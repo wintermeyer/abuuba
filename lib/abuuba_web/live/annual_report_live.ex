@@ -43,7 +43,7 @@ defmodule AbuubaWeb.AnnualReportLive do
       <header class="border-b border-base-300 p-4">
         <p class="text-xs uppercase text-base-content/60">{@report.year}</p>
         <h1 class="text-2xl font-semibold">
-          {gettext("%{name}'s year", name: display_name(@account))}
+          {gettext("%{name}'s year", name: Account.display_name(@account))}
         </h1>
         <p class="text-base-content/60">
           <.link navigate={~p"/@#{@account.username}"} class="link link-hover">
@@ -85,10 +85,7 @@ defmodule AbuubaWeb.AnnualReportLive do
     """
   end
 
-  defp display_name(%Account{display_name: name}) when name not in [nil, ""], do: name
-  defp display_name(%Account{username: username}), do: username
-
-  defp page_title(account, report), do: "#{display_name(account)} · #{report.year}"
+  defp page_title(account, report), do: "#{Account.display_name(account)} · #{report.year}"
 
   defp posts_total(report) do
     report.data |> Map.get("time_series", []) |> Enum.map(&(&1["statuses"] || 0)) |> Enum.sum()

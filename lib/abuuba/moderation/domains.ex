@@ -148,6 +148,22 @@ defmodule Abuuba.Moderation.Domains do
   end
 
   @doc """
+  How many domains are blocked and how many are allowed.
+
+  Counted in the database rather than by measuring the lists. The screen that
+  asks wants two integers for a sentence, and reading the rows to length them
+  meant loading every column of up to ten thousand blocks and sorting them,
+  once per view of the page.
+  """
+  @spec counts() :: %{blocks: non_neg_integer(), allows: non_neg_integer()}
+  def counts do
+    %{
+      blocks: Repo.aggregate(DomainBlock, :count),
+      allows: Repo.aggregate(DomainAllow, :count)
+    }
+  end
+
+  @doc """
   One block by id, or `nil`.
   """
   @spec get_block(integer() | String.t()) :: DomainBlock.t() | nil

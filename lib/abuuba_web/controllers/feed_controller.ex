@@ -32,6 +32,7 @@ defmodule AbuubaWeb.FeedController do
   alias Abuuba.Federation.Serializer
   alias Abuuba.Settings
   alias Abuuba.Statuses
+  alias Abuuba.Statuses.Formatter
   alias Abuuba.Timelines
 
   @limit 20
@@ -46,7 +47,7 @@ defmodule AbuubaWeb.FeedController do
 
         conn
         |> render_feed(
-          title: display_name(subject) <> " (@" <> subject.username <> ")",
+          title: Account.display_name(subject) <> " (@" <> subject.username <> ")",
           description: summary(subject.note),
           link: url(~p"/@#{subject.username}"),
           self: url(~p"/@#{subject.username}/feed.rss"),
@@ -138,16 +139,7 @@ defmodule AbuubaWeb.FeedController do
   defp public?(%{visibility: :public}), do: true
   defp public?(_status), do: false
 
-  defp display_name(%Account{display_name: name}) when is_binary(name) and name != "", do: name
-  defp display_name(%Account{username: username}), do: username
-
-  defp summary(html) do
-    html
-    |> to_string()
-    |> String.replace(~r/<[^>]*>/, " ")
-    |> String.replace(~r/\s+/u, " ")
-    |> String.trim()
-  end
+  defp summary(html), do: Formatter.plain_text(html)
 
   # `]]>` inside a CDATA section closes it early, and what follows is then read
   # as markup. Nothing in a post may end this block.

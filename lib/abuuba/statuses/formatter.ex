@@ -157,6 +157,33 @@ defmodule Abuuba.Statuses.Formatter do
     |> mark_links()
   end
 
+  @doc """
+  What a post says, with the markup taken off.
+
+  The other direction from `to_html/2`, and here beside it for that reason: a
+  summary line, a meta description, an RSS blurb and an admin listing all want
+  the words and none of them want the tags. It was written out separately in
+  eight places under four names, each with its own length baked in, which is
+  how a tag-stripping regex comes to be fixed in one of them.
+
+  `:limit` cuts the result to that many characters; without it the whole text
+  comes back.
+  """
+  @spec plain_text(String.t() | nil, keyword()) :: String.t()
+  def plain_text(html, opts \\ []) do
+    text =
+      html
+      |> to_string()
+      |> String.replace(~r/<[^>]*>/, " ")
+      |> String.replace(~r/\s+/u, " ")
+      |> String.trim()
+
+    case Keyword.get(opts, :limit) do
+      nil -> text
+      limit -> String.slice(text, 0, limit)
+    end
+  end
+
   # The sanitiser takes `rel` and `target` off along with everything else it
   # does not recognise, and puts nothing back. Upstream's adds both to every
   # anchor it keeps, and since local posts got them a link in the same timeline

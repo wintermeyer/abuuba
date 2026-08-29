@@ -29,6 +29,7 @@ defmodule AbuubaWeb.StatusLive do
   import AbuubaWeb.StatusComponent
 
   alias Abuuba.Accounts
+  alias Abuuba.Accounts.Account
   alias Abuuba.Federation.ResolveStatus
   alias Abuuba.Federation.Serializer
   alias Abuuba.Federation.URIs
@@ -276,7 +277,7 @@ defmodule AbuubaWeb.StatusLive do
 
   defp title(author, status) do
     gettext("%{name} on %{server}",
-      name: display_name(author),
+      name: Account.display_name(author),
       server: Abuuba.Instance.software_name()
     ) <> ": " <> String.slice(summary(status), 0, 60)
   end
@@ -292,9 +293,6 @@ defmodule AbuubaWeb.StatusLive do
   defp one_line(text) do
     text |> to_string() |> String.replace(~r/\s+/u, " ") |> String.trim()
   end
-
-  defp display_name(%{display_name: name}) when is_binary(name) and name != "", do: name
-  defp display_name(%{username: username}), do: username
 
   # Under this author, and visible to whoever is asking. Both checks are the
   # query's rather than an afterthought: one that cannot return the wrong row

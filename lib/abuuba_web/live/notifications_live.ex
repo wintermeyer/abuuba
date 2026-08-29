@@ -332,11 +332,11 @@ defmodule AbuubaWeb.NotificationsLive do
   # wrongly in half the languages this is translated into, and the plural of
   # "one other person" is not a suffix.
   defp headline(%{count: 1, senders: [sender | _]} = group) do
-    verb(group.type, display_name(sender))
+    verb(group.type, Account.display_name(sender))
   end
 
   defp headline(%{senders: [sender | _]} = group) do
-    others(group.type, display_name(sender), group.count)
+    others(group.type, Account.display_name(sender), group.count)
   end
 
   defp headline(group), do: verb(group.type, gettext("Somebody"))
@@ -405,12 +405,9 @@ defmodule AbuubaWeb.NotificationsLive do
   defp sender_name(request, senders) do
     case senders[request.from_account_id] do
       nil -> gettext("Somebody")
-      account -> display_name(account)
+      account -> Account.display_name(account)
     end
   end
-
-  defp display_name(%Account{display_name: name}) when is_binary(name) and name != "", do: name
-  defp display_name(%Account{username: username}), do: username
 
   defp stored_types(%{settings: settings}) when is_map(settings) do
     settings |> Map.get("notification_types", []) |> Enum.filter(&(&1 in @offered_types))

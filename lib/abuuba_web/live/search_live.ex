@@ -103,7 +103,7 @@ defmodule AbuubaWeb.SearchLive do
         <h2 class="px-4 pt-3 text-xs uppercase text-base-content/60">{gettext("People")}</h2>
         <ul class="divide-y divide-base-300">
           <li :for={person <- @accounts} class="p-4">
-            <a href={"/@" <> Account.acct(person)} class="font-semibold">{display_name(person)}</a>
+            <a href={"/@" <> Account.acct(person)} class="font-semibold">{Account.display_name(person)}</a>
             <p class="text-sm text-base-content/60">@{Account.acct(person)}</p>
           </li>
         </ul>
@@ -189,7 +189,7 @@ defmodule AbuubaWeb.SearchLive do
   def handle_event("translate", %{"id" => id}, socket) do
     case PostActions.translate(socket.assigns.viewer, id, locale(socket)) do
       {:ok, rendered} ->
-        {:noreply, update(socket, :posts, &PostActions.swap(&1, rendered))}
+        {:noreply, update(socket, :statuses, &PostActions.swap(&1, rendered))}
 
       :error ->
         {:noreply, put_flash(socket, :error, gettext("That could not be translated just now."))}
@@ -273,9 +273,6 @@ defmodule AbuubaWeb.SearchLive do
   defp operator_hint("before:"), do: gettext("posts older than a date")
   defp operator_hint("after:"), do: gettext("posts newer than a date")
   defp operator_hint(name), do: name
-
-  defp display_name(%Account{display_name: name}) when is_binary(name) and name != "", do: name
-  defp display_name(%Account{username: username}), do: username
 
   defp viewer_id(nil), do: nil
   defp viewer_id(viewer), do: to_string(viewer.id)

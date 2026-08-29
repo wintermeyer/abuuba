@@ -88,7 +88,7 @@ defmodule AbuubaWeb.TagLive do
       Statuses.follow_tag(viewer, tag)
     end
 
-    {:noreply, load(socket)}
+    {:noreply, assign_following(socket)}
   end
 
   def handle_event("unfollow_tag", _params, socket) do
@@ -96,7 +96,7 @@ defmodule AbuubaWeb.TagLive do
       Statuses.unfollow_tag(viewer, tag)
     end
 
-    {:noreply, load(socket)}
+    {:noreply, assign_following(socket)}
   end
 
   # The action bar is drawn on this screen, so the events it raises are
@@ -163,6 +163,13 @@ defmodule AbuubaWeb.TagLive do
       posts: posts(socket.assigns.tag, viewer),
       following?: following?(viewer, socket.assigns.tag)
     )
+  end
+
+  # Following a tag changes the button and nothing else on the page, so the
+  # timeline is left where it is. Re-read rather than assumed because the
+  # follow above is inside a `with` that can decline to do anything.
+  defp assign_following(socket) do
+    assign(socket, following?: following?(socket.assigns.viewer, socket.assigns.tag))
   end
 
   defp posts(nil, _viewer), do: []

@@ -1564,7 +1564,7 @@ defmodule AbuubaWeb.ComposeComponent do
     |> Enum.map(fn account ->
       %{
         value: "@" <> Account.acct(account),
-        label: display_name(account),
+        label: Account.display_name(account),
         hint: "@" <> Account.acct(account),
         image: nil
       }
@@ -1650,12 +1650,9 @@ defmodule AbuubaWeb.ComposeComponent do
   defp reply_name(%Status{account_id: account_id}) do
     case Accounts.get_account(account_id) do
       nil -> gettext("somebody")
-      account -> display_name(account)
+      account -> Account.display_name(account)
     end
   end
-
-  defp display_name(%Account{display_name: name}) when is_binary(name) and name != "", do: name
-  defp display_name(%Account{username: username}), do: username
 
   # What the person chose in their settings, rather than what this module would
   # have guessed. A default audience is the setting people most regret not

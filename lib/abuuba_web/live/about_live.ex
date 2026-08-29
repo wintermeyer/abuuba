@@ -15,6 +15,7 @@ defmodule AbuubaWeb.AboutLive do
   alias Abuuba.Instance
   alias Abuuba.Settings
   alias AbuubaWeb.Formats
+  alias AbuubaWeb.RegistrationWords
 
   @impl Phoenix.LiveView
   def mount(_params, _session, socket) do
@@ -60,7 +61,7 @@ defmodule AbuubaWeb.AboutLive do
 
         <section>
           <h2 class="text-xl font-semibold">{gettext("Signing up")}</h2>
-          <p class="mt-2">{registration_note(@registration_mode)}</p>
+          <p class="mt-2">{RegistrationWords.note(@registration_mode)}</p>
         </section>
 
         <section :if={@rules != []}>
@@ -106,14 +107,4 @@ defmodule AbuubaWeb.AboutLive do
       {gettext("people active this half-year"), usage.active_halfyear}
     ]
   end
-
-  defp registration_note(:open), do: gettext("Registration is open: anybody may sign up.")
-
-  defp registration_note(:approved),
-    do: gettext("Registration needs approval: you sign up and an admin reads your request.")
-
-  defp registration_note(:closed),
-    do: gettext("Registration is closed here, but any other server on the network will do.")
-
-  defp registration_note(_mode), do: ""
 end

@@ -42,6 +42,7 @@ defmodule AbuubaWeb.AdminLive do
   alias Abuuba.Roles.Role
   alias Abuuba.Settings
   alias Abuuba.Statuses
+  alias Abuuba.Statuses.Formatter
   alias Abuuba.Streaming
   alias Abuuba.Trends
   alias Abuuba.Webhooks
@@ -189,7 +190,7 @@ defmodule AbuubaWeb.AdminLive do
 
   @impl Phoenix.LiveView
   def handle_params(params, _uri, socket) do
-    section = section_of(socket.assigns.live_action)
+    section = socket.assigns.live_action
 
     if Roles.can?(socket.assigns.user, permission_for(section)) do
       {:noreply,
@@ -235,6 +236,7 @@ defmodule AbuubaWeb.AdminLive do
         <h2 class="text-xl font-semibold">{section_label(@section)}</h2>
 
         <p :if={@saved?} class="mt-2 text-sm text-success" role="status">{gettext("Saved.")}</p>
+        <p :if={@imported} class="mt-2 text-sm text-success" role="status">{@imported}</p>
         <p :if={@error} class="mt-2 text-sm text-error" role="alert">{@error}</p>
 
         <.dashboard
@@ -3012,12 +3014,7 @@ defmodule AbuubaWeb.AdminLive do
   end
 
   defp load(socket, :domain_lists, _params) do
-    assign(socket,
-      domain_counts: %{
-        blocks: length(Domains.blocks(%{limit: 10_000})),
-        allows: length(Domains.allows())
-      }
-    )
+    assign(socket, domain_counts: Domains.counts())
   end
 
   defp load(socket, :suggestions, _params) do
@@ -3332,9 +3329,6 @@ defmodule AbuubaWeb.AdminLive do
   defp outranks_message,
     do: gettext("That account outranks yours, so there is nothing here you can do to it.")
 
-  defp section_of(:account), do: :account
-  defp section_of(action), do: action
-
   # The account page belongs to the accounts section, and needs its permission.
   defp permission_for(:account), do: "manage_users"
   defp permission_for(:report), do: "manage_reports"
@@ -3434,14 +3428,7 @@ defmodule AbuubaWeb.AdminLive do
   # to anybody there, so it is recorded with the domain rather than only taken.
   defp subject_id(socket), do: to_string(socket.assigns.subject.id)
 
-  defp plain_text(html) do
-    html
-    |> to_string()
-    |> String.replace(~r/<[^>]*>/, " ")
-    |> String.replace(~r/\s+/u, " ")
-    |> String.trim()
-    |> String.slice(0, 200)
-  end
+  defp plain_text(html), do: Formatter.plain_text(html, limit: 200)
 
   defp with_instance(socket, domain, action, act) do
     act.(domain)

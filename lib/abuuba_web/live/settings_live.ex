@@ -52,6 +52,7 @@ defmodule AbuubaWeb.SettingsLive do
   alias Abuuba.Relationships
   alias Abuuba.Statuses
   alias Abuuba.Statuses.Cleanup
+  alias Abuuba.Statuses.Formatter
   alias AbuubaWeb.CoreComponents
   alias AbuubaWeb.Formats
   alias AbuubaWeb.ScopeWords
@@ -856,10 +857,10 @@ defmodule AbuubaWeb.SettingsLive do
             name="accounts[]"
             value={person.id}
             class="checkbox checkbox-sm"
-            aria-label={display_name(person)}
+            aria-label={Account.display_name(person)}
           />
           <span class="min-w-0 flex-1">
-            <a href={"/@" <> Account.acct(person)} class="font-medium">{display_name(person)}</a>
+            <a href={"/@" <> Account.acct(person)} class="font-medium">{Account.display_name(person)}</a>
             <span class="block text-sm text-base-content/60">@{Account.acct(person)}</span>
           </span>
         </li>
@@ -1646,8 +1647,14 @@ defmodule AbuubaWeb.SettingsLive do
 
   ## Plumbing
 
+  # The section that was saved, not always the profile: privacy and aliases save
+  # through here too, and reloading `:profile` for them redrew the page with
+  # another section's data. `save_user/2` below already asks the socket.
   defp save(socket, {:ok, account}) do
-    {:noreply, socket |> assign(account: account, saved?: true, error: nil) |> load(:profile)}
+    {:noreply,
+     socket
+     |> assign(account: account, saved?: true, error: nil)
+     |> load(socket.assigns.section)}
   end
 
   defp save(socket, {:error, _changeset}) do
@@ -2167,13 +2174,7 @@ defmodule AbuubaWeb.SettingsLive do
     end)
   end
 
-  defp plain_text(html) do
-    html
-    |> to_string()
-    |> String.replace(~r/<[^>]*>/, " ")
-    |> String.replace(~r/\s+/u, " ")
-    |> String.trim()
-  end
+  defp plain_text(html), do: Formatter.plain_text(html)
 
   # `consume_uploaded_entries` hands over a path that is deleted the moment the
   # function returns, which is exactly the shape `ProfileImages.store/3` wants:
@@ -2316,9 +2317,6 @@ defmodule AbuubaWeb.SettingsLive do
   defp filter_action_label("warn"), do: gettext("Fold it behind a warning")
   defp filter_action_label("hide"), do: gettext("Hide it completely")
   defp filter_action_label(action), do: action
-
-  defp display_name(%Account{display_name: name}) when is_binary(name) and name != "", do: name
-  defp display_name(%Account{username: username}), do: username
 
   defp to_integer(value) when is_integer(value), do: value
 

@@ -541,6 +541,17 @@ defmodule Abuuba.Accounts.Account do
   def acct(%Account{username: username, domain: domain}), do: "#{username}@#{domain}"
 
   @doc """
+  The name to show for an account, falling back to the username.
+
+  `display_name` is optional and blank far more often than it looks, so every
+  screen that renders an account needs this fallback. It lives here because it
+  was written out privately in eleven modules, in two spellings, and the most
+  rendered string in the product should have one definition.
+  """
+  def display_name(%Account{display_name: name}) when is_binary(name) and name != "", do: name
+  def display_name(%Account{username: username}), do: username
+
+  @doc """
   The pattern a username must match.
 
   Exposed so that the signup form checks the same rule the schema does; two

@@ -74,7 +74,7 @@ defmodule AbuubaWeb.CollectionLive do
       <ul class="divide-y divide-base-300">
         <li :for={account <- @accounts} class="p-4">
           <.link navigate={~p"/@#{account.username}"} class="font-medium link link-hover">
-            {display_name(account)}
+            {Account.display_name(account)}
           </.link>
           <p class="text-sm text-base-content/60">@{Account.acct(account)}</p>
           <p :if={account.note not in [nil, ""]} class="mt-1 break-words text-sm">
@@ -102,9 +102,6 @@ defmodule AbuubaWeb.CollectionLive do
     |> Enum.map(&Map.get(accounts, &1.account_id))
     |> Enum.reject(&(&1 == nil or &1.suspended_at != nil))
   end
-
-  defp display_name(%Account{display_name: name}) when name not in [nil, ""], do: name
-  defp display_name(%Account{username: username}), do: username
 
   defp note_html(%Account{domain: nil, note: note}), do: Formatter.to_html(note)
   defp note_html(%Account{note: note}), do: Formatter.sanitize(note)
