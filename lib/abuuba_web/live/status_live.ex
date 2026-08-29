@@ -241,13 +241,11 @@ defmodule AbuubaWeb.StatusLive do
     |> assign(:robots, robots(author))
     |> assign(
       :page_meta,
-      [
-        {"property", "og:type", "article"},
-        {"property", "og:title", title(author, status)},
-        {"property", "og:description", summary},
-        {"property", "og:url", URIs.status_url(author, status.id)},
-        {"name", "description", summary}
-      ]
+      Meta.open_graph(
+        title: title(author, status),
+        description: summary,
+        url: URIs.status_url(author, status.id)
+      )
     )
     # What an editor fetches before it turns a pasted link into an embed.
     # Without the tag, nothing discovers the endpoint.

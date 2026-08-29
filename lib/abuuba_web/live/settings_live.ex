@@ -55,6 +55,7 @@ defmodule AbuubaWeb.SettingsLive do
   alias Abuuba.Statuses.Formatter
   alias AbuubaWeb.CoreComponents
   alias AbuubaWeb.Formats
+  alias AbuubaWeb.Params
   alias AbuubaWeb.ScopeWords
 
   @impl Phoenix.LiveView
@@ -1331,11 +1332,11 @@ defmodule AbuubaWeb.SettingsLive do
   end
 
   def handle_event("remove_field", %{"index" => index}, socket) do
-    {:noreply, update(socket, :fields, &List.delete_at(&1, to_integer(index)))}
+    {:noreply, update(socket, :fields, &List.delete_at(&1, Params.to_integer(index)))}
   end
 
   def handle_event("move_field", %{"index" => index}, socket) do
-    index = to_integer(index)
+    index = Params.to_integer(index)
 
     {:noreply,
      update(socket, :fields, fn fields ->
@@ -1545,7 +1546,7 @@ defmodule AbuubaWeb.SettingsLive do
   end
 
   def handle_event("delete_filter", %{"filter" => id}, socket) do
-    with {:ok, id} <- numeric(id),
+    with {:ok, id} <- Params.id(id),
          filter when not is_nil(filter) <- Filters.get(socket.assigns.account, id) do
       Filters.delete(filter)
     end
@@ -1583,7 +1584,7 @@ defmodule AbuubaWeb.SettingsLive do
   end
 
   def handle_event("revoke_application", %{"application" => id}, socket) do
-    with {:ok, id} <- numeric(id) do
+    with {:ok, id} <- Params.id(id) do
       OAuth.revoke_application_for(socket.assigns.user, id)
     end
 
@@ -1809,7 +1810,7 @@ defmodule AbuubaWeb.SettingsLive do
       fields when is_map(fields) ->
         ordered =
           fields
-          |> Enum.sort_by(fn {index, _field} -> to_integer(index) end)
+          |> Enum.sort_by(fn {index, _field} -> Params.to_integer(index) end)
           |> Enum.map(fn {_index, field} -> field end)
           |> Enum.reject(&(String.trim(&1["name"] || "") == ""))
 
@@ -2330,32 +2331,10 @@ defmodule AbuubaWeb.SettingsLive do
   defp filter_action_label("hide"), do: gettext("Hide it completely")
   defp filter_action_label(action), do: action
 
-  defp to_integer(value) when is_integer(value), do: value
-
-  defp to_integer(value) when is_binary(value) do
-    case Integer.parse(value) do
-      {number, _rest} -> number
-      :error -> 0
-    end
-  end
-
-  defp to_integer(_value), do: 0
-
   defp account_id(value) do
-    case numeric(value) do
+    case Params.id(value) do
       {:ok, id} -> id
       _ -> nil
     end
   end
-
-  defp numeric(value) when is_integer(value), do: {:ok, value}
-
-  defp numeric(value) when is_binary(value) do
-    case Integer.parse(value) do
-      {number, ""} -> {:ok, number}
-      _ -> nil
-    end
-  end
-
-  defp numeric(_value), do: nil
 end

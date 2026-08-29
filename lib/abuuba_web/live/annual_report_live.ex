@@ -116,11 +116,14 @@ defmodule AbuubaWeb.AnnualReportLive do
         year: report.year
       )
 
-    assign(socket, :page_meta, [
-      {"property", "og:type", "article"},
-      {"property", "og:title", page_title(account, report)},
-      {"property", "og:description", summary},
-      {"name", "description", summary}
-    ])
+    assign(
+      socket,
+      :page_meta,
+      Meta.open_graph(
+        title: page_title(account, report),
+        description: summary,
+        url: url(~p"/@#{account.username}/year/#{report.year}")
+      )
+    )
   end
 end

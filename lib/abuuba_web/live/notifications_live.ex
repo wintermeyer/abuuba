@@ -36,6 +36,7 @@ defmodule AbuubaWeb.NotificationsLive do
   alias Abuuba.Timelines
   alias AbuubaWeb.API.Entities
   alias AbuubaWeb.API.NestedParams
+  alias AbuubaWeb.Params
 
   @page_size 40
 
@@ -234,7 +235,7 @@ defmodule AbuubaWeb.NotificationsLive do
   end
 
   def handle_event("accept_request", %{"account" => id}, socket) do
-    with {:ok, id} <- numeric(id) do
+    with {:ok, id} <- Params.id(id) do
       Notifications.accept_request(socket.assigns.account, id)
     end
 
@@ -242,7 +243,7 @@ defmodule AbuubaWeb.NotificationsLive do
   end
 
   def handle_event("dismiss_request", %{"account" => id}, socket) do
-    with {:ok, id} <- numeric(id) do
+    with {:ok, id} <- Params.id(id) do
       Notifications.dismiss_request(socket.assigns.account, id)
     end
 
@@ -453,15 +454,4 @@ defmodule AbuubaWeb.NotificationsLive do
   # A group key carries characters a DOM id may not, so it is hashed rather
   # than interpolated.
   defp dom_id(key), do: :erlang.phash2(key)
-
-  defp numeric(value) when is_integer(value), do: {:ok, value}
-
-  defp numeric(value) when is_binary(value) do
-    case Integer.parse(value) do
-      {number, ""} -> {:ok, number}
-      _ -> nil
-    end
-  end
-
-  defp numeric(_value), do: nil
 end

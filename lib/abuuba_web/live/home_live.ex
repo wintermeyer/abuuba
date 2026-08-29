@@ -35,6 +35,7 @@ defmodule AbuubaWeb.HomeLive do
   alias Abuuba.Timelines.Broadcast
   alias AbuubaWeb.API.Entities
   alias AbuubaWeb.ComposeComponent
+  alias AbuubaWeb.Params
   alias AbuubaWeb.PostActions
 
   @post_actions PostActions.toggles()
@@ -269,7 +270,7 @@ defmodule AbuubaWeb.HomeLive do
   # having worked.
   def handle_event("mute_thread", %{"id" => id}, socket) do
     with account when not is_nil(account) <- socket.assigns.account,
-         status when not is_nil(status) <- Statuses.get_status(to_integer(id), account),
+         status when not is_nil(status) <- Statuses.get_status(Params.to_integer(id), account),
          {:ok, _mute} <- Statuses.mute_thread(account, status) do
       {:noreply, stream_delete(socket, :statuses, %{"id" => to_string(status.id)})}
     else
@@ -280,7 +281,7 @@ defmodule AbuubaWeb.HomeLive do
   def handle_event("unmute_thread", %{"id" => id}, socket) do
     account = socket.assigns.account
 
-    case Statuses.get_status(to_integer(id), account) do
+    case Statuses.get_status(Params.to_integer(id), account) do
       nil ->
         {:noreply, socket}
 
@@ -306,7 +307,7 @@ defmodule AbuubaWeb.HomeLive do
   end
 
   def handle_event("reply", %{"id" => id}, socket) do
-    case Statuses.get_status(to_integer(id), socket.assigns.account) do
+    case Statuses.get_status(Params.to_integer(id), socket.assigns.account) do
       nil -> {:noreply, socket}
       status -> {:noreply, open_compose(socket, reply_to: status)}
     end
@@ -317,7 +318,7 @@ defmodule AbuubaWeb.HomeLive do
   def handle_event("edit", %{"id" => id}, socket) do
     account = socket.assigns.account
 
-    case Statuses.get_status(to_integer(id), account) do
+    case Statuses.get_status(Params.to_integer(id), account) do
       %{account_id: author_id} = status when author_id == account.id ->
         {:noreply, open_compose(socket, editing: status)}
 
@@ -341,7 +342,7 @@ defmodule AbuubaWeb.HomeLive do
   def handle_event("mark_read", %{"id" => id}, socket) do
     # Where the reader had got to, so the next device starts there rather than
     # at the top with no idea what this one already saw.
-    Timelines.put_marker(socket.assigns.account, "home", to_integer(id))
+    Timelines.put_marker(socket.assigns.account, "home", Params.to_integer(id))
 
     {:noreply, socket}
   end
@@ -383,17 +384,6 @@ defmodule AbuubaWeb.HomeLive do
 
   defp newest_id([]), do: nil
   defp newest_id(statuses), do: statuses |> Enum.map(& &1.id) |> Enum.max()
-
-  defp to_integer(value) when is_integer(value), do: value
-
-  defp to_integer(value) when is_binary(value) do
-    case Integer.parse(value) do
-      {number, _rest} -> number
-      :error -> 0
-    end
-  end
-
-  defp to_integer(_value), do: 0
 
   defp translation_locale(socket),
     do: socket.assigns[:locale] || Gettext.get_locale(AbuubaWeb.Gettext)

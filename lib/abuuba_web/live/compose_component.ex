@@ -61,6 +61,7 @@ defmodule AbuubaWeb.ComposeComponent do
   alias Abuuba.Statuses.ScheduledStatus
   alias Abuuba.Statuses.Status
   alias AbuubaWeb.Formats
+  alias AbuubaWeb.Params
 
   # Endonyms, so somebody looking for their own language reads it in their own
   # language. Not a full ISO-639 list: a picker of nine thousand entries is one
@@ -312,7 +313,7 @@ defmodule AbuubaWeb.ComposeComponent do
   # one, and an id in an event payload is written by whoever is at the other
   # end of the socket.
   defp own_attachment(socket, id) do
-    with {:ok, id} <- numeric(id) do
+    with {:ok, id} <- Params.id(id) do
       if id in socket.assigns.attachment_ids do
         Media.get_own_unattached(socket.assigns.account, id)
       end
@@ -320,7 +321,7 @@ defmodule AbuubaWeb.ComposeComponent do
   end
 
   defp without(socket, id) do
-    case numeric(id) do
+    case Params.id(id) do
       {:ok, id} -> socket.assigns.attachment_ids -- [id]
       _ -> socket.assigns.attachment_ids
     end
@@ -332,7 +333,7 @@ defmodule AbuubaWeb.ComposeComponent do
   defp move_earlier(socket, id) do
     ids = socket.assigns.attachment_ids
 
-    with {:ok, id} <- numeric(id),
+    with {:ok, id} <- Params.id(id),
          index when is_integer(index) and index > 0 <- Enum.find_index(ids, &(&1 == id)) do
       ids |> List.delete_at(index) |> List.insert_at(index - 1, id)
     else
@@ -357,23 +358,12 @@ defmodule AbuubaWeb.ComposeComponent do
   # socket, not by the button this server drew. A `Repo.get` on "../etc/passwd"
   # raises rather than returning nothing.
   defp find_draft(socket, id) do
-    with {:ok, id} <- numeric(id), do: Statuses.get_draft(socket.assigns.account, id)
+    with {:ok, id} <- Params.id(id), do: Statuses.get_draft(socket.assigns.account, id)
   end
 
   defp find_scheduled(socket, id) do
-    with {:ok, id} <- numeric(id), do: Statuses.get_scheduled(socket.assigns.account, id)
+    with {:ok, id} <- Params.id(id), do: Statuses.get_scheduled(socket.assigns.account, id)
   end
-
-  defp numeric(value) when is_integer(value), do: {:ok, value}
-
-  defp numeric(value) when is_binary(value) do
-    case Integer.parse(value) do
-      {number, ""} when number >= 0 and number < 9_223_372_036_854_775_807 -> {:ok, number}
-      _ -> nil
-    end
-  end
-
-  defp numeric(_value), do: nil
 
   defp current_draft(%{assigns: %{draft_id: nil}}), do: nil
 
@@ -1053,7 +1043,7 @@ defmodule AbuubaWeb.ComposeComponent do
     options = socket.assigns.draft["poll_options"]
 
     if length(options) > 2 do
-      {:noreply, put(socket, "poll_options", List.delete_at(options, to_integer(index)))}
+      {:noreply, put(socket, "poll_options", List.delete_at(options, Params.to_integer(index)))}
     else
       {:noreply, socket}
     end
@@ -1247,7 +1237,8 @@ defmodule AbuubaWeb.ComposeComponent do
       options: options,
       tallies: List.duplicate(0, length(options)),
       multiple: draft["poll_multiple"] == true,
-      expires_at: DateTime.add(DateTime.utc_now(), to_integer(draft["poll_expires_in"]), :second)
+      expires_at:
+        DateTime.add(DateTime.utc_now(), Params.to_integer(draft["poll_expires_in"]), :second)
     }
 
     case Statuses.create_poll(status, attrs) do
@@ -1306,7 +1297,7 @@ defmodule AbuubaWeb.ComposeComponent do
     Map.put(params, "poll", %{
       "options" => usable_options(draft),
       "multiple" => draft["poll_multiple"] == true,
-      "expires_in" => to_integer(draft["poll_expires_in"])
+      "expires_in" => Params.to_integer(draft["poll_expires_in"])
     })
   end
 
@@ -1609,7 +1600,7 @@ defmodule AbuubaWeb.ComposeComponent do
   defp caret(draft) do
     length = String.length(draft["text"])
 
-    case to_integer(draft["caret"]) do
+    case Params.to_integer(draft["caret"]) do
       caret when caret >= 0 and caret <= length -> caret
       _ -> length
     end
@@ -1692,15 +1683,4 @@ defmodule AbuubaWeb.ComposeComponent do
       nil -> gettext("Public")
     end
   end
-
-  defp to_integer(value) when is_integer(value), do: value
-
-  defp to_integer(value) when is_binary(value) do
-    case Integer.parse(value) do
-      {number, _rest} -> number
-      :error -> 0
-    end
-  end
-
-  defp to_integer(_value), do: 0
 end
