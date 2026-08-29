@@ -248,7 +248,7 @@ needs to know before running it, not afterwards.
 
 | Left behind | What that costs |
 | --- | --- |
-| Login activity | The recent sign-ins list starts empty. abuuba records new ones from the first sign-in and does not show them anywhere yet |
+| Login activity | The recent sign-ins list in Security settings starts empty; abuuba records new ones from the first sign-in |
 | WebAuthn credentials | Nothing here reads them yet, so a copy would sit unused; anybody using a security key sets it up again when abuuba surfaces them |
 
 The list was built by comparing the source's tables against the ones here, so
