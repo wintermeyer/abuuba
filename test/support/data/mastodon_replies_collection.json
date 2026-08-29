@@ -1,0 +1,38 @@
+{
+  "source": {
+    "server": "mastodon.social",
+    "fetched": "2026-08-29",
+    "command": "curl -H 'Accept: application/activity+json' https://mastodon.social/users/<name>/outbox?page=true",
+    "note": "Public ActivityPub documents, fetched unauthenticated. Only the `replies` object of each Note is kept: its structure is the fact we need, and nobody's post text belongs in this repository."
+  },
+  "samples": {
+    "no_self_replies": {
+      "note": "https://mastodon.social/users/Gargron/statuses/117167082117352484",
+      "replies": {
+        "id": "https://mastodon.social/users/Gargron/statuses/117167082117352484/replies",
+        "type": "Collection",
+        "first": {
+          "type": "CollectionPage",
+          "next": "https://mastodon.social/users/Gargron/statuses/117167082117352484/replies?only_other_accounts=true&page=true",
+          "partOf": "https://mastodon.social/users/Gargron/statuses/117167082117352484/replies",
+          "items": []
+        }
+      }
+    },
+    "author_replied": {
+      "note": "https://mastodon.social/users/nixCraft/statuses/117156990168180040",
+      "replies": {
+        "id": "https://mastodon.social/users/nixCraft/statuses/117156990168180040/replies",
+        "type": "Collection",
+        "first": {
+          "type": "CollectionPage",
+          "next": "https://mastodon.social/users/nixCraft/statuses/117156990168180040/replies?min_id=117156999042992401&page=true",
+          "partOf": "https://mastodon.social/users/nixCraft/statuses/117156990168180040/replies",
+          "items": [
+            "https://mastodon.social/users/nixCraft/statuses/117156999042992401"
+          ]
+        }
+      }
+    }
+  }
+}

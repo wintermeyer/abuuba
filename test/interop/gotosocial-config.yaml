@@ -1,0 +1,15 @@
+# The one GoToSocial setting the suite cannot pass as an environment variable.
+#
+# Every server here runs on a private docker network, and GoToSocial refuses to
+# make an outbound request to a private address by default: its webfinger of a
+# abuuba account dies with "dial within blocked / reserved IP range" before it
+# leaves the process. That is the right default for a real server and wrong for
+# a network where all three servers are neighbours -- Mastodon needs the same
+# permission, given as ALLOWED_PRIVATE_ADDRESSES in compose.yml.
+#
+# It lives here rather than beside the others because `http-client` has no
+# command-line flag, and so no environment variable bound to one. Everything
+# else stays in compose.yml, where env vars take precedence over this file.
+http-client:
+  allow-ips:
+    - "172.16.0.0/12"

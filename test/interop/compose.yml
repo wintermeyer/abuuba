@@ -1,0 +1,221 @@
+# Four servers on one network, so they can talk to each other the way they
+# would across the internet.
+#
+# Each is reachable at a hostname the others resolve, and each is configured to
+# call itself by that hostname — an implementation that thinks it is
+# `localhost` publishes `localhost` in every id it writes, and nothing else can
+# fetch those.
+#
+# HTTP rather than HTTPS. Every implementation here can be told to speak it,
+# and the alternative is a certificate authority in a test fixture.
+name: abuuba-interop
+
+services:
+  # --- abuuba -----------------------------------------------------------------
+
+  abuuba-db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: abuuba
+      POSTGRES_PASSWORD: interop
+      POSTGRES_DB: abuuba_interop
+    tmpfs: [/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U abuuba"]
+      interval: 2s
+      retries: 30
+
+  abuuba:
+    volumes:
+      - ./tls/generated/bundle.crt:/etc/ssl/certs/ca-certificates.crt:ro
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    depends_on:
+      abuuba-db: {condition: service_healthy}
+    # Migrating on start is wrong in production (see docs/deploy.md) and right
+    # here: one container, brought up and thrown away by a script.
+    command: ["sh", "-c", "/app/bin/abuuba eval 'Abuuba.Release.migrate()' && /app/bin/abuuba start"]
+    environment:
+      DATABASE_URL: ecto://abuuba:interop@abuuba-db/abuuba_interop
+      SECRET_KEY_BASE: interop-only-secret-key-base-that-is-long-enough-for-phoenix-to-accept-it
+      CLOAK_KEY: 3Jnb0hZiHIzHTOih7t2cTEPEpY98Tu1wvA0yXCETFg0=
+      LOCAL_DOMAIN: abuuba.interop
+      PHX_HOST: abuuba.interop
+      # The scheme every id is written with. http, because these servers are
+      # talking to each other over a Docker network and not the internet.
+      URI_SCHEME: https
+      # A Docker bridge is entirely private, so abuuba refuses to fetch anything
+      # on it unless told otherwise. This is the switch, and it exists for
+      # exactly this: a closed network of servers made to talk to each other.
+      ALLOW_PRIVATE_FEDERATION_ADDRESSES: "true"
+      PORT: "4000"
+      PHX_SERVER: "true"
+      MEDIA_ROOT: /app/uploads
+      MAIL_FROM: noreply@localhost
+      MAIL_ADAPTER: local
+    ports: ["${ABUUBA_INTEROP_PORT:-4000}:4000"]
+
+  # --- Mastodon -------------------------------------------------------------
+
+  mastodon-db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: mastodon
+      POSTGRES_PASSWORD: interop
+      POSTGRES_DB: mastodon_interop
+    tmpfs: [/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mastodon"]
+      interval: 2s
+      retries: 30
+
+  mastodon-redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      retries: 30
+
+  mastodon:
+    image: ghcr.io/mastodon/mastodon:v4.4.7
+    volumes:
+      - ./tls/generated/bundle.crt:/etc/ssl/certs/ca-certificates.crt:ro
+    command: >
+      bash -c "bin/rails db:prepare && bundle exec puma -C config/puma.rb"
+    healthcheck:
+      # `/health` is the one path Mastodon exempts from host authorization, so
+      # it answers here without the Host gymnastics everything else needs.
+      test: ["CMD-SHELL", "curl -sf http://localhost:3000/health || exit 1"]
+      interval: 3s
+      retries: 60
+    depends_on:
+      mastodon-db: {condition: service_healthy}
+      mastodon-redis: {condition: service_healthy}
+    environment: &mastodon-env
+      # The mirror image of abuuba's own switch. Mastodon refuses to fetch
+      # anything on a private network — including the key it needs to verify a
+      # signature — and a Docker bridge is entirely private, so every delivery
+      # from abuuba was refused with PrivateNetworkAddressError, and Mastodon
+      # fetched nothing from abuuba at all. Docker hands out 172.16/12.
+      #
+      # On the anchor, so the worker gets it too: the fetch that verifies a
+      # signature happens in whichever process received the delivery, and the
+      # one that resolves an account happens in Sidekiq.
+      ALLOWED_PRIVATE_ADDRESSES: "172.16.0.0/12"
+      LOCAL_DOMAIN: mastodon.interop
+      LOCAL_HTTPS: "false"
+      SECRET_KEY_BASE: interop-only-000000000000000000000000000000000000000000000000000000000000000000000000
+      OTP_SECRET: interop-only-111111111111111111111111111111111111111111111111111111111111111111111111
+      ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY: interopdeterministickey00000000
+      ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT: interopkeyderivationsalt0000000
+      ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY: interopprimarykey00000000000000
+      DB_HOST: mastodon-db
+      DB_USER: mastodon
+      DB_NAME: mastodon_interop
+      DB_PASS: interop
+      REDIS_HOST: mastodon-redis
+      RAILS_ENV: production
+      RAILS_SERVE_STATIC_FILES: "true"
+      RAILS_LOG_LEVEL: warn
+      # On. It is the harder setting, a large and growing part of the network
+      # runs it, and until #236 was fixed abuuba could not talk to such a server
+      # at all -- so this is the condition worth holding the suite to.
+      #
+      # Mastodon reads it once at boot, so the note that used to sit here --
+      # that the authorized-fetch scenario turns it on for the run that needs
+      # it -- described something no scenario can do, and it ran against a peer
+      # that asked for no signature while reporting that signed fetches worked.
+      # That scenario now skips rather than claim anything when the peer
+      # answers unsigned, which is what INTEROP_AUTHORIZED_FETCH=false gives.
+      AUTHORIZED_FETCH: "${INTEROP_AUTHORIZED_FETCH:-true}"
+    ports: ["${MASTODON_INTEROP_PORT:-3000}:3000"]
+
+  mastodon-sidekiq:
+    image: ghcr.io/mastodon/mastodon:v4.4.7
+    volumes:
+      - ./tls/generated/bundle.crt:/etc/ssl/certs/ca-certificates.crt:ro
+    command: bundle exec sidekiq
+    depends_on:
+      mastodon-db: {condition: service_healthy}
+      mastodon-redis: {condition: service_healthy}
+      # And on the web container, which is what runs `db:prepare`. Waiting only
+      # for the database meant Sidekiq booted against an empty schema and died
+      # with `relation "users" does not exist` — so Mastodon had no worker at
+      # all, and delivered nothing to anybody for as long as this suite has
+      # existed. Nothing said so: the scenarios saw posts that never arrived.
+      mastodon: {condition: service_healthy}
+    environment: *mastodon-env
+
+  # --- GoToSocial -----------------------------------------------------------
+
+  gotosocial:
+    image: docker.io/superseriousbusiness/gotosocial:0.19.1
+    environment:
+      GTS_HOST: gotosocial.interop
+      # https, though the TLS is the proxy's and GoToSocial itself speaks plain
+      # http on 8080. This is the scheme it builds its own URIs from, and with
+      # `http` it advertised `http://gotosocial.interop/users/interop` as its
+      # actor -- which abuuba refuses, because insecure federation is off unless
+      # somebody turns it on. Webfinger answered 200 and resolution stopped
+      # there, and every scenario reported that the account could not be
+      # resolved.
+      GTS_PROTOCOL: https
+      GTS_DB_TYPE: sqlite
+      GTS_DB_ADDRESS: /gotosocial/storage/sqlite.db
+      GTS_LETSENCRYPT_ENABLED: "false"
+      GTS_BIND_ADDRESS: 0.0.0.0
+      GTS_PORT: "8080"
+      GTS_ACCOUNTS_REGISTRATION_OPEN: "true"
+      # The permission to reach a neighbour on this private network is in
+      # gotosocial-config.yaml, mounted below: `http-client` has no
+      # command-line flag and so no environment variable to set here.
+      GTS_CONFIG_PATH: /gotosocial/config.yaml
+      # Raise it to debug when GoToSocial is the thing being investigated:
+      # at warn it says nothing about what it did with a delivery, and "it
+      # answered 202 and then nothing happened" is not a finding.
+      GTS_LOG_LEVEL: "${INTEROP_GTS_LOG_LEVEL:-warn}"
+    volumes:
+      - ./gotosocial-config.yaml:/gotosocial/config.yaml:ro
+      # The suite's own CA, as every other server here gets it. Without it
+      # GoToSocial reaches abuuba and then refuses the certificate the proxy
+      # presents: "certificate signed by unknown authority".
+      - ./tls/generated/bundle.crt:/etc/ssl/certs/ca-certificates.crt:ro
+    ports: ["${GOTOSOCIAL_INTEROP_PORT:-8080}:8080"]
+
+  # --- Akkoma ---------------------------------------------------------------
+  #
+  # Not here, deliberately. Akkoma publishes no container image: their install
+  # docs tell you to build one with `./docker-resources/build.sh`, and the
+  # `ghcr.io/akkoma/akkoma` this used to pin answers `denied` for every tag,
+  # which is what GHCR says about a repository that does not exist. The only
+  # thing on Docker Hub under that name is a single-arch `latest` last pushed
+  # in July 2023, which would test three-year-old Akkoma and is a moving tag
+  # besides.
+  #
+  # Adding it back means building it here, which is an Elixir compile inside a
+  # nightly job. Worth doing if Akkoma's behaviour is what you are chasing;
+  # not worth doing on the way past.
+
+  # --- TLS ------------------------------------------------------------------
+  #
+  # Every server in the stack answers behind this, under the name it was
+  # configured with. Without it the stack cannot federate at all: Mastodon in
+  # production publishes https and demands it, so two servers on plain HTTP
+  # never fetch each other however correct either one is.
+  proxy:
+    image: nginx:1.27-alpine
+    depends_on:
+      abuuba: {condition: service_started}
+    volumes:
+      - ./tls/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./tls/generated:/tls:ro
+    networks:
+      default:
+        aliases: [abuuba.interop, mastodon.interop, gotosocial.interop]
+
+networks:
+  default:
+    # Named, so the aliases above are resolvable by every service and the
+    # scenarios can use the same hostnames the servers publish.
+    driver: bridge

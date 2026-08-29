@@ -1,0 +1,33 @@
+<Layouts.app flash={@flash} current_scope={@current_scope} page_title={@page_title}>
+  <div class="mx-auto max-w-md p-4">
+    <h2 class="text-xl font-semibold">
+      {gettext("Email updates from %{name}", name: account_name(@account))}
+    </h2>
+
+    <p class="mt-2 text-base-content/70">{@subscription.email}</p>
+
+    <%= if @subscription.confirmed_at do %>
+      <p class="mt-4">
+        {gettext("This address is getting updates. You can stop them at any time.")}
+      </p>
+
+      <.form for={%{}} action={~p"/email_subscriptions/#{@subscription.token}/unsubscribe"}>
+        <button type="submit" class="btn btn-primary mt-6">{gettext("Stop the updates")}</button>
+      </.form>
+    <% else %>
+      <p class="mt-4">
+        {gettext("Confirm that this address should get updates. Nothing is sent until you do.")}
+      </p>
+
+      <div class="mt-6 flex gap-2">
+        <.form for={%{}} action={~p"/email_subscriptions/#{@subscription.token}/confirm"}>
+          <button type="submit" class="btn btn-primary">{gettext("Yes, send them")}</button>
+        </.form>
+
+        <.form for={%{}} action={~p"/email_subscriptions/#{@subscription.token}/unsubscribe"}>
+          <button type="submit" class="btn btn-ghost">{gettext("No, remove my address")}</button>
+        </.form>
+      </div>
+    <% end %>
+  </div>
+</Layouts.app>

@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>abuuba – a fediverse server that cares about performance</title>
+<meta name="description" content="abuuba is a fediverse server written in Elixir and Phoenix. It speaks the complete Mastodon client API and answers twelve to sixty-eight times faster than Mastodon on the same hardware.">
+<meta property="og:title" content="abuuba">
+<meta property="og:description" content="A fediverse server written in Elixir and Phoenix, twelve to sixty-eight times faster than Mastodon on the same box.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://abuuba.com/">
+<link rel="canonical" href="https://abuuba.com/">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+<header class="top wrap">
+  <a class="logo" href="#top" aria-label="abuuba">
+    <span class="spots" aria-hidden="true">
+      <i style="left:0;top:2px;width:11px;height:9px"></i>
+      <i style="left:13px;top:0;width:8px;height:10px"></i>
+      <i style="left:6px;top:13px;width:9px;height:8px"></i>
+      <i style="left:19px;top:12px;width:11px;height:9px"></i>
+    </span>abuuba</a>
+  <nav aria-label="Primary">
+    <a href="https://github.com/wintermeyer/abuuba">GitHub</a>
+    <a href="https://github.com/wintermeyer/abuuba/blob/main/bench/README.md">Benchmark</a>
+    <a href="https://github.com/wintermeyer/abuuba/blob/main/docs/deploy.md">Deploy</a>
+    <a href="https://vutuv.de/abuuba">News</a>
+    <a href="press.html">Press</a>
+  </nav>
+</header>
+
+<main id="top">
+  <section class="hero">
+    <div class="wrap">
+      <div class="hero-grid">
+        <div>
+          <h1>The cheetah that outran the mastodon.</h1>
+          <p class="lede">abuuba is a fediverse server written in <a href="https://elixir-lang.org">Elixir</a> and <a href="https://www.phoenixframework.org">Phoenix</a>. It speaks <a href="https://joinmastodon.org">Mastodon</a>'s protocols: ActivityPub for federation and the complete Mastodon client API, all 289 endpoints, so existing apps work unchanged. It exists for one reason: <strong>Mastodon is too slow.</strong></p>
+        </div>
+        <div class="giant" aria-live="polite">
+          <span class="giant-num" id="giant-num">68<span class="times">×</span></span>
+          <span class="giant-label" id="giant-label">faster<small>Fan-out to the last of 10,000 followers</small></span>
+        </div>
+      </div>
+
+      <div class="plate-wrap">
+        <table class="plate" id="plate">
+          <thead>
+            <tr><th scope="col">Same machine, same data, same Postgres</th><th scope="col">abuuba</th><th scope="col">Mastodon</th><th scope="col"><span class="sr">Result</span></th></tr>
+          </thead>
+          <tbody>
+            <tr data-x="12" data-label="Home timeline p50"><th scope="row">Home timeline p50</th><td class="a num">7.37 ms</td><td class="m num">85.83 ms</td><td class="x">12×<small>faster</small></td></tr>
+            <tr data-x="16" data-label="Home timeline p99"><th scope="row">Home timeline p99</th><td class="a num">17.81 ms</td><td class="m num">292.10 ms</td><td class="x">16×<small>faster</small></td></tr>
+            <tr data-x="14" data-label="Public timeline p50"><th scope="row">Public timeline p50</th><td class="a num">5.33 ms</td><td class="m num">76.71 ms</td><td class="x">14×<small>faster</small></td></tr>
+            <tr data-x="18" data-label="Public timeline p99"><th scope="row">Public timeline p99</th><td class="a num">11.45 ms</td><td class="m num">204.23 ms</td><td class="x">18×<small>faster</small></td></tr>
+            <tr data-x="68" data-label="Fan-out to the last of 10,000 followers"><th scope="row">Fan-out to the last of 10,000 followers</th><td class="a num">830 ms</td><td class="m num">56,874 ms</td><td class="x">68×<small>faster</small></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="plate-foot">
+        <p class="caption">Medians of three runs on 28 August 2026 against Mastodon v4.4.7, both servers on one bare-metal box: 2× AMD EPYC 9254, 96 threads, 1.0 TiB DDR5, Debian 13, Postgres 17.10 on both sides from the same untuned image. <a href="https://github.com/wintermeyer/abuuba/blob/main/bench/README.md">How it was measured.</a></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="band">
+    <div class="wrap reveal">
+      <h2>That is <em>one</em> instance.</h2>
+      <p>What decides how many a host can carry is a different set of numbers, and they compound.</p>
+      <div style="overflow-x:auto">
+        <table class="sheet">
+          <thead><tr><th scope="col">Per instance</th><th scope="col">abuuba</th><th scope="col">Mastodon</th><th scope="col"><span class="sr">Result</span></th></tr></thead>
+          <tbody>
+            <tr><th scope="row">Memory, idle</th><td class="a num">725 MB</td><td class="m num">1,175 MB</td><td class="x2">1.6× smaller</td></tr>
+            <tr><th scope="row">Restart, until it answers again</th><td class="a num">2,695 ms</td><td class="m num">4,816 ms</td><td class="x2">1.8× faster</td></tr>
+            <tr><th scope="row">Docker containers</th><td class="a num">2</td><td class="m num">5</td><td class="x2">2.5× fewer</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="band">
+    <div class="wrap reveal">
+      <h2>The same story, told in <em>JavaScript</em>.</h2>
+      <p>abuuba has no client application. LiveView renders on the server and sends diffs down a websocket, so the browser applies patches instead of keeping its own copy of the timeline. No <code>package.json</code>, no <code>node_modules</code>, no lockfile.</p>
+      <div class="pair">
+        <div class="big a"><span class="n num">364</span><span class="l"><b>abuuba</b> · lines of JavaScript · 0 npm dependencies</span></div>
+        <div class="big"><span class="n num">97,209</span><span class="l"><b>Mastodon</b> · lines of JavaScript · 1,428 lockfile entries</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="band">
+    <div class="wrap reveal">
+      <h2>Different <em>all the way down</em>.</h2>
+      <p>Speed is why abuuba exists, but it is not the only thing that differs. The licence is the one to read first: MIT lets you build on this and keep your changes to yourself. The AGPL asks anyone running a modified copy to offer its source to the people using it. Neither is the wrong answer, and which one you want is worth deciding before you pick a server rather than after.</p>
+      <div class="plate-wrap">
+        <table class="sheet">
+          <thead><tr><th scope="col">What each one is made of</th><th scope="col">abuuba</th><th scope="col">Mastodon</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">Licence</th><td class="a">MIT</td><td class="m">AGPL-3.0</td></tr>
+            <tr><th scope="row">Language</th><td class="a">Elixir 1.20, functional</td><td class="m">Ruby 3.4, object-oriented</td></tr>
+            <tr><th scope="row">Web framework</th><td class="a">Phoenix 1.8</td><td class="m">Rails 8.0</td></tr>
+            <tr><th scope="row">Background jobs</th><td class="a">Oban 2, in Postgres</td><td class="m">Sidekiq 7, in Redis</td></tr>
+            <tr><th scope="row">Full-text search</th><td class="a">Postgres</td><td class="m">Elasticsearch, optional</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="plate-foot">
+        <p class="caption">Read from each project on 29 August 2026: abuuba's <code>.tool-versions</code> and <code>mix.lock</code>, Mastodon's <code>.ruby-version</code> and <code>Gemfile.lock</code> at v4.4.7.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="band">
+    <div class="wrap reveal">
+      <h2>No client application. <em>Still an application.</em></h2>
+      <p>Every screen is HTML the server rendered, patched over a websocket as things change. These come straight from a running instance, cropped and not otherwise touched, in the dark theme abuuba takes from your system settings.</p>
+      <div class="shots">
+        <figure class="shot">
+          <img src="shots/timeline.avif" width="2120" height="1590" loading="lazy" decoding="async"
+               alt="The explore timeline: seven posts from five accounts, each row showing an avatar, a display name, a handle and how long ago it was posted.">
+          <figcaption><b>Explore, logged out.</b> The sidebar, the tabs and every row arrive as markup. Nothing here is a client-side copy of the timeline that has to be kept in step with the server's.</figcaption>
+        </figure>
+        <figure class="shot">
+          <img src="shots/profile.avif" width="2120" height="1004" loading="lazy" decoding="async"
+               alt="An account page for Nadia Osei: avatar, display name, handle, a one-line bio, and tabs for posts, posts and replies, media, followers and follows.">
+          <figcaption><b>An account.</b> Avatar, bio, and the tabs a fediverse client expects. A Mastodon app pointed at this server is served the same account through the same API.</figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <section class="band">
+    <div class="wrap reveal">
+      <h2>Not here to replace Mastodon. <em>To push it.</em></h2>
+      <blockquote class="quote">
+        <p>This is the <a href="https://nginx.org">nginx</a> and <a href="https://httpd.apache.org">Apache</a> story. Apache was good software and still is; nginx turned up because a different shape of load arrived and an architecture built for the older one could not bend that far. The part worth remembering is what happened next: nginx did not kill Apache, it made Apache faster and better.</p>
+        <p>That is what I hope abuuba does for Mastodon. If a server twelve times quicker on the same hardware pushes Mastodon to close that gap, the fediverse wins twice, and I will count that as the best thing this project ever did.</p>
+      </blockquote>
+      <p class="sig"><a href="https://vutuv.de/wintermeyer">Stefan Wintermeyer</a></p>
+    </div>
+  </section>
+
+  <section class="band">
+    <div class="wrap reveal">
+      <h2>Why the <em>name</em>.</h2>
+      <div class="story">
+        <div>
+          <p>During the time mastodons lived, roughly 5 million to 10,000 years ago, one of the fastest mammals in North America was <strong>Miracinonyx</strong>, the so-called American cheetah. So the project was almost called Miracinonyx. But who can remember that?</p>
+          <p>A stack of registered but unused domain names later, it was abuuba. The cheetah stayed in the logo.</p>
+        </div>
+        <div class="plate-card">
+          <p class="eyebrow">Specimen</p>
+          <dl>
+            <dt>Written in</dt><dd>Elixir, Phoenix, LiveView</dd>
+            <dt>Runs on</dt><dd>the BEAM, one application and one Postgres</dd>
+            <dt>Speaks</dt><dd>ActivityPub, the complete Mastodon client API (289 endpoints)</dd>
+            <dt>Verified against</dt><dd>Mastodon 4.4.7 and GoToSocial 0.19.1, 32 scenarios</dd>
+            <dt>Licence</dt><dd>MIT</dd>
+            <dt>Version</dt><dd>1.0.0</dd>
+          </dl>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="band">
+    <div class="wrap reveal">
+      <h2>abuuba and Postgres. <em>Nothing else.</em></h2>
+      <p>No Redis, no worker process, no cron, no Node. Scheduled work runs inside the server that answers requests.</p>
+<pre><i># development</i>
+mix setup
+mix phx.server
+
+<i># production</i>
+cp .env.example .env
+docker compose run --rm abuuba bin/abuuba eval 'Abuuba.Release.migrate()'
+docker compose up -d</pre>
+      <div class="cta">
+        <a class="btn primary" href="https://github.com/wintermeyer/abuuba">Source on GitHub</a>
+        <a class="btn" href="https://github.com/wintermeyer/abuuba/blob/main/docs/deploy.md">Deployment guide</a>
+        <a class="btn" href="https://github.com/wintermeyer/abuuba/blob/main/docs/admin/importing-from-mastodon.md">Coming from Mastodon</a>
+      </div>
+    </div>
+  </section>
+  <section class="band">
+    <div class="wrap reveal">
+      <h2>Run it yourself. <em>Or ask for help.</em></h2>
+      <p class="links">abuuba is MIT-licensed and the deployment guide is enough to get an instance running. If you would rather have somebody on the other end, <a href="https://wintermeyer-consulting.de">Wintermeyer Consulting</a> offers support and consulting for it. An email to Stefan Wintermeyer, <a href="mailto:sw@wintermeyer-consulting.de">sw@wintermeyer-consulting.de</a>, is all it takes.</p>
+    </div>
+  </section>
+
+  <section class="band">
+    <div class="wrap reveal">
+      <h2>News lands on the <em>fediverse</em>.</h2>
+      <p class="links">Releases, benchmark runs and the odd thing that broke get posted to abuuba's own account. It is a fediverse account: follow it from <a href="https://vutuv.de">vutuv</a>, <a href="https://joinmastodon.org">Mastodon</a>, any app that speaks the protocol, or abuuba itself.</p>
+      <div class="follow">
+        <p class="handle"><a href="https://vutuv.de/abuuba">@abuuba@vutuv.de</a></p>
+        <p class="note">Not on the fediverse? The same posts are a normal web page at <a href="https://vutuv.de/abuuba">vutuv.de/abuuba</a>. Nothing to install, no account, no login.</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="wrap">
+  <span>abuuba 1.0.0 · MIT licence · built by the founder of <a href="https://vutuv.de">vutuv</a>, because vutuv is fast and its peer was not.</span>
+  <nav aria-label="Secondary"><a href="press.html">Press</a><a href="impressum.html">Impressum</a><a href="datenschutz.html">Datenschutz</a><a href="https://github.com/wintermeyer/abuuba">GitHub</a></nav>
+</footer>
+
+<script>
+(function () {
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var rows = Array.prototype.slice.call(document.querySelectorAll('#plate tbody tr'));
+  var num = document.getElementById('giant-num'), label = document.getElementById('giant-label');
+  var HOLD = 2400, timer = null;
+
+  function show(k) {
+    rows.forEach(function (r) { r.classList.remove('current'); });
+    var r = rows[k];
+    r.classList.add('current');
+    num.innerHTML = r.dataset.x + '<span class="times">\u00d7</span>';
+    label.innerHTML = 'faster<small></small>';
+    label.querySelector('small').textContent = r.dataset.label;
+    if (reduce) return;
+    num.classList.remove('slam');
+    void num.offsetWidth;
+    num.classList.add('slam');
+  }
+
+  function play() {
+    clearTimeout(timer);
+    if (reduce) { show(rows.length - 1); return; }
+    var i = 0;
+    (function step() {
+      show(i);
+      if (i < rows.length - 1) { i += 1; timer = setTimeout(step, HOLD); }
+    })();
+  }
+
+  rows.forEach(function (r, k) {
+    r.addEventListener('click', function () { clearTimeout(timer); show(k); });
+  });
+  if (reduce) { show(rows.length - 1); } else { setTimeout(play, 300); }
+
+  var reveals = document.querySelectorAll('.reveal');
+  if (reduce || !('IntersectionObserver' in window)) {
+    reveals.forEach(function (el) { el.classList.add('in'); });
+  } else {
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
+    }, { rootMargin: '0px 0px -10% 0px' });
+    reveals.forEach(function (el) { io.observe(el); });
+  }
+})();
+</script>
+</body>
+</html>

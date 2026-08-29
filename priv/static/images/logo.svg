@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 24" fill="#E5A72E" aria-hidden="true">
+  <!-- abuuba's mark: a cheetah's spots, in the same arrangement and the same
+       amber as the header of abuuba.com, so the site and the software read as
+       one thing. Transparent and wider than tall on purpose: it sits beside
+       the wordmark rather than standing on its own. The square version for
+       home screens is icon.svg. -->
+  <ellipse cx="5.5" cy="6.5" rx="5.5" ry="4.5"/>
+  <ellipse cx="17" cy="5" rx="4" ry="5"/>
+  <ellipse cx="10.5" cy="17" rx="4.5" ry="4"/>
+  <ellipse cx="24.5" cy="16.5" rx="5.5" ry="4.5"/>
+</svg>

@@ -1,0 +1,18 @@
+<Layouts.app flash={@flash} current_scope={@current_scope} page_title={@page_title}>
+  <div class="p-4">
+    <h2 class="text-xl font-semibold">{gettext("Keyboard shortcuts")}</h2>
+
+    <p class="mt-2 text-base-content/70">
+      {gettext("Shortcuts do nothing while you are typing in a text box.")}
+    </p>
+
+    <dl class="mt-6 divide-y divide-base-300">
+      <div :for={shortcut <- @shortcuts} class="flex items-baseline justify-between gap-4 py-2">
+        <dt>{shortcut.description}</dt>
+        <dd class="flex shrink-0 gap-1">
+          <kbd :for={key <- shortcut.keys} class="kbd kbd-sm">{key}</kbd>
+        </dd>
+      </div>
+    </dl>
+  </div>
+</Layouts.app>

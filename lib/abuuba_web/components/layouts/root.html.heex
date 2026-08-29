@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html
+  lang={assigns[:locale] || Abuuba.I18n.default_locale()}
+  class={Abuuba.Accounts.Preferences.body_class(assigns[:accessibility] || %{})}
+>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="csrf-token" content={get_csrf_token()} />
+    <%!-- Declared by the server so that the shortcuts page and the bindings cannot disagree. --%>
+    <meta name="hotkeys" content={Jason.encode!(AbuubaWeb.Hotkeys.bindings())} />
+    <.live_title
+      default={Abuuba.Instance.software_name()}
+      suffix={" · " <> Abuuba.Instance.software_name()}
+      phx-no-format
+    >{assigns[:page_title]}</.live_title>
+    <%!-- Asked of every page that shows somebody else's writing, and of the
+    pages that are nobody's business but their owner's. An aggregate cannot
+    honour a per-author setting, because the authors on it disagree, and the
+    safe reading of a disagreement is the stricter one. --%>
+    <meta :if={assigns[:robots]} name="robots" content={@robots} />
+    <%!-- What a link preview reads. Emitted from the first, server-rendered
+    response, which is the only one a crawler ever sees: a page that filled
+    these in after the socket connected would preview as an empty shell. --%>
+    <meta
+      :for={{attribute, key, value} <- assigns[:page_meta] || []}
+      {%{attribute => key}}
+      content={value}
+    />
+    <link :for={link <- assigns[:page_links] || []} {link} />
+    <link phx-track-static rel="stylesheet" href={~p"/assets/css/app.css"} />
+    <!-- After the server's own, so an admin's rule wins without needing
+         !important on every line. -->
+    <link rel="stylesheet" href={~p"/custom.css"} />
+    <%!-- SVG first for anything that understands it, .ico behind it for what
+    does not, and the Apple one because iOS reads neither the manifest nor
+    the SVG when it adds a page to a home screen. The SVG is the same file the
+    manifest names rather than a copy at /favicon.svg: only .ico is fetched by
+    convention without being declared, so a second copy would buy nothing and
+    could drift. --%>
+    <link rel="icon" href={~p"/images/icon.svg"} type="image/svg+xml" />
+    <link rel="icon" href={~p"/favicon.ico"} sizes="48x48" />
+    <link rel="apple-touch-icon" href={~p"/apple-touch-icon.png"} />
+    <link rel="manifest" href={~p"/manifest"} />
+    <script defer phx-track-static type="text/javascript" src={~p"/assets/js/app.js"}>
+    </script>
+  </head>
+  <body>
+    {@inner_content}
+  </body>
+</html>

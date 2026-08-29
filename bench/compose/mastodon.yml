@@ -1,0 +1,98 @@
+# Mastodon, from its own published images, at a pinned version.
+#
+# This is deliberately close to the compose file Mastodon publishes rather than
+# a version of it somebody here tuned: the comparison is against Mastodon as an
+# admin would run it, not against a configuration chosen by the people writing
+# the benchmark. The differences from upstream are listed in bench/README.md
+# and are all about making it start unattended.
+name: mastodon-bench
+
+x-mastodon: &mastodon
+  image: ghcr.io/mastodon/mastodon:v4.4.7
+  environment: &mastodon-env
+    LOCAL_DOMAIN: localhost:${BENCH_MASTODON_PORT:-3000}
+    SINGLE_USER_MODE: "false"
+    SECRET_KEY_BASE: benchmark-only-secret-key-base-0000000000000000000000000000000000000000000000000000000000000000
+    OTP_SECRET: benchmark-only-otp-secret-000000000000000000000000000000000000000000000000000000000000000000000
+    ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY: benchmarkdeterministickey0000000
+    ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT: benchmarkkeyderivationsalt000000
+    ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY: benchmarkprimarykey000000000000
+    VAPID_PRIVATE_KEY: ""
+    VAPID_PUBLIC_KEY: ""
+    DB_HOST: db
+    DB_USER: mastodon
+    DB_NAME: mastodon_bench
+    DB_PASS: benchmark
+    DB_PORT: "5432"
+    REDIS_HOST: redis
+    REDIS_PORT: "6379"
+    RAILS_ENV: production
+    RAILS_SERVE_STATIC_FILES: "true"
+    RAILS_LOG_LEVEL: warn
+  # The seeder, mounted for the same reason it is mounted on the other side.
+  volumes:
+    - ../:/bench:ro
+  depends_on:
+    db:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+
+services:
+  db:
+    # The same image the abuuba stack gets. A comparison where one side has a
+    # newer Postgres is a comparison of Postgres versions.
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: mastodon
+      POSTGRES_PASSWORD: benchmark
+      POSTGRES_DB: mastodon_bench
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mastodon"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+
+  redis:
+    # Mastodon needs it and abuuba does not, which is a difference in what the
+    # two servers require rather than something to hold against either. It is
+    # counted in the resource measurements for exactly that reason.
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+
+  web:
+    <<: *mastodon
+    command: bundle exec puma -C config/puma.rb
+    # Overridable, because a development machine very often already has
+    # something on 3000 and the failure is a container that will not start
+    # halfway through a twenty-minute run.
+    ports:
+      - "${BENCH_MASTODON_PORT:-3000}:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:3000/health || exit 1"]
+      interval: 3s
+      timeout: 5s
+      retries: 40
+
+  sidekiq:
+    <<: *mastodon
+    command: bundle exec sidekiq
+
+  streaming:
+    image: ghcr.io/mastodon/mastodon-streaming:v4.4.7
+    environment:
+      <<: *mastodon-env
+    command: node ./streaming/index.js
+    ports:
+      - "${BENCH_MASTODON_STREAMING_PORT:-4001}:4000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy

@@ -1,0 +1,24 @@
+# What the build does not need, and what it must not pick up.
+#
+# _build in particular: copying a host-built _build into the image gives you
+# artifacts compiled against the host's OTP, which then fail at runtime with an
+# error about a beam file that looks nothing like the real cause.
+_build
+deps
+.elixir_ls
+.git
+.github
+.tool-versions
+
+# Assets are compiled inside the image from source.
+assets/node_modules
+priv/static/assets
+priv/static/cache_manifest.json
+
+# Nothing here belongs in a production image.
+test
+bench
+planning
+docs
+.credo.exs
+*.log

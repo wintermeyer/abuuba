@@ -1,0 +1,18 @@
+<!-- Nothing of this server around it. It is framed by other sites on purpose,
+     so it carries no navigation, no session and nothing to click through to. -->
+<div style="margin:0;background:#000;display:flex;align-items:center;justify-content:center;height:100vh">
+  <video
+    :if={kind(@attachment) == :video}
+    src={file_url(@attachment)}
+    controls
+    playsinline
+    style="max-width:100%;max-height:100%"
+  ></video>
+  <audio :if={kind(@attachment) == :audio} src={file_url(@attachment)} controls></audio>
+  <img
+    :if={kind(@attachment) == :image}
+    src={file_url(@attachment)}
+    alt={@attachment.description || ""}
+    style="max-width:100%;max-height:100%"
+  />
+</div>

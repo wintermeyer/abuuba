@@ -1,0 +1,56 @@
+# The directory Mix will write compiled artifacts to.
+/_build/
+
+# If you run "mix test --cover", coverage assets end up here.
+/cover/
+
+# The directory Mix downloads your dependencies sources to.
+/deps/
+
+# Where 3rd-party dependencies like ExDoc output generated docs.
+/doc/
+
+# Ignore .fetch files in case you like to edit your project deps locally.
+/.fetch
+
+# If the VM crashes, it generates a dump, let's ignore it too.
+erl_crash.dump
+
+# Also ignore archive artifacts (built via "mix archive.build").
+*.ez
+
+# Temporary files, for example, from tests.
+/tmp/
+
+# Ignore package tarball (built via "mix hex.build").
+abuuba-*.tar
+
+# Ignore assets that are produced by build tools.
+/priv/static/assets/
+
+# Ignore digested assets cache.
+/priv/static/cache_manifest.json
+
+# And the digested copies themselves. `mix assets.deploy` writes a
+# content-hashed and a gzipped version of every static file next to the
+# original, so a release built in the working tree otherwise leaves a pile of
+# them staged behind it.
+/priv/static/**/*-????????????????????????????????.*
+/priv/static/**/*.gz
+
+# In case you use Node.js/npm, you want to ignore these.
+npm-debug.log
+/assets/node_modules/
+
+
+# Benchmark output. Regenerate with bench/run.sh; the numbers belong in a
+# report, not in the history.
+/bench/results/
+
+# What a federation interop run wrote: a matrix and the raw logs behind it.
+# Output of running the suite, not part of it.
+/test/interop/results/
+
+# Certificates the interop stack makes for itself. Worthless outside its
+# Docker network and regenerated when absent.
+/test/interop/tls/generated/

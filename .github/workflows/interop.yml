@@ -1,0 +1,57 @@
+# The federation interop suite, on a schedule rather than on every push.
+#
+# It brings up four servers and drives real asynchronous federation between
+# them, which takes long enough that running it per push would make every push
+# slow and would tell nobody anything new: this suite catches drift in *other*
+# people's releases as much as in ours, and that happens on their schedule.
+#
+# Nightly, and on demand.
+name: Interop
+
+on:
+  schedule:
+    # Early morning UTC, when the runners are least busy.
+    - cron: "17 4 * * *"
+  workflow_dispatch:
+    inputs:
+      implementation:
+        description: "One implementation, or blank for all"
+        required: false
+        default: ""
+
+jobs:
+  interop:
+    name: Against real implementations
+    runs-on: ubuntu-latest
+    # Four servers, four databases and a suite that waits for real delivery.
+    timeout-minutes: 90
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: erlef/setup-beam@v1
+        with:
+          version-file: .tool-versions
+          version-type: strict
+
+      - name: Fetch dependencies
+        run: mix deps.get
+
+      - name: Run the suite
+        run: test/interop/run.sh ${{ github.event.inputs.implementation }}
+
+      # Whatever happened. A failed run is the one whose notes somebody wants.
+      - name: Keep the report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: interop-report
+          path: test/interop/results/
+          retention-days: 30
+
+      - name: Say what failed
+        if: failure()
+        run: |
+          echo "### Federation interop failed" >>"$GITHUB_STEP_SUMMARY"
+          echo >>"$GITHUB_STEP_SUMMARY"
+          cat test/interop/results/report.md >>"$GITHUB_STEP_SUMMARY" || true

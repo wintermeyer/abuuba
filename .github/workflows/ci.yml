@@ -1,0 +1,117 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+# A superseded pull-request push is worth cancelling; a push to main is not.
+# GitHub renders a cancelled run as a red "failing" badge, so cancelling main
+# turns the README badge red whenever two commits land a few minutes apart.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  precommit:
+    name: precommit
+    runs-on: ubuntu-24.04
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 15
+
+    env:
+      MIX_ENV: test
+      PGUSER: postgres
+      PGPASSWORD: postgres
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # The media pipeline shells out to these for video, audio and animated
+      # pictures, and the tests build their fixtures with them rather than
+      # committing binaries nobody can read in a diff. A runner without them
+      # fails every media test with :enoent.
+      - name: Install ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
+
+      # Reads the same .tool-versions mise uses locally, so there is no second
+      # place to bump when the Erlang or Elixir pin moves. `strict` takes the
+      # pins as written instead of guessing a nearby release.
+      - uses: erlef/setup-beam@v1
+        with:
+          version-file: .tool-versions
+          version-type: strict
+
+      # Scoped to the language pins: a lock bump reuses the previous build,
+      # but an Erlang or Elixir bump starts from a clean slate rather than
+      # linking beams compiled by another compiler.
+      - name: Cache deps and build
+        uses: actions/cache@v4
+        with:
+          path: |
+            deps
+            _build
+          key: mix-${{ runner.os }}-${{ hashFiles('.tool-versions') }}-${{ hashFiles('mix.lock') }}
+          restore-keys: |
+            mix-${{ runner.os }}-${{ hashFiles('.tool-versions') }}-
+
+      - name: Fetch dependencies
+        run: mix deps.get --check-locked
+
+      # A restored _build carries this project's beams from an older commit,
+      # and unchanged modules are not recompiled, so a warning introduced on
+      # this branch could go unreported to --warnings-as-errors. Only the
+      # project's own artifacts go; the compiled dependencies stay cached.
+      - name: Drop stale project build artifacts
+        run: mix clean
+
+      - name: mix precommit
+        run: mix precommit
+
+  # The base images the production Dockerfile names have to exist. A tag that
+  # does not resolves at `docker build` and nowhere earlier, which means the
+  # first sign of it is a red Release workflow on main after the merge — which
+  # is exactly how it went the first time. Resolving the manifests takes
+  # seconds and needs no build.
+  base-images:
+    name: base images resolve
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve every FROM in the Dockerfile
+        run: |
+          set -euo pipefail
+          elixir=$(grep -oP 'ARG ELIXIR_VERSION=\K.*' Dockerfile)
+          otp=$(grep -oP 'ARG OTP_VERSION=\K.*' Dockerfile)
+          debian=$(grep -oP 'ARG DEBIAN_VERSION=\K.*' Dockerfile)
+
+          for image in "hexpm/elixir:${elixir}-erlang-${otp}-debian-${debian}" "debian:${debian}"; do
+            echo "resolving $image"
+            manifest=$(docker manifest inspect "$image")
+
+            # Both architectures the release workflow builds, on both images.
+            # A tag published for only one of them fails halfway through a
+            # multi-arch build, which is a slower way to learn the same thing.
+            for arch in amd64 arm64; do
+              echo "$manifest" | grep -q "\"architecture\": \"$arch\"" \
+                || { echo "$image has no $arch"; exit 1; }
+            done
+          done

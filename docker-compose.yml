@@ -1,0 +1,69 @@
+# The reference deployment: abuuba and Postgres, nothing else.
+#
+# No Redis, no separate worker container, no cron. Scheduled work runs inside
+# the same beam as the web server (Oban cron), and the queue lives in Postgres,
+# so scaling out means adding an abuuba container rather than adding a component.
+#
+#   1. cp .env.example .env  and fill it in
+#   2. docker compose run --rm abuuba bin/abuuba eval 'Abuuba.Release.migrate()'
+#   3. docker compose up -d
+#
+# TLS is not here on purpose. Terminate it in whatever already faces the
+# internet on that host (Caddy, nginx, a load balancer) and forward to abuuba's
+# port; a reverse proxy baked into this file is one you would have to fight.
+name: abuuba
+
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: abuuba
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: abuuba
+    volumes:
+      - db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U abuuba"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    # Not published. The only thing that needs to reach Postgres is abuuba, and a
+    # port mapping here is a database on the internet.
+    expose: ["5432"]
+
+  abuuba:
+    image: ghcr.io/wintermeyer/abuuba:${ABUUBA_VERSION:-edge}
+    # To run your own build instead of the published image, uncomment:
+    # build: .
+    restart: unless-stopped
+    depends_on:
+      db: {condition: service_healthy}
+    environment:
+      DATABASE_URL: ecto://abuuba:${POSTGRES_PASSWORD}@db/abuuba
+      SECRET_KEY_BASE: ${SECRET_KEY_BASE:?set SECRET_KEY_BASE in .env}
+      CLOAK_KEY: ${CLOAK_KEY:?set CLOAK_KEY in .env}
+      PHX_HOST: ${PHX_HOST:?set PHX_HOST in .env}
+      LOCAL_DOMAIN: ${LOCAL_DOMAIN:-${PHX_HOST}}
+      PORT: "4000"
+      POOL_SIZE: ${POOL_SIZE:-10}
+      MEDIA_ROOT: /app/uploads
+      MAIL_FROM: ${MAIL_FROM:?set MAIL_FROM in .env}
+      MAIL_ADAPTER: ${MAIL_ADAPTER:-smtp}
+      SMTP_RELAY: ${SMTP_RELAY:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+    volumes:
+      # Uploads. Losing this volume loses every avatar, header and attachment
+      # this instance has ever served, including the ones remote servers have
+      # already linked to.
+      - uploads:/app/uploads
+    ports:
+      # On localhost, because the reverse proxy in front of it is on the same
+      # host. Change to "4000:4000" only if something else is doing TLS.
+      - "127.0.0.1:4000:4000"
+
+volumes:
+  db:
+  uploads:

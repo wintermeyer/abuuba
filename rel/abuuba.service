@@ -1,0 +1,67 @@
+# A systemd unit for running the release directly on a host, without Docker.
+#
+#   sudo cp rel/abuuba.service /etc/systemd/system/abuuba.service
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now abuuba
+#
+# Assumes the release is unpacked at /opt/abuuba and its configuration lives in
+# /etc/abuuba/abuuba.env, owned by root and readable only by root: that file holds
+# SECRET_KEY_BASE and CLOAK_KEY, and a world-readable copy of it is the whole
+# instance.
+
+[Unit]
+Description=abuuba
+Documentation=https://github.com/wintermeyer/abuuba
+# Wants rather than Requires for the network, and After for Postgres when it is
+# on the same host. abuuba retries a database that is not up yet, so ordering is
+# a courtesy rather than a dependency.
+Wants=network-online.target
+After=network-online.target postgresql.service
+
+[Service]
+Type=exec
+User=abuuba
+Group=abuuba
+WorkingDirectory=/opt/abuuba
+
+EnvironmentFile=/etc/abuuba/abuuba.env
+Environment=PHX_SERVER=true
+# Where `bin/abuuba` puts its own runtime files. Left to systemd rather than to
+# /tmp, so two instances on one host cannot collide and nothing important
+# lives in a directory somebody's cleaner empties.
+Environment=RELEASE_TMP=/run/abuuba
+RuntimeDirectory=abuuba
+
+ExecStart=/opt/abuuba/bin/abuuba start
+# A graceful stop: the node stops accepting and finishes what it is holding.
+# There is no ExecReload, because runtime.exs is read once at boot — a
+# configuration change is a restart, and calling it a reload would only hide
+# that.
+ExecStop=/opt/abuuba/bin/abuuba stop
+
+Restart=on-failure
+RestartSec=5
+# Long enough for connections to drain. The beam stops accepting immediately
+# and finishes what it is holding, and killing it early is what turns a restart
+# into a handful of 502s.
+TimeoutStopSec=30
+
+# Least privilege. None of these are exotic; they are the parts of the host a
+# fediverse server has no business touching, and a remote-content processor is
+# exactly the kind of program you want them on.
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictSUIDSGID=yes
+# The two places it does write: uploads, and its own runtime directory.
+ReadWritePaths=/var/lib/abuuba
+
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,17 @@
+<Layouts.app flash={@flash} current_scope={@current_scope} page_title={@page_title}>
+  <div class="mx-auto max-w-md p-4">
+    <h2 class="text-xl font-semibold">{gettext("Stop these emails")}</h2>
+
+    <p class="mt-2 text-base-content/70">
+      {gettext("This turns off %{kind}.", kind: kind_label(@kind))}
+    </p>
+
+    <p class="mt-2 text-sm text-base-content/60">
+      {gettext("Mail about your own account — password resets and the like — still comes.")}
+    </p>
+
+    <.form for={%{}} action={~p"/unsubscribe/#{@token}"} class="mt-6">
+      <button type="submit" class="btn btn-primary">{gettext("Turn them off")}</button>
+    </.form>
+  </div>
+</Layouts.app>

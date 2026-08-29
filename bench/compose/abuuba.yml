@@ -1,0 +1,72 @@
+# abuuba, as close to how somebody would actually run it as a benchmark can get.
+#
+# Out of the box: no tuning, no cache in front, the same Postgres image the
+# other side gets. The only thing set here that a real server would not set is
+# the secret, and that is because a benchmark that asked for one could not be
+# started with one command.
+name: abuuba-bench
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: abuuba
+      POSTGRES_PASSWORD: benchmark
+      POSTGRES_DB: abuuba_bench
+    # No volume. A benchmark starts from nothing every time, and a leftover
+    # database from the last run is the most boring way to get a wrong number.
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U abuuba"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+
+  abuuba:
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    depends_on:
+      db:
+        condition: service_healthy
+    # The seed script is not in the image, and should not be: it is benchmark
+    # scaffolding, not part of what anybody deploys. Mounted read-only instead,
+    # which also means editing a seeder does not mean rebuilding the release.
+    volumes:
+      - ../../bench:/app/bench:ro
+    # Migrating on start is wrong in production (see docs/deploy.md) and right
+    # here: one container, brought up and thrown away by a script.
+    command: ["sh", "-c", "/app/bin/abuuba eval 'Abuuba.Release.migrate()' && /app/bin/abuuba start"]
+    environment:
+      DATABASE_URL: ecto://abuuba:benchmark@db/abuuba_bench
+      SECRET_KEY_BASE: benchmark-only-secret-key-base-that-is-long-enough-for-phoenix-to-accept
+      CLOAK_KEY: 3Jnb0hZiHIzHTOih7t2cTEPEpY98Tu1wvA0yXCETFg0=
+      LOCAL_DOMAIN: localhost:4000
+      PHX_HOST: localhost
+      PORT: "4000"
+      PHX_SERVER: "true"
+      MEDIA_ROOT: /app/uploads
+      MAIL_FROM: noreply@localhost
+      MAIL_ADAPTER: local
+      MIX_ENV: prod
+    ports:
+      - "${BENCH_ABUUBA_PORT:-4000}:4000"
+    # An HTTP probe, because the other side gets one too. `bin/abuuba rpc` boots a
+    # whole second BEAM — on this host with no cgroup quota to read, one with a
+    # scheduler per core — connects, prints, and throws the VM away. Every three
+    # seconds, for the life of the container, inside the cgroup `docker stats`
+    # measures. Mastodon was probed with `wget --spider` over the same interval,
+    # so the idle-CPU row was comparing a VM boot against an HTTP GET: abuuba's
+    # five idle samples ran 0.6% to 86.8% while Mastodon's sat between 1.1% and
+    # 6.0%. bash's /dev/tcp rather than wget or curl, because neither is in the
+    # runtime image and the benchmark does not get to add packages to it.
+    healthcheck:
+      test:
+        - CMD
+        - bash
+        - -c
+        - "exec 3<>/dev/tcp/127.0.0.1/4000 && printf 'GET /health HTTP/1.1\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && head -1 <&3 | grep -q ' 200 '"
+      interval: 3s
+      timeout: 5s
+      retries: 40
