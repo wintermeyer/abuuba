@@ -10,15 +10,15 @@
 # hard-codes an architecture. See `.github/workflows/release.yml`.
 
 # The versions in .tool-versions, so the image builds what CI builds.
-ARG ELIXIR_VERSION=1.20.2
-ARG OTP_VERSION=29.0.4
+ARG ELIXIR_VERSION=1.20.4
+ARG OTP_VERSION=29.0.5
 # The date matters: hexpm publishes one Debian snapshot per Elixir/OTP pair,
 # so the combination is what has to exist rather than the Debian release on its
-# own. Not every snapshot is built for both architectures either — the trixie
-# one for this pair is arm64 only, which a multi-arch build discovers halfway
-# through. CI resolves both tags and both architectures on every pull request,
-# because nothing else does until `docker build` runs.
-ARG DEBIAN_VERSION=bookworm-20260713-slim
+# own. Not every snapshot is built for both architectures either, and a missing
+# one is what a multi-arch build discovers halfway through. CI resolves both
+# tags and both architectures on every pull request, because nothing else does
+# until `docker build` runs.
+ARG DEBIAN_VERSION=bookworm-20260824-slim
 
 ARG BUILDER_IMAGE="hexpm/elixir:${ELIXIR_VERSION}-erlang-${OTP_VERSION}-debian-${DEBIAN_VERSION}"
 ARG RUNNER_IMAGE="debian:${DEBIAN_VERSION}"
