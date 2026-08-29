@@ -89,7 +89,10 @@ defmodule Abuuba.Federation.Activity.Move do
 
   # Follow first, then unfollow. The other order leaves somebody following
   # nobody if the second step fails, and following both for a moment is a much
-  # smaller wrong than following neither.
+  # smaller wrong than following neither. Outright rather than asked: the
+  # follow was granted by the same person, on the account they moved from, and
+  # a locked target answers the `Follow` we send with an `Accept` or a `Reject`
+  # of its own.
   defp refollow(follower, origin, target) do
     Relationships.follow(follower, target)
     Relationships.unfollow(follower, origin)

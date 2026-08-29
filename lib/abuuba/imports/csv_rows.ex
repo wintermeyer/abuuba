@@ -72,7 +72,7 @@ defmodule Abuuba.Imports.CSVRows do
   @spec apply(atom(), map(), map()) :: :ok | {:error, atom()}
   def apply(:following, account, row) do
     with {:ok, target} <- lookup(row) do
-      relate(Relationships.follow(account, target, follow_options(row)))
+      relate(Relationships.follow_or_request(account, target, follow_options(row)))
     end
   end
 
@@ -111,7 +111,7 @@ defmodule Abuuba.Imports.CSVRows do
       # A list holds people somebody follows, so the follow comes first. An
       # exported list names accounts the old server knew they followed, and the
       # follow list may not have been imported yet — or at all.
-      Relationships.follow(account, target)
+      Relationships.follow_or_request(account, target)
 
       relate(Lists.add(list, [target.id]))
     else

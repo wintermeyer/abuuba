@@ -272,7 +272,9 @@ defmodule Abuuba.Accounts.Auth do
   defp first_user?, do: Repo.aggregate(User, :count) == 1
 
   # The point of an invite is usually that the two people already know each
-  # other, so a new account arrives with somebody to read.
+  # other, so a new account arrives with somebody to read. Outright even for an
+  # account that approves its followers: whoever turned this on for their own
+  # invite has already said yes to whoever redeems it.
   defp autofollow(_account, nil), do: :ok
   defp autofollow(_account, %{autofollow: false}), do: :ok
 

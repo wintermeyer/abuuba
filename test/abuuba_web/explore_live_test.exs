@@ -151,6 +151,27 @@ defmodule AbuubaWeb.ExploreLiveTest do
       assert Abuuba.Relationships.following?(reader, author)
     end
 
+    test "somebody who approves their followers is asked, not followed", %{
+      signed_in: conn,
+      author: author,
+      reader: reader
+    } do
+      {:ok, locked} = Accounts.update_account(author, %{locked: true})
+
+      {:ok, live, _html} = live(conn, ~p"/explore/people")
+
+      html =
+        live
+        |> element("button[phx-value-account='#{locked.id}'][phx-click='follow']")
+        |> render_click()
+
+      refute Abuuba.Relationships.following?(reader, locked),
+             "the card followed a locked account outright instead of asking it"
+
+      assert Abuuba.Relationships.get_follow_request(reader, locked)
+      assert html =~ "Requested"
+    end
+
     test "a passer-by is offered nothing to press", %{conn: conn} do
       html = conn |> get(~p"/explore/people") |> html_response(200)
 

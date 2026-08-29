@@ -400,6 +400,47 @@ defmodule AbuubaWeb.API.AccountControllerTest do
       assert body["requested"]
     end
 
+    test "asking a locked account twice is one request", %{conn: conn} do
+      locked = account_fixture(%{username: "dora", locked: true})
+
+      post(conn, "/api/v1/accounts/#{locked.id}/follow")
+      body = json_response(post(conn, "/api/v1/accounts/#{locked.id}/follow"), 200)
+
+      assert body["requested"]
+    end
+
+    # A follow already granted is changed by a repeat follow, on a locked
+    # account like on any other. Asking again would leave a request pending
+    # beside a follow that is already in place.
+    test "setting the options on a follow a locked account granted", %{
+      conn: conn,
+      account: account
+    } do
+      locked = account_fixture(%{username: "elke", locked: true})
+      {:ok, request} = Relationships.request_follow(account, locked)
+      {:ok, _follow} = Relationships.accept_follow_request(request)
+
+      body =
+        json_response(
+          post(conn, "/api/v1/accounts/#{locked.id}/follow", %{"reblogs" => false}),
+          200
+        )
+
+      assert body["following"]
+      refute body["requested"]
+      refute body["showing_reblogs"]
+    end
+
+    test "unfollowing withdraws a request nobody has answered", %{conn: conn, account: account} do
+      locked = account_fixture(%{username: "frida", locked: true})
+      post(conn, "/api/v1/accounts/#{locked.id}/follow")
+
+      body = json_response(post(conn, "/api/v1/accounts/#{locked.id}/unfollow"), 200)
+
+      refute body["requested"]
+      assert Relationships.get_follow_request(account, locked) == nil
+    end
+
     test "carrying the per-follow options", %{conn: conn, other: other} do
       body =
         json_response(

@@ -37,8 +37,9 @@ defmodule Abuuba.Relationships do
   ## Following
 
   @doc """
-  Follows an account outright. For an account that approves its followers
-  manually, use `request_follow/3`.
+  Follows an account outright, whatever that account asked for. Anything a
+  person presses goes through `follow_or_request/3` instead, which asks an
+  account that approves its followers rather than following it.
 
   Refused if either account has blocked the other: a follow that a block would
   immediately have to undo should never come into being.
@@ -137,6 +138,11 @@ defmodule Abuuba.Relationships do
       delete_edge(Endorsement, follower_id, target_id)
     end
 
+    # A request nobody has answered yet is the follow until they answer it, so
+    # whatever stops a follow stops this too. Without it, somebody who asked an
+    # account that never answers has no way out of waiting.
+    withdraw_request(follower_id, target_id)
+
     :ok
   end
 
@@ -171,6 +177,56 @@ defmodule Abuuba.Relationships do
           :ok
       end)
     end
+  end
+
+  @doc """
+  Follows an account, or asks it, whichever that account has said it wants.
+
+  The one door behind every "Follow" a person presses -- the profile, the
+  explore list, the API, a follow list being imported -- so that an account
+  which approves its followers is asked wherever the button is drawn, and not
+  only where somebody remembered to check. `follow/3` stays the way in for the
+  paths that mean an outright follow: a move carrying followers to a new
+  account, an invite whose owner asked for them.
+  """
+  @spec follow_or_request(Account.t(), Account.t(), map()) ::
+          {:ok, Follow.t() | FollowRequest.t()} | {:error, :blocked | Ecto.Changeset.t()}
+  def follow_or_request(follower, target, attrs \\ %{})
+
+  def follow_or_request(%Account{} = follower, %Account{} = target, attrs) do
+    # A follow already granted is changed by a repeat follow, on an account
+    # that approves its followers like on any other: somebody who locked their
+    # account afterwards has answered for the people already following them,
+    # and a fresh request would sit beside a follow that is already in place.
+    if approves_followers?(target) and not following?(follower, target) do
+      ask_to_follow(follower, target, attrs)
+    else
+      follow(follower, target, attrs)
+    end
+  end
+
+  # Asking twice is one request rather than an error: the second press carries
+  # whatever changed, the same way a repeat follow does.
+  defp ask_to_follow(follower, target, attrs) do
+    case get_follow_request(follower, target) do
+      nil ->
+        request_follow(follower, target, attrs)
+
+      pending ->
+        pending
+        |> FollowRequest.changeset(edge_attrs(attrs, follower.id, target.id))
+        |> Repo.update()
+    end
+  end
+
+  # Read from the row, not from the copy the caller is holding: a profile open
+  # in a browser was built when the page loaded, and what decides this is
+  # whether the account approves its followers at the moment of the press.
+  defp approves_followers?(%Account{id: id}) do
+    Account
+    |> where([a], a.id == ^id)
+    |> select([a], a.locked)
+    |> Repo.one()
   end
 
   @doc """
@@ -399,6 +455,19 @@ defmodule Abuuba.Relationships do
   end
 
   @doc """
+  The ids of the accounts an account has asked to follow and is waiting on.
+  """
+  @spec requested_ids(Account.t() | integer()) :: [integer()]
+  def requested_ids(%Account{id: id}), do: requested_ids(id)
+
+  def requested_ids(account_id) do
+    FollowRequest
+    |> where([r], r.account_id == ^account_id)
+    |> select([r], r.target_account_id)
+    |> Repo.all()
+  end
+
+  @doc """
   The ids of an account's followers.
   """
   @spec follower_ids(Account.t() | integer()) :: [integer()]
@@ -459,12 +528,11 @@ defmodule Abuuba.Relationships do
       |> Repo.insert()
 
     with {:ok, block} <- result do
-      # Both directions. A block that left the blocked account still following
-      # would have the API report "blocking" and "followed_by" at once.
+      # Both directions, and `unfollow/2` takes the unanswered requests with
+      # it. A block that left the blocked account still following would have
+      # the API report "blocking" and "followed_by" at once.
       unfollow(blocker_id, target_id)
       unfollow(target_id, blocker_id)
-      withdraw_request(blocker_id, target_id)
-      withdraw_request(target_id, blocker_id)
 
       # Both feeds, not only the blocker's: a block means neither of them is
       # reading the other, and `unfollow/2` above only clears one side when
@@ -811,8 +879,23 @@ defmodule Abuuba.Relationships do
     :ok
   end
 
-  defp withdraw_request(account_id, target_id),
-    do: delete_edge(FollowRequest, account_id, target_id)
+  # Wherever a request stops being one without being answered: the asker took
+  # it back, or a block tore it down. The `Undo` matters as much as the row,
+  # because the other server is holding a pending request of its own and
+  # nothing else tells it the question was withdrawn.
+  defp withdraw_request(account_id, target_id) do
+    case get_edge(FollowRequest, account_id, target_id) do
+      nil ->
+        :ok
+
+      request ->
+        Repo.delete(request)
+        forget_request(request)
+        Outbox.unfollowed(request)
+
+        :ok
+    end
+  end
 
   defp blocked_either_way?(account_id, target_id) do
     Block

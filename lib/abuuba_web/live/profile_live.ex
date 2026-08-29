@@ -138,12 +138,21 @@ defmodule AbuubaWeb.ProfileLive do
 
         <div :if={@actionable?} class="mt-4 flex flex-wrap items-center gap-2">
           <button
-            :if={!@relationship.following}
+            :if={!@relationship.following and not @relationship.requested}
             type="button"
             phx-click="follow"
             class="btn btn-primary btn-sm"
           >
             {gettext("Follow")}
+          </button>
+
+          <button
+            :if={@relationship.requested}
+            type="button"
+            phx-click="unfollow"
+            class="btn btn-sm"
+          >
+            {gettext("Cancel follow request")}
           </button>
 
           <button
@@ -402,7 +411,9 @@ defmodule AbuubaWeb.ProfileLive do
   def handle_event("follow", _params, socket) do
     case Relationships.take_follow_budget(socket.assigns.viewer) do
       :ok ->
-        act(socket, &Relationships.follow/2)
+        {:noreply, socket} = act(socket, &Relationships.follow_or_request/2)
+
+        {:noreply, explain_request(socket)}
 
       {:error, :rate_limited} ->
         {:noreply, put_flash(socket, :error, follow_limit_message())}
@@ -584,6 +595,19 @@ defmodule AbuubaWeb.ProfileLive do
   defp follow_limit_message do
     gettext("Too many follows today. Try again tomorrow.")
   end
+
+  # The button turning into "Cancel follow request" is the whole answer for
+  # anybody who knew the account was locked. For everybody else, pressing
+  # Follow and not following is a surprise that needs a sentence.
+  defp explain_request(%{assigns: %{relationship: %{requested: true}}} = socket) do
+    put_flash(
+      socket,
+      :info,
+      gettext("This account approves its followers. Your request is waiting for an answer.")
+    )
+  end
+
+  defp explain_request(socket), do: socket
 
   defp act(socket, fun) do
     if socket.assigns.actionable? do
@@ -789,6 +813,7 @@ defmodule AbuubaWeb.ProfileLive do
   defp relationship(nil, _subject),
     do: %{
       following: false,
+      requested: false,
       muting: false,
       blocking: false,
       endorsed: false,
@@ -802,6 +827,10 @@ defmodule AbuubaWeb.ProfileLive do
 
     %{
       following: follow != nil,
+      # An account that approves its followers leaves the button waiting on
+      # somebody else, and a button that says nothing about that reads as one
+      # that did not work.
+      requested: follow == nil and Relationships.get_follow_request(viewer, subject) != nil,
       muting: Relationships.muting?(viewer, subject),
       blocking: Relationships.blocking?(viewer, subject),
       endorsed: Relationships.endorsed?(viewer, subject),

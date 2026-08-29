@@ -450,6 +450,44 @@ defmodule AbuubaWeb.ProfileLiveTest do
     end
   end
 
+  describe "following somebody who approves their followers" do
+    setup %{subject: subject} do
+      {:ok, locked} = Accounts.update_account(subject, %{locked: true})
+
+      %{subject: locked}
+    end
+
+    test "asks rather than follows", %{signed_in: conn, subject: subject, reader: reader} do
+      {:ok, live, _html} = live(conn, "/@bob")
+
+      html = live |> element("button[phx-click='follow']") |> render_click()
+
+      refute Relationships.following?(reader, subject),
+             "the button followed a locked account outright instead of asking it"
+
+      assert Relationships.get_follow_request(reader, subject)
+      assert html =~ "approves"
+    end
+
+    test "says the request is waiting, and offers a way out of waiting", %{
+      signed_in: conn,
+      subject: subject,
+      reader: reader
+    } do
+      {:ok, _request} = Relationships.request_follow(reader, subject)
+
+      {:ok, live, html} = live(conn, "/@bob")
+
+      refute html =~ ~s(phx-click="follow")
+      assert html =~ "Cancel follow request"
+
+      live |> element("button[phx-click='unfollow']") |> render_click()
+
+      assert Relationships.get_follow_request(reader, subject) == nil
+      assert render(live) =~ ~s(phx-click="follow")
+    end
+  end
+
   describe "acting on somebody" do
     test "following and unfollowing", %{signed_in: conn, subject: subject, reader: reader} do
       {:ok, live, _html} = live(conn, "/@bob")
@@ -459,6 +497,23 @@ defmodule AbuubaWeb.ProfileLiveTest do
 
       live |> element("button[phx-click='unfollow']") |> render_click()
       refute Relationships.following?(reader, subject)
+    end
+
+    # The page holds the profile it was built from, and that copy is as old as
+    # the tab. What decides whether to ask is the account as it stands at the
+    # moment of the press, not as it stood when somebody opened the page.
+    test "somebody who locks their account while the page is open is asked", %{
+      signed_in: conn,
+      subject: subject,
+      reader: reader
+    } do
+      {:ok, live, _html} = live(conn, "/@bob")
+      {:ok, subject} = Accounts.update_account(subject, %{locked: true})
+
+      live |> element("button[phx-click='follow']") |> render_click()
+
+      refute Relationships.following?(reader, subject)
+      assert Relationships.get_follow_request(reader, subject)
     end
 
     test "blocking", %{signed_in: conn, subject: subject, reader: reader} do

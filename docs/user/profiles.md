@@ -82,6 +82,11 @@ full of the person they just blocked.
 Blocking somebody also hides your posts from them, including the direct link to
 a post's page.
 
+Some people approve their followers by hand. Following one of them sends a
+request instead, and the button becomes **Cancel follow request** until they
+answer. Press it to take the request back; nothing of theirs reaches you while
+you are waiting.
+
 ## Reading from the keyboard
 
 `j` and `k` move between posts on any page that lists them, and the post you
