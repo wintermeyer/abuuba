@@ -2224,7 +2224,19 @@ defmodule AbuubaWeb.SettingsLive do
 
   defp picture_url(account, kind), do: ProfileImages.url(account, kind)
 
-  defp human_bytes(bytes), do: "#{div(bytes, 1024 * 1024)} MB"
+  # Megabytes, through the formatter and with the unit translated. Integer
+  # division would render a 4.7 MB limit as "4 MB", which is a smaller number
+  # than the one the upload actually refuses at, and a bare interpolation
+  # would show a German reader "4.7" where they read "4,7".
+  defp human_bytes(bytes) do
+    case Float.round(bytes / (1024 * 1024), 1) do
+      whole when whole == trunc(whole) ->
+        gettext("%{size} MB", size: Formats.number(trunc(whole)))
+
+      fraction ->
+        gettext("%{size} MB", size: Formats.number(fraction))
+    end
+  end
 
   defp export_label("follows"), do: gettext("Follows")
   defp export_label("blocks"), do: gettext("Blocks")

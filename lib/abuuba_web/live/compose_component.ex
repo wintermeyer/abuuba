@@ -57,6 +57,7 @@ defmodule AbuubaWeb.ComposeComponent do
   alias Abuuba.Search
   alias Abuuba.Statuses
   alias Abuuba.Statuses.Formatter
+  alias Abuuba.Statuses.Poll
   alias Abuuba.Statuses.ScheduledStatus
   alias Abuuba.Statuses.Status
   alias AbuubaWeb.Formats
@@ -82,20 +83,6 @@ defmodule AbuubaWeb.ComposeComponent do
     {"한국어", "ko"},
     {"العربية", "ar"}
   ]
-
-  # Mastodon's ladder, which is what other servers and clients expect to see.
-  @poll_durations [
-    {300, "5 minutes"},
-    {1800, "30 minutes"},
-    {3600, "1 hour"},
-    {21_600, "6 hours"},
-    {86_400, "1 day"},
-    {259_200, "3 days"},
-    {604_800, "7 days"}
-  ]
-
-  @max_poll_options 4
-  @max_option_characters 50
 
   # Long enough that a sentence is one write rather than twenty, short enough
   # that a closed tab loses a few words rather than a paragraph.
@@ -623,7 +610,7 @@ defmodule AbuubaWeb.ComposeComponent do
               type="text"
               name="draft[poll_options][]"
               value={option}
-              maxlength={@max_option_characters}
+              maxlength={Poll.max_option_characters()}
               placeholder={gettext("Choice %{number}", number: index + 1)}
               class="input input-sm w-full"
             />
@@ -642,7 +629,7 @@ defmodule AbuubaWeb.ComposeComponent do
 
           <div class="flex flex-wrap items-center gap-3">
             <button
-              :if={length(@draft["poll_options"]) < @max_poll_options}
+              :if={length(@draft["poll_options"]) < Poll.max_options()}
               type="button"
               phx-click="poll_option_add"
               phx-target={@myself}
@@ -948,8 +935,6 @@ defmodule AbuubaWeb.ComposeComponent do
     end
   end
 
-  def handle_event("upload_validate", _params, socket), do: {:noreply, socket}
-
   def handle_event("upload_cancel", %{"ref" => ref}, socket) do
     {:noreply, cancel_upload(socket, :media, ref)}
   end
@@ -1057,7 +1042,7 @@ defmodule AbuubaWeb.ComposeComponent do
   def handle_event("poll_option_add", _params, socket) do
     options = socket.assigns.draft["poll_options"]
 
-    if length(options) < @max_poll_options do
+    if length(options) < Poll.max_options() do
       {:noreply, put(socket, "poll_options", options ++ [""])}
     else
       {:noreply, socket}
@@ -1158,7 +1143,7 @@ defmodule AbuubaWeb.ComposeComponent do
       Enum.any?(options, &too_long?/1) ->
         {:error,
          gettext("A poll choice is too long. Keep each under %{count} characters.",
-           count: @max_option_characters
+           count: Poll.max_option_characters()
          )}
 
       length(Enum.uniq(options)) != length(options) ->
@@ -1470,9 +1455,7 @@ defmodule AbuubaWeb.ComposeComponent do
       remaining: Instance.max_characters() - length_of(draft),
       mentions: reply_chips(socket.assigns),
       token: token,
-      suggestions: suggestions,
-      max_poll_options: @max_poll_options,
-      max_option_characters: @max_option_characters
+      suggestions: suggestions
     )
   end
 
@@ -1491,7 +1474,7 @@ defmodule AbuubaWeb.ComposeComponent do
   defp warning(%{"warn" => true} = draft), do: String.trim(draft["spoiler_text"])
   defp warning(_draft), do: ""
 
-  defp too_long?(option), do: String.length(option) > @max_option_characters
+  defp too_long?(option), do: String.length(option) > Poll.max_option_characters()
 
   defp usable_options(draft) do
     draft["poll_options"] |> Enum.map(&String.trim/1) |> Enum.reject(&(&1 == ""))
@@ -1670,16 +1653,20 @@ defmodule AbuubaWeb.ComposeComponent do
 
   defp languages, do: @languages
 
+  # Mastodon's ladder, which is what other servers and clients expect to see.
+  # Written once, translated where it is written: the list used to be an
+  # attribute of English labels that this threw away and replaced clause by
+  # clause, so an eighth rung added above raised inside `render/1`.
   defp poll_durations do
-    Enum.map(@poll_durations, fn
-      {300, _} -> {300, gettext("5 minutes")}
-      {1800, _} -> {1800, gettext("30 minutes")}
-      {3600, _} -> {3600, gettext("1 hour")}
-      {21_600, _} -> {21_600, gettext("6 hours")}
-      {86_400, _} -> {86_400, gettext("1 day")}
-      {259_200, _} -> {259_200, gettext("3 days")}
-      {604_800, _} -> {604_800, gettext("7 days")}
-    end)
+    [
+      {300, gettext("5 minutes")},
+      {1800, gettext("30 minutes")},
+      {3600, gettext("1 hour")},
+      {21_600, gettext("6 hours")},
+      {86_400, gettext("1 day")},
+      {259_200, gettext("3 days")},
+      {604_800, gettext("7 days")}
+    ]
   end
 
   defp visibilities do
