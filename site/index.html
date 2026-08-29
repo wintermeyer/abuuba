@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>abuuba – a fediverse server that cares about performance</title>
-<meta name="description" content="abuuba is a fediverse server written in Elixir and Phoenix. It speaks the complete Mastodon client API and answers twelve to sixty-eight times faster than Mastodon on the same hardware.">
+<meta name="description" content="abuuba is a fediverse server written in Elixir and Phoenix. It does what Mastodon does, answers all 289 endpoints of the Mastodon client API, and can take over an existing instance. Twelve to sixty-eight times faster on the same hardware.">
 <meta property="og:title" content="abuuba">
-<meta property="og:description" content="A fediverse server written in Elixir and Phoenix, twelve to sixty-eight times faster than Mastodon on the same box.">
+<meta property="og:description" content="A fediverse server written in Elixir and Phoenix. It does what Mastodon does, takes over an existing instance, and runs twelve to sixty-eight times faster on the same box.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://abuuba.com/">
 <link rel="canonical" href="https://abuuba.com/">
@@ -37,7 +37,7 @@
       <div class="hero-grid">
         <div>
           <h1>The cheetah that outran the mastodon.</h1>
-          <p class="lede">abuuba is a fediverse server written in <a href="https://elixir-lang.org">Elixir</a> and <a href="https://www.phoenixframework.org">Phoenix</a>. It speaks <a href="https://joinmastodon.org">Mastodon</a>'s protocols: ActivityPub for federation and the complete Mastodon client API, all 289 endpoints, so existing apps work unchanged. It exists for one reason: <strong>Mastodon is too slow.</strong></p>
+          <p class="lede">abuuba is a fediverse server written in <a href="https://elixir-lang.org">Elixir</a> and <a href="https://www.phoenixframework.org">Phoenix</a>. It speaks <a href="https://joinmastodon.org">Mastodon</a>'s protocols: ActivityPub for federation and the complete Mastodon client API, all 289 endpoints, so existing apps work unchanged. It does what a Mastodon instance does, which means it can replace one, keeping the domain, the accounts and the posts. It exists for one reason: <strong>Mastodon is too slow.</strong></p>
         </div>
         <div class="giant" aria-live="polite">
           <span class="giant-num" id="giant-num">68<span class="times">×</span></span>
@@ -85,7 +85,7 @@
   <section class="band">
     <div class="wrap reveal">
       <h2>The same story, told in <em>JavaScript</em>.</h2>
-      <p>abuuba has no client application. LiveView renders on the server and sends diffs down a websocket, so the browser applies patches instead of keeping its own copy of the timeline. No <code>package.json</code>, no <code>node_modules</code>, no lockfile.</p>
+      <p>Open Mastodon in a browser and it hands you a second program to run: the JavaScript that fetches the timeline and draws it on your screen. abuuba has no such program. The server builds every page, and as posts arrive it sends the browser only the parts that changed. That is what LiveView does, the piece of Phoenix abuuba is built on, and it is why there is no <code>package.json</code>, no <code>node_modules</code>, no lockfile.</p>
       <div class="pair">
         <div class="big a"><span class="n num">364</span><span class="l"><b>abuuba</b> · lines of JavaScript · 0 npm dependencies</span></div>
         <div class="big"><span class="n num">97,209</span><span class="l"><b>Mastodon</b> · lines of JavaScript · 1,428 lockfile entries</span></div>
@@ -136,7 +136,31 @@
 
   <section class="band">
     <div class="wrap reveal">
-      <h2>Not here to replace Mastodon. <em>To push it.</em></h2>
+      <h2>Everything Mastodon does. <em>Then the speed.</em></h2>
+      <p>abuuba is a replacement, not a companion. Nobody has to give anything up to move.</p>
+      <ul class="nots">
+        <li><b>The whole client API.</b> All 289 endpoints Mastodon declares under <code>/api/v1</code> and <code>/api/v2</code> are answered here, and a test fails the build the day one stops being answered. An app pointed at this server cannot tell which one it is talking to, lists and all.</li>
+        <li><b>The features around it.</b> Polls, content warnings, scheduled posts, keyword filters, direct messages, two-step sign-in, CSV and archive import and export, and moving an account to another server with the aliases that make a move work. The admin area too: reports, appeals, roles, relays, domain blocks, webhooks, announcements, custom emoji, trends, an audit log.</li>
+        <li><b>The behaviour between servers.</b> A checklist cannot prove federation, so 32 scenarios drive follows, boosts, replies, edits, deletes, polls, quotes, media, reports and account moves against real Mastodon 4.4.7 and GoToSocial 0.19.1 containers, every night.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="band">
+    <div class="wrap reveal">
+      <h2>Already running Mastodon? <em>Take the server over.</em></h2>
+      <p>Nothing has to be rebuilt. A Mastodon instance becomes an abuuba instance in place, keeping the domain it already has. That domain is the one thing a takeover cannot change: every post URL and every signature the old server published names it. <strong>Everything else moves.</strong> Accounts keep their passwords, posts keep their permalinks, followers stay followers, and the app on somebody's phone stays signed in, because the token it holds comes across too. Media, lists, filters, blocks and the whole moderation history follow.</p>
+      <p>The importer is a dry run by default. It reads the old database, checks everything that has to be true, counts what would move, and writes nothing. A run that gets interrupted continues where it stopped, and afterwards <code>--verify</code> asks the old server, while it is still up, whether every post arrived and every key still signs.</p>
+<pre>mix abuuba.import           <i># a dry run, and the default</i>
+mix abuuba.import --execute <i># do it</i>
+mix abuuba.import --verify  <i># check it afterwards</i></pre>
+      <p class="caption">What moves, what is deliberately left behind, and the two things not carried yet: <a href="https://github.com/wintermeyer/abuuba/blob/main/docs/admin/importing-from-mastodon.md">Taking over a Mastodon instance</a>.</p>
+    </div>
+  </section>
+
+  <section class="band">
+    <div class="wrap reveal">
+      <h2>Not here to kill Mastodon. <em>To push it.</em></h2>
       <blockquote class="quote">
         <p>This is the <a href="https://nginx.org">nginx</a> and <a href="https://httpd.apache.org">Apache</a> story. Apache was good software and still is; nginx turned up because a different shape of load arrived and an architecture built for the older one could not bend that far. The part worth remembering is what happened next: nginx did not kill Apache, it made Apache faster and better.</p>
         <p>That is what I hope abuuba does for Mastodon. If a server twelve times quicker on the same hardware pushes Mastodon to close that gap, the fediverse wins twice, and I will count that as the best thing this project ever did.</p>

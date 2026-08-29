@@ -54,7 +54,7 @@
       </div>
       <div class="copyblock">
         <h3>A paragraph</h3>
-        <p>abuuba is a fediverse server written in Elixir and Phoenix, published under the MIT licence by Stefan Wintermeyer in Koblenz. It federates over ActivityPub and answers all 289 endpoints of the Mastodon client API, so existing Mastodon apps work against it unchanged. It exists because Mastodon is slow: measured on one machine against Mastodon 4.4.7, abuuba serves the home timeline 12 times faster at the median and fans a post out to 10,000 followers 68 times faster. It runs as one application process next to one Postgres database, with no Redis, no worker process and no JavaScript build.</p>
+        <p>abuuba is a fediverse server written in Elixir and Phoenix, published under the MIT licence by Stefan Wintermeyer in Koblenz. It federates over ActivityPub and answers all 289 endpoints of the Mastodon client API, so existing Mastodon apps work against it unchanged. It exists because Mastodon is slow: measured on one machine against Mastodon 4.4.7, abuuba serves the home timeline 12 times faster at the median and fans a post out to 10,000 followers 68 times faster. It runs as one application process next to one Postgres database, with no Redis, no worker process and no JavaScript build. An existing Mastodon instance can be taken over in place, on its own domain, with its accounts, posts, follows and moderation history.</p>
       </div>
       <div class="copyblock" lang="de">
         <h3>Ein Satz</h3>
@@ -83,6 +83,7 @@
         <dl>
           <dt>Client API</dt><dd>All 289 endpoints Mastodon 4.6 declares under <code>/api/v1</code> and <code>/api/v2</code></dd>
           <dt>Federation</dt><dd>Tested against Mastodon 4.4.7 and GoToSocial 0.19.1 in Docker, 32 scenarios</dd>
+          <dt>Migration</dt><dd>Takes over a Mastodon instance in place, on the same domain, with <code>mix abuuba.import</code></dd>
           <dt>Size</dt><dd>About 84,000 lines of application code, 4,347 tests, 364 lines of JavaScript, no npm dependencies</dd>
           <dt>Author</dt><dd>Stefan Wintermeyer, Koblenz, Germany</dd>
           <dt>Source</dt><dd><a href="https://github.com/wintermeyer/abuuba">github.com/wintermeyer/abuuba</a></dd>
@@ -122,7 +123,7 @@
         <li><b>Not a Mastodon fork.</b> No line of Mastodon's code is in it. Mastodon is AGPL, abuuba is MIT; what the two share is the protocols, which are written down in public.</li>
         <li><b>Not a hosted service.</b> There is no abuuba.com sign-up. It is software you install on your own server.</li>
         <li><b>Not a company product.</b> One person wrote it, as a side project of <a href="https://vutuv.de">vutuv</a>.</li>
-        <li><b>Not a bid to replace Mastodon.</b> The hope is the nginx effect: nginx did not kill Apache, it made Apache faster.</li>
+        <li><b>Not a bid to kill Mastodon.</b> An instance can be replaced by one of these, domain and accounts and posts intact, if its admin wants that. The hope is still the nginx effect: nginx did not kill Apache, it made Apache faster.</li>
       </ul>
     </div>
   </section>
