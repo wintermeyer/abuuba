@@ -33,6 +33,7 @@ defmodule AbuubaWeb.ExploreLive do
   alias Abuuba.Relationships
   alias Abuuba.Settings
   alias Abuuba.Statuses
+  alias Abuuba.Statuses.Formatter
   alias Abuuba.Trends
   alias AbuubaWeb.API.Entities
   alias AbuubaWeb.Meta
@@ -95,10 +96,10 @@ defmodule AbuubaWeb.ExploreLive do
       <ul :if={@tab == :people} class="divide-y divide-base-300">
         <li :for={person <- @people} class="flex items-center gap-3 p-4">
           <div class="min-w-0 flex-1">
-            <a href={"/@" <> person.username} class="font-semibold">{display_name(person)}</a>
+            <a href={"/@" <> person.username} class="font-semibold">{Account.display_name(person)}</a>
             <p class="text-sm text-base-content/60">@{Account.acct(person)}</p>
             <p :if={person.note not in [nil, ""]} class="mt-1 text-sm break-words">
-              {summary(person.note)}
+              {Formatter.plain_text(person.note, limit: 160)}
             </p>
           </div>
 
@@ -258,21 +259,6 @@ defmodule AbuubaWeb.ExploreLive do
   # The same address a hashtag inside a post links to, so the two cannot point
   # at different places.
   defp tag_path(tag), do: "/tags/#{tag.name}"
-
-  defp summary(note) do
-    note
-    |> to_string()
-    |> String.replace(~r/<[^>]*>/, " ")
-    |> String.replace(~r/\s+/u, " ")
-    |> String.trim()
-    |> String.slice(0, 160)
-  end
-
-  defp display_name(%Account{display_name: name}) when is_binary(name) and name != "", do: name
-  defp display_name(%Account{username: username}), do: username
-
-  defp viewer_id(nil), do: nil
-  defp viewer_id(viewer), do: to_string(viewer.id)
 
   defp numeric(value) when is_binary(value) do
     case Integer.parse(value) do

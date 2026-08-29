@@ -131,7 +131,4 @@ defmodule AbuubaWeb.TagLive do
   defp following?(nil, _tag), do: false
   defp following?(_viewer, nil), do: false
   defp following?(viewer, tag), do: Statuses.following_tag?(viewer, tag)
-
-  defp viewer_id(nil), do: nil
-  defp viewer_id(viewer), do: to_string(viewer.id)
 end

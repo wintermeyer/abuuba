@@ -330,7 +330,7 @@ defmodule AbuubaWeb.HomeLive do
   # Same shared path as everywhere else; a stream takes the rendered post
   # directly, so the translated words go straight back in place.
   def handle_event("translate", %{"id" => id}, socket) do
-    case PostActions.translate(socket.assigns.account, id, translation_locale(socket)) do
+    case PostActions.translate(socket.assigns.account, id, PostActions.locale(socket)) do
       {:ok, rendered} ->
         {:noreply, stream_insert(socket, :statuses, rendered)}
 
@@ -384,7 +384,4 @@ defmodule AbuubaWeb.HomeLive do
 
   defp newest_id([]), do: nil
   defp newest_id(statuses), do: statuses |> Enum.map(& &1.id) |> Enum.max()
-
-  defp translation_locale(socket),
-    do: socket.assigns[:locale] || Gettext.get_locale(AbuubaWeb.Gettext)
 end

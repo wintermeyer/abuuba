@@ -217,7 +217,4 @@ defmodule AbuubaWeb.SearchLive do
   defp operator_hint("before:"), do: gettext("posts older than a date")
   defp operator_hint("after:"), do: gettext("posts newer than a date")
   defp operator_hint(name), do: name
-
-  defp viewer_id(nil), do: nil
-  defp viewer_id(viewer), do: to_string(viewer.id)
 end

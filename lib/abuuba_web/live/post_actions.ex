@@ -305,9 +305,16 @@ defmodule AbuubaWeb.PostActions do
     put_back.(socket, Entities.status(status, socket.assigns.viewer))
   end
 
-  # The reader's own language where the hook has one, and the request's
-  # otherwise. Was a private one-liner in five screens.
-  defp locale(socket) do
+  @doc """
+  The language to translate into for this reader.
+
+  Their own where the locale hook has set one, and the request's otherwise.
+  Public because the two screens with a composer answer `translate` themselves
+  and still have to pick the same target; it was a private one-liner in six
+  screens, one of which had drifted to a different name.
+  """
+  @spec locale(Phoenix.LiveView.Socket.t()) :: String.t()
+  def locale(socket) do
     socket.assigns[:locale] || Gettext.get_locale(AbuubaWeb.Gettext)
   end
 end

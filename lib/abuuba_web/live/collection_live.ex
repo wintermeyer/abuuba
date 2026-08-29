@@ -105,11 +105,8 @@ defmodule AbuubaWeb.CollectionLive do
     items
     |> Enum.map(&Map.get(accounts, &1.account_id))
     |> Enum.reject(&(&1 == nil or &1.suspended_at != nil))
-    |> Enum.map(&%{account: &1, note_html: note_html(&1)})
+    |> Enum.map(&%{account: &1, note_html: Formatter.note_html(&1)})
   end
-
-  defp note_html(%Account{domain: nil, note: note}), do: Formatter.to_html(note)
-  defp note_html(%Account{note: note}), do: Formatter.sanitize(note)
 
   defp put_meta(socket, collection, owner) do
     summary =

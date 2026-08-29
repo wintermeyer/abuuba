@@ -109,7 +109,7 @@ defmodule AbuubaWeb.ProfileLive do
           alt=""
           class="mb-3 size-20 rounded bg-base-300 object-cover"
         />
-        <h1 class="text-2xl font-semibold">{display_name(@subject)}</h1>
+        <h1 class="text-2xl font-semibold">{Account.display_name(@subject)}</h1>
         <p class="text-base-content/60">@{Account.acct(@subject)}</p>
 
         <div :if={@subject.note not in [nil, ""]} class="mt-3 break-words">
@@ -271,7 +271,7 @@ defmodule AbuubaWeb.ProfileLive do
         >
           <label class="block">
             <span class="font-medium">
-              {gettext("Get updates from %{name} by email", name: display_name(@subject))}
+              {gettext("Get updates from %{name} by email", name: Account.display_name(@subject))}
             </span>
             <span class="mt-1 block text-sm text-base-content/60">
               {gettext(
@@ -335,7 +335,7 @@ defmodule AbuubaWeb.ProfileLive do
                 alt=""
                 class="size-6 rounded"
               />
-              <span class="font-medium">{display_name(person)}</span>
+              <span class="font-medium">{Account.display_name(person)}</span>
               <span class="text-sm text-base-content/60">@{Account.acct(person)}</span>
             </.link>
           </li>
@@ -383,7 +383,7 @@ defmodule AbuubaWeb.ProfileLive do
           <img :if={avatar_url(person) != ""} src={avatar_url(person)} alt="" class="size-10 rounded" />
           <span class="min-w-0 flex-1">
             <.link navigate={~p"/@#{Account.acct(person)}"} class="font-medium">
-              {display_name(person)}
+              {Account.display_name(person)}
             </.link>
             <span class="block truncate text-sm text-base-content/60">@{Account.acct(person)}</span>
           </span>
@@ -582,8 +582,8 @@ defmodule AbuubaWeb.ProfileLive do
 
     socket
     |> assign(
-      page_title: display_name(subject),
-      note_html: note_html(subject),
+      page_title: Account.display_name(subject),
+      note_html: Formatter.note_html(subject),
       fields: rendered["fields"] || [],
       featured_tags: Statuses.featured_tag_names(subject),
       moved_to: moved_to(subject),
@@ -706,13 +706,7 @@ defmodule AbuubaWeb.ProfileLive do
   defp put_meta(socket) do
     subject = socket.assigns.subject
 
-    summary =
-      subject.note
-      |> to_string()
-      |> String.replace(~r/<[^>]*>/, " ")
-      |> String.replace(~r/\s+/u, " ")
-      |> String.trim()
-      |> String.slice(0, 200)
+    summary = Formatter.plain_text(subject.note, limit: 200)
 
     socket
     |> assign(:robots, robots(subject, socket.assigns[:live_action]))
@@ -725,7 +719,7 @@ defmodule AbuubaWeb.ProfileLive do
     ])
     |> assign(:page_meta, [
       {"property", "og:type", "profile"},
-      {"property", "og:title", "#{display_name(subject)} (@#{Account.acct(subject)})"},
+      {"property", "og:title", "#{Account.display_name(subject)} (@#{Account.acct(subject)})"},
       {"property", "og:description", summary},
       {"property", "og:url", URIs.profile_url(subject)},
       {"name", "description", summary}
@@ -741,12 +735,6 @@ defmodule AbuubaWeb.ProfileLive do
   defp robots(_subject, action) when action in [:followers, :following], do: Meta.noindex()
   defp robots(%Account{indexable: true}, _action), do: nil
   defp robots(_subject, _action), do: Meta.noindex()
-
-  # Ours is plain text and is escaped on the way out; theirs is markup that was
-  # cleaned on the way in. Both go through a function that says which is which,
-  # so neither is ever rendered as the other.
-  defp note_html(%Account{domain: nil, note: note}), do: Formatter.to_html(note)
-  defp note_html(%Account{note: note}), do: Formatter.sanitize(note)
 
   defp relationship(nil, _subject),
     do: %{
@@ -825,12 +813,6 @@ defmodule AbuubaWeb.ProfileLive do
   # would be.
   defp avatar_url(account), do: ProfileImages.url(account, :avatar)
   defp header_url(account), do: ProfileImages.url(account, :header)
-
-  defp display_name(%Account{display_name: name}) when is_binary(name) and name != "", do: name
-  defp display_name(%Account{username: username}), do: username
-
-  defp viewer_id(nil), do: nil
-  defp viewer_id(viewer), do: to_string(viewer.id)
 
   # Rendered the way this screen renders the rest of them, then swapped in.
   # Both lists, because a pinned post is drawn twice on a profile and updating

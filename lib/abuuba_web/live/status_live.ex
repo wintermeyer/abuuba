@@ -177,7 +177,7 @@ defmodule AbuubaWeb.StatusLive do
   # inside the rendered post now rather than in an assign of this page's own,
   # which is what lets a list screen put a translated post back where it was.
   def handle_event("translate", %{"id" => id}, socket) do
-    case PostActions.translate(socket.assigns.viewer, id, locale(socket)) do
+    case PostActions.translate(socket.assigns.viewer, id, PostActions.locale(socket)) do
       {:ok, rendered} ->
         {:noreply, assign(socket, rendered: rendered)}
 
@@ -187,8 +187,6 @@ defmodule AbuubaWeb.StatusLive do
   end
 
   def handle_event(_event, _params, socket), do: {:noreply, socket}
-
-  defp locale(socket), do: socket.assigns[:locale] || Gettext.get_locale(AbuubaWeb.Gettext)
 
   @impl Phoenix.LiveView
   # The fetcher is injected rather than called directly, so a test can exercise
@@ -346,7 +344,4 @@ defmodule AbuubaWeb.StatusLive do
   # the one place where a direct link would otherwise walk around that.
   defp blocked?(_author, nil), do: false
   defp blocked?(author, viewer), do: Abuuba.Relationships.blocking?(author, viewer)
-
-  defp viewer_id(nil), do: nil
-  defp viewer_id(viewer), do: to_string(viewer.id)
 end

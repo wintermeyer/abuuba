@@ -158,6 +158,22 @@ defmodule Abuuba.Statuses.Formatter do
   end
 
   @doc """
+  An account's bio, as markup that is safe to render.
+
+  Ours is plain text and is escaped on the way out; theirs is markup that was
+  cleaned on the way in. Both go through this, so neither is ever rendered as
+  the other — and it is one function rather than two copies, because it was
+  two, and only one of them carried the sentence above.
+
+  Matches on the shape rather than on `%Account{}` so that this module does not
+  have to know the schema: it is already what resolves mentions through
+  `Abuuba.Accounts`, and depending on the struct as well would close the loop.
+  """
+  @spec note_html(%{optional(:domain) => String.t() | nil, note: String.t() | nil}) :: String.t()
+  def note_html(%{domain: nil, note: note}), do: to_html(note)
+  def note_html(%{note: note}), do: sanitize(note)
+
+  @doc """
   What a post says, with the markup taken off.
 
   The other direction from `to_html/2`, and here beside it for that reason: a
