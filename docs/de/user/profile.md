@@ -91,6 +91,11 @@ weiter folgt, hat eine Timeline voll mit der gerade blockierten Person.
 Wen du blockierst, der sieht auch deine Beiträge nicht mehr, den direkten Link
 auf die Seite eines Beitrags eingeschlossen.
 
+Manche Leute bestätigen ihre Follower von Hand. Wer einem solchen Konto folgt,
+schickt stattdessen eine Anfrage, und aus dem Knopf wird **Folgeanfrage
+zurückziehen**, bis sie beantwortet ist. Ein Druck darauf nimmt die Anfrage
+zurück; solange du wartest, kommt nichts von dort bei dir an.
+
 ## Mit der Tastatur lesen
 
 `j` und `k` springen zwischen den Beiträgen auf jeder Seite, die welche

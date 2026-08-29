@@ -235,6 +235,20 @@ defmodule Abuuba.Federation.OutboxTest do
       assert [%{"type" => "Undo", "object" => %{"type" => "Follow"}}] = queued_activities()
     end
 
+    # Their server is holding a pending request of its own. Deleting the row
+    # here and saying nothing leaves it waiting for an answer to a question
+    # that has been taken back.
+    test "withdrawing a request tells their server it is gone" do
+      asker = account_fixture()
+      target = watcher("locked")
+      {:ok, _request} = Relationships.request_follow(asker, target)
+      Repo.delete_all(Oban.Job)
+
+      :ok = Relationships.unfollow(asker, target)
+
+      assert [%{"type" => "Undo", "object" => %{"type" => "Follow"}}] = queued_activities()
+    end
+
     test "accepting a request tells the asker they are in" do
       target = account_fixture(%{locked: true})
       asker = watcher("asker")

@@ -4,7 +4,11 @@ defmodule Abuuba.RelationshipsTest do
   import Abuuba.AccountsFixtures
   import Abuuba.StatusesFixtures
 
+  alias Abuuba.Accounts
+  alias Abuuba.Notifications
   alias Abuuba.Relationships
+  alias Abuuba.Relationships.Follow
+  alias Abuuba.Relationships.FollowRequest
   alias Abuuba.Relationships.Mute
   alias Abuuba.Stats
   alias Abuuba.Statuses
@@ -162,6 +166,80 @@ defmodule Abuuba.RelationshipsTest do
 
       assert {:error, changeset} = Relationships.request_follow(alice, bob)
       assert errors_on(changeset).account_id != []
+    end
+
+    test "is withdrawn by the person who asked", %{alice: alice, bob: bob} do
+      {:ok, _} = Relationships.request_follow(alice, bob)
+
+      assert :ok = Relationships.unfollow(alice, bob)
+
+      assert Relationships.get_follow_request(alice, bob) == nil
+      refute Relationships.following?(alice, bob)
+    end
+
+    test "withdrawing takes the notification asking about it", %{alice: alice, bob: bob} do
+      {:ok, _} = Relationships.request_follow(alice, bob)
+
+      Relationships.unfollow(alice, bob)
+
+      assert Notifications.list(bob) == []
+    end
+  end
+
+  describe "following an account that approves its followers" do
+    setup do
+      %{locked: account_fixture(%{locked: true})}
+    end
+
+    test "asks instead of following", %{alice: alice, locked: locked} do
+      assert {:ok, %FollowRequest{}} = Relationships.follow_or_request(alice, locked)
+
+      refute Relationships.following?(alice, locked)
+      assert Relationships.get_follow_request(alice, locked)
+    end
+
+    test "follows anybody else outright", %{alice: alice, bob: bob} do
+      assert {:ok, %Follow{}} = Relationships.follow_or_request(alice, bob)
+
+      assert Relationships.following?(alice, bob)
+    end
+
+    test "carries the options into the request", %{alice: alice, locked: locked} do
+      {:ok, request} =
+        Relationships.follow_or_request(alice, locked, %{show_reblogs: false, languages: ["de"]})
+
+      assert request.show_reblogs == false
+      assert request.languages == ["de"]
+    end
+
+    # Somebody who locks their account after granting a follow has already said
+    # yes to the people following them, and a repeat follow is how the options
+    # on that follow are changed. Asking again would hand them a question about
+    # somebody they already answered for.
+    test "changes an existing follow rather than asking again", %{alice: alice, bob: bob} do
+      {:ok, _} = Relationships.follow(alice, bob)
+      {:ok, locked} = Accounts.update_account(bob, %{locked: true})
+
+      assert {:ok, %Follow{}} =
+               Relationships.follow_or_request(alice, locked, %{show_reblogs: false})
+
+      assert Relationships.get_follow_request(alice, locked) == nil
+      refute Relationships.get_follow(alice, locked).show_reblogs
+    end
+
+    test "asking twice is one request, not an error", %{alice: alice, locked: locked} do
+      {:ok, _} = Relationships.follow_or_request(alice, locked)
+
+      assert {:ok, request} =
+               Relationships.follow_or_request(alice, locked, %{show_reblogs: false})
+
+      assert request.show_reblogs == false
+    end
+
+    test "is refused where either has blocked the other", %{alice: alice, locked: locked} do
+      {:ok, _} = Relationships.block(locked, alice)
+
+      assert {:error, :blocked} = Relationships.follow_or_request(alice, locked)
     end
   end
 

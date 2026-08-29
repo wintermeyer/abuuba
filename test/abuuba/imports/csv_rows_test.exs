@@ -55,6 +55,17 @@ defmodule Abuuba.Imports.CSVRowsTest do
       assert Relationships.following?(account, other)
     end
 
+    test "asks the ones who approve their followers", %{account: account, root: root} do
+      locked = account_fixture(%{locked: true})
+      contents = "Account address\n#{handle(locked)}\n"
+
+      finished = run!(account, root, "following_accounts.csv", contents)
+
+      assert finished.imported == 1
+      refute Relationships.following?(account, locked)
+      assert Relationships.get_follow_request(account, locked)
+    end
+
     test "keeping what the file said about boosts", %{account: account, other: other, root: root} do
       contents = "Account address,Show boosts,Notify on new posts\n#{handle(other)},false,true\n"
 

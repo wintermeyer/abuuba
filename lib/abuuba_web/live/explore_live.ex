@@ -104,7 +104,7 @@ defmodule AbuubaWeb.ExploreLive do
           </div>
 
           <button
-            :if={followable?(@viewer, person, @following)}
+            :if={followable?(@viewer, person, @following) and not requested?(person, @requested)}
             type="button"
             phx-click="follow"
             phx-value-account={person.id}
@@ -112,6 +112,10 @@ defmodule AbuubaWeb.ExploreLive do
           >
             {gettext("Follow")}
           </button>
+
+          <span :if={requested?(person, @requested)} class="badge badge-ghost">
+            {gettext("Requested")}
+          </span>
         </li>
       </ul>
 
@@ -135,7 +139,7 @@ defmodule AbuubaWeb.ExploreLive do
            # A screen that suggests people to follow is the easiest place to
            # build a list from, so it is the last place to leave uncounted.
            :ok <- Relationships.take_follow_budget(viewer) do
-        Relationships.follow(viewer, target)
+        Relationships.follow_or_request(viewer, target)
       end
 
     socket =
@@ -218,7 +222,10 @@ defmodule AbuubaWeb.ExploreLive do
       tags: tags(socket.assigns.tab),
       people: people(socket.assigns.tab)
     )
-    |> assign(following: following(socket.assigns.tab, viewer))
+    |> assign(
+      following: following(socket.assigns.tab, viewer),
+      requested: requested(socket.assigns.tab, viewer)
+    )
   end
 
   # Read once for the page rather than once per card: twenty people on screen
@@ -227,6 +234,9 @@ defmodule AbuubaWeb.ExploreLive do
   # follow list is not a thing to fetch for a page of posts.
   defp following(tab, viewer) when tab != :people or is_nil(viewer), do: MapSet.new()
   defp following(_tab, viewer), do: viewer |> Relationships.following_ids() |> MapSet.new()
+
+  defp requested(tab, viewer) when tab != :people or is_nil(viewer), do: MapSet.new()
+  defp requested(_tab, viewer), do: viewer |> Relationships.requested_ids() |> MapSet.new()
 
   # Only the tab being looked at asks the database. Three queries for a page
   # that shows one of them is two queries nobody needed.
@@ -282,6 +292,12 @@ defmodule AbuubaWeb.ExploreLive do
   defp followable?(viewer, person, following) do
     viewer.id != person.id and not MapSet.member?(following, person.id)
   end
+
+  # There is no unfollow button on this screen, so there is no cancel either --
+  # that lives on the profile. What this owes somebody who pressed Follow on an
+  # account that approves its followers is the news that they did, rather than
+  # a button that quietly disappears as if the follow had gone through.
+  defp requested?(person, requested), do: MapSet.member?(requested, person.id)
 
   defp tabs do
     [

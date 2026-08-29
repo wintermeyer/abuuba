@@ -425,13 +425,11 @@ defmodule AbuubaWeb.API.AccountController do
         |> put_if(params, "notify", :notify)
         |> put_languages(params)
 
-      # A locked account is asked rather than followed. The request is the
-      # follow until they say yes.
-      # A follow request counts too: asking four hundred locked accounts in a
-      # day is the same list-building the allowance exists to stop.
+      # A follow request spends the allowance too: asking four hundred locked
+      # accounts in a day is the same list-building the number exists to stop.
       result =
         with :ok <- Relationships.take_follow_budget(account),
-             do: make_follow(account, target, attrs)
+             do: Relationships.follow_or_request(account, target, attrs)
 
       case result do
         {:ok, _edge} ->
@@ -656,15 +654,6 @@ defmodule AbuubaWeb.API.AccountController do
       end
     end)
   end
-
-  # A locked account is asked rather than followed. The request is the follow
-  # until they say yes, and it spends the same allowance: asking four hundred
-  # locked accounts in a day is the list-building the number exists to stop.
-  defp make_follow(account, %Account{locked: true} = target, attrs),
-    do: Relationships.request_follow(account, target, attrs)
-
-  defp make_follow(account, target, attrs),
-    do: Relationships.follow(account, target, attrs)
 
   defp render_relationship(conn, account, target) do
     json(conn, Entities.relationship(Relationships.relationship(account, target)))

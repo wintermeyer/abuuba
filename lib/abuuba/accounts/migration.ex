@@ -140,7 +140,10 @@ defmodule Abuuba.Accounts.Migration do
   # The followers on this server are this server's to move, and moving them is
   # the whole point. Follow first, then unfollow: the other order leaves
   # somebody following nobody if the second step fails, and following both for
-  # a moment is a much smaller wrong than following neither.
+  # a moment is a much smaller wrong than following neither. Outright even
+  # where the new account approves its followers, because a move needs an alias
+  # back and that makes both accounts the same person's: they are not being
+  # asked to approve people they already approved.
   defp move_local_followers(account, target) do
     account
     |> local_follower_ids()
