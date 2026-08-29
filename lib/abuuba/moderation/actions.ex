@@ -36,6 +36,7 @@ defmodule Abuuba.Moderation.Actions do
   alias Abuuba.Notifications
   alias Abuuba.OAuth
   alias Abuuba.Repo
+  alias Abuuba.Snowflake
   alias Abuuba.Statuses
   alias Abuuba.Statuses.Status
 
@@ -124,7 +125,7 @@ defmodule Abuuba.Moderation.Actions do
   def own_strike(%Account{id: id}, strike_id), do: own_strike(id, strike_id)
 
   def own_strike(target_id, strike_id) do
-    with {:ok, id} <- numeric(strike_id) do
+    with {:ok, id} <- Snowflake.cast(strike_id) do
       Repo.get_by(Strike, id: id, target_account_id: target_id)
     end
   end
@@ -476,15 +477,4 @@ defmodule Abuuba.Moderation.Actions do
 
   defp report_id(nil), do: nil
   defp report_id(%{id: id}), do: id
-
-  defp numeric(value) when is_integer(value), do: {:ok, value}
-
-  defp numeric(value) when is_binary(value) do
-    case Integer.parse(value) do
-      {number, ""} -> {:ok, number}
-      _ -> nil
-    end
-  end
-
-  defp numeric(_value), do: nil
 end

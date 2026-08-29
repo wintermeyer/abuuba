@@ -32,11 +32,11 @@ defmodule AbuubaWeb.NotificationsLive do
   alias Abuuba.Accounts
   alias Abuuba.Accounts.Account
   alias Abuuba.Notifications
+  alias Abuuba.Snowflake
   alias Abuuba.Streaming
   alias Abuuba.Timelines
   alias AbuubaWeb.API.Entities
   alias AbuubaWeb.API.NestedParams
-  alias AbuubaWeb.Params
   alias AbuubaWeb.PostActions
 
   @page_size 40
@@ -253,7 +253,7 @@ defmodule AbuubaWeb.NotificationsLive do
   end
 
   def handle_event("accept_request", %{"account" => id}, socket) do
-    with {:ok, id} <- Params.id(id) do
+    with {:ok, id} <- Snowflake.cast(id) do
       Notifications.accept_request(socket.assigns.viewer, id)
     end
 
@@ -261,7 +261,7 @@ defmodule AbuubaWeb.NotificationsLive do
   end
 
   def handle_event("dismiss_request", %{"account" => id}, socket) do
-    with {:ok, id} <- Params.id(id) do
+    with {:ok, id} <- Snowflake.cast(id) do
       Notifications.dismiss_request(socket.assigns.viewer, id)
     end
 

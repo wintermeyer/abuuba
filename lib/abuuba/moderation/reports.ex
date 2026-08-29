@@ -35,6 +35,7 @@ defmodule Abuuba.Moderation.Reports do
   alias Abuuba.Pagination
   alias Abuuba.Repo
   alias Abuuba.Roles
+  alias Abuuba.Snowflake
   alias Abuuba.Statuses.Status
   alias Abuuba.Webhooks
 
@@ -88,7 +89,7 @@ defmodule Abuuba.Moderation.Reports do
   """
   @spec get(integer() | String.t()) :: Report.t() | nil
   def get(id) do
-    case numeric(id) do
+    case Snowflake.cast(id) do
       {:ok, id} -> Repo.get(Report, id)
       _ -> nil
     end
@@ -320,20 +321,9 @@ defmodule Abuuba.Moderation.Reports do
   defp id_of(id) when is_integer(id), do: id
 
   defp numeric_list(value) do
-    case numeric(value) do
+    case Snowflake.cast(value) do
       {:ok, id} -> [id]
       _ -> []
     end
   end
-
-  defp numeric(value) when is_integer(value), do: {:ok, value}
-
-  defp numeric(value) when is_binary(value) do
-    case Integer.parse(value) do
-      {number, ""} -> {:ok, number}
-      _ -> nil
-    end
-  end
-
-  defp numeric(_value), do: nil
 end

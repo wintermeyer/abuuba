@@ -276,7 +276,7 @@ defmodule AbuubaWeb.AdminLive do
           filters={@filters}
           pending={@pending}
           batch={@batch}
-          batch_count={@batch_count}
+          batch_count={MapSet.size(@batch)}
         />
         <.account
           :if={@section == :account}
@@ -2424,7 +2424,7 @@ defmodule AbuubaWeb.AdminLive do
   def handle_event("pick_batch", params, socket) do
     batch = ticked(params)
 
-    {:noreply, assign(socket, batch: batch, batch_count: MapSet.size(batch))}
+    {:noreply, assign(socket, batch: batch)}
   end
 
   def handle_event("batch", params, socket) do
@@ -2944,8 +2944,7 @@ defmodule AbuubaWeb.AdminLive do
       filters: filters,
       accounts: accounts,
       pending: Admin.pending_user_ids(accounts),
-      batch: batch,
-      batch_count: MapSet.size(batch)
+      batch: batch
     )
   end
 
@@ -3257,7 +3256,7 @@ defmodule AbuubaWeb.AdminLive do
       |> Enum.frequencies()
 
     socket
-    |> assign(saved?: true, batch: MapSet.new(), batch_count: 0)
+    |> assign(saved?: true, batch: MapSet.new())
     |> assign(error: batch_message(outcomes))
     |> load(:accounts, socket.assigns.filters)
   end
@@ -3519,10 +3518,7 @@ defmodule AbuubaWeb.AdminLive do
             "label" => saved.name
           })
 
-          {:noreply,
-           socket
-           |> assign(saved?: true, error: nil, editing_role: nil)
-           |> load(:roles, %{})}
+          {:noreply, socket |> assign(saved?: true, error: nil) |> load(:roles, %{})}
 
         {:error, _changeset} ->
           {:noreply, assign(socket, error: gettext("That role could not be saved."))}

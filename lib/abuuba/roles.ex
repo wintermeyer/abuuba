@@ -30,6 +30,7 @@ defmodule Abuuba.Roles do
   alias Abuuba.Repo
   alias Abuuba.Roles.Role
   alias Abuuba.Settings
+  alias Abuuba.Snowflake
 
   # The reference implementation's flags and its bit positions. Its admin API
   # hands these numbers to clients, so they are part of the protocol rather
@@ -200,7 +201,7 @@ defmodule Abuuba.Roles do
   """
   @spec get(integer() | String.t()) :: Role.t() | nil
   def get(id) do
-    case numeric(id) do
+    case Snowflake.cast(id) do
       {:ok, id} -> Repo.get(Role, id)
       _ -> nil
     end
@@ -327,15 +328,4 @@ defmodule Abuuba.Roles do
     administrator?(user) or
       Bitwise.band(role.permissions, Bitwise.bnot(permissions_of(user))) == 0
   end
-
-  defp numeric(value) when is_integer(value), do: {:ok, value}
-
-  defp numeric(value) when is_binary(value) do
-    case Integer.parse(value) do
-      {number, ""} -> {:ok, number}
-      _ -> nil
-    end
-  end
-
-  defp numeric(_value), do: nil
 end

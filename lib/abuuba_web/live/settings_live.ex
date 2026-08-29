@@ -50,6 +50,7 @@ defmodule AbuubaWeb.SettingsLive do
   alias Abuuba.Moderation.Domains
   alias Abuuba.OAuth
   alias Abuuba.Relationships
+  alias Abuuba.Snowflake
   alias Abuuba.Statuses
   alias Abuuba.Statuses.Cleanup
   alias Abuuba.Statuses.Formatter
@@ -1546,7 +1547,7 @@ defmodule AbuubaWeb.SettingsLive do
   end
 
   def handle_event("delete_filter", %{"filter" => id}, socket) do
-    with {:ok, id} <- Params.id(id),
+    with {:ok, id} <- Snowflake.cast(id),
          filter when not is_nil(filter) <- Filters.get(socket.assigns.account, id) do
       Filters.delete(filter)
     end
@@ -1584,7 +1585,7 @@ defmodule AbuubaWeb.SettingsLive do
   end
 
   def handle_event("revoke_application", %{"application" => id}, socket) do
-    with {:ok, id} <- Params.id(id) do
+    with {:ok, id} <- Snowflake.cast(id) do
       OAuth.revoke_application_for(socket.assigns.user, id)
     end
 
@@ -2332,7 +2333,7 @@ defmodule AbuubaWeb.SettingsLive do
   defp filter_action_label(action), do: action
 
   defp account_id(value) do
-    case Params.id(value) do
+    case Snowflake.cast(value) do
       {:ok, id} -> id
       _ -> nil
     end

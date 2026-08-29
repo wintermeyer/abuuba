@@ -55,6 +55,7 @@ defmodule AbuubaWeb.ComposeComponent do
   alias Abuuba.Media.Blurhash
   alias Abuuba.Media.Upload
   alias Abuuba.Search
+  alias Abuuba.Snowflake
   alias Abuuba.Statuses
   alias Abuuba.Statuses.Formatter
   alias Abuuba.Statuses.Poll
@@ -313,7 +314,7 @@ defmodule AbuubaWeb.ComposeComponent do
   # one, and an id in an event payload is written by whoever is at the other
   # end of the socket.
   defp own_attachment(socket, id) do
-    with {:ok, id} <- Params.id(id) do
+    with {:ok, id} <- Snowflake.cast(id) do
       if id in socket.assigns.attachment_ids do
         Media.get_own_unattached(socket.assigns.account, id)
       end
@@ -321,7 +322,7 @@ defmodule AbuubaWeb.ComposeComponent do
   end
 
   defp without(socket, id) do
-    case Params.id(id) do
+    case Snowflake.cast(id) do
       {:ok, id} -> socket.assigns.attachment_ids -- [id]
       _ -> socket.assigns.attachment_ids
     end
@@ -333,7 +334,7 @@ defmodule AbuubaWeb.ComposeComponent do
   defp move_earlier(socket, id) do
     ids = socket.assigns.attachment_ids
 
-    with {:ok, id} <- Params.id(id),
+    with {:ok, id} <- Snowflake.cast(id),
          index when is_integer(index) and index > 0 <- Enum.find_index(ids, &(&1 == id)) do
       ids |> List.delete_at(index) |> List.insert_at(index - 1, id)
     else
@@ -358,11 +359,11 @@ defmodule AbuubaWeb.ComposeComponent do
   # socket, not by the button this server drew. A `Repo.get` on "../etc/passwd"
   # raises rather than returning nothing.
   defp find_draft(socket, id) do
-    with {:ok, id} <- Params.id(id), do: Statuses.get_draft(socket.assigns.account, id)
+    with {:ok, id} <- Snowflake.cast(id), do: Statuses.get_draft(socket.assigns.account, id)
   end
 
   defp find_scheduled(socket, id) do
-    with {:ok, id} <- Params.id(id), do: Statuses.get_scheduled(socket.assigns.account, id)
+    with {:ok, id} <- Snowflake.cast(id), do: Statuses.get_scheduled(socket.assigns.account, id)
   end
 
   defp current_draft(%{assigns: %{draft_id: nil}}), do: nil
