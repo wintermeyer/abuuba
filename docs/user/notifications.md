@@ -7,6 +7,8 @@ you, favouriting or boosting or quoting one of your posts, following you or
 asking to, editing a post you boosted, and a poll you voted in closing. Events
 that belong together are one line: twelve people boosting the same post is one
 thing that happened, not twelve, and the post itself is shown once underneath.
+That post carries the same buttons it has anywhere else, so you can favourite,
+boost, bookmark, reply to or translate it without leaving the column.
 
 A poll closing reaches its author as well as everybody who voted, since the
 answer is the part that arrives after the post does.

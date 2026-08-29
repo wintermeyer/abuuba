@@ -28,6 +28,8 @@ defmodule AbuubaWeb.PostActions do
   turns a correction into a silent no-op.
   """
 
+  use Gettext, backend: AbuubaWeb.Gettext
+
   alias Abuuba.Accounts.Account
   alias Abuuba.Statuses
   alias Abuuba.Statuses.Poll
@@ -203,5 +205,109 @@ defmodule AbuubaWeb.PostActions do
       {number, ""} -> Statuses.get_status(number, viewer)
       _not_a_number -> nil
     end
+  end
+
+  @doc """
+  Answers every event the action bar raises, for a screen that keeps its posts
+  in plain lists.
+
+  ## Why the wiring moved here too
+
+  The work behind these events came here first and the wiring did not, so the
+  same fifty-four lines sat in four screens: identical in three of them, and
+  identical apart from one list name in the fourth. That is the shape the
+  moduledoc above describes, one level up — the copies were what disagreed.
+  Search's translate put the fresh post into an assign that screen never had,
+  so the button raised on every result, and nothing said so until somebody
+  pressed it.
+
+  `:lists` names the assigns holding the posts, so a screen that keeps two of
+  them (a profile, with its pinned posts above the rest) says so rather than
+  writing the loop again.
+
+  ## What a screen keeps for itself
+
+  Replying and editing here go to the post's own page, because these screens
+  have no composer. A screen that has one — the home timeline, a post's own
+  page — answers those two itself and does not attach this.
+  """
+  @spec attach(Phoenix.LiveView.Socket.t(), keyword()) :: Phoenix.LiveView.Socket.t()
+  def attach(socket, opts) do
+    put_back = put_back_fun(opts)
+
+    Phoenix.LiveView.attach_hook(socket, :post_actions, :handle_event, fn event, params, socket ->
+      handle(event, params, socket, put_back)
+    end)
+  end
+
+  # `:lists` covers every screen that keeps posts in plain lists, which is most
+  # of them. `:put_back` is for the one that does not — the notifications page
+  # holds each post inside the group of notifications about it — and is the
+  # same division of labour the moduledoc describes: this decides what an
+  # action does, the screen decides where the answer goes.
+  defp put_back_fun(opts) do
+    case Keyword.fetch(opts, :put_back) do
+      {:ok, fun} when is_function(fun, 2) -> fun
+      :error -> lists_put_back(opts |> Keyword.fetch!(:lists) |> List.wrap())
+    end
+  end
+
+  defp lists_put_back(lists), do: &swap_lists(&1, lists, &2)
+
+  defp swap_lists(socket, lists, rendered) do
+    Enum.reduce(lists, socket, fn list, acc ->
+      Phoenix.Component.update(acc, list, &swap(&1, rendered))
+    end)
+  end
+
+  defp handle(event, %{"id" => id}, socket, put_back) when event in @toggles do
+    case toggle(socket.assigns.viewer, event, id) do
+      {:ok, status} -> {:halt, rendered_back(socket, status, put_back)}
+      :error -> {:halt, socket}
+    end
+  end
+
+  defp handle("vote", %{"poll_id" => poll_id} = params, socket, put_back) do
+    choices = params |> Map.get("choices", []) |> List.wrap()
+
+    case vote(socket.assigns.viewer, poll_id, choices) do
+      {:ok, status} -> {:halt, rendered_back(socket, status, put_back)}
+      :error -> {:halt, socket}
+    end
+  end
+
+  defp handle(event, %{"id" => id}, socket, _put_back) when event in ~w(reply edit) do
+    case page_of(socket.assigns.viewer, id) do
+      nil -> {:halt, socket}
+      path -> {:halt, Phoenix.LiveView.push_navigate(socket, to: path)}
+    end
+  end
+
+  defp handle("translate", %{"id" => id}, socket, put_back) do
+    case translate(socket.assigns.viewer, id, locale(socket)) do
+      {:ok, rendered} ->
+        {:halt, put_back.(socket, rendered)}
+
+      :error ->
+        {:halt,
+         Phoenix.LiveView.put_flash(
+           socket,
+           :error,
+           gettext("That could not be translated just now.")
+         )}
+    end
+  end
+
+  defp handle(_event, _params, socket, _put_back), do: {:cont, socket}
+
+  # Rendered the way the screen rendered the rest of them, then handed back.
+  defp rendered_back(socket, %Status{} = status, put_back) do
+    put_back.(socket, Entities.status(status, socket.assigns.viewer))
+  end
+
+  # The reader's own language where the hook has one, and the request's
+  # otherwise. Was a private one-liner in five screens.
+  defp locale(socket) do
+    socket.assigns[:locale] || Gettext.get_locale(AbuubaWeb.Gettext)
   end
 end

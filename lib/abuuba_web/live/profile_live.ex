@@ -38,9 +38,6 @@ defmodule AbuubaWeb.ProfileLive do
   alias AbuubaWeb.Meta
   alias AbuubaWeb.PostActions
 
-  # Answered here because the action bar is drawn here.
-  @post_actions PostActions.toggles()
-
   @page_size 20
 
   # Enough to be a recommendation and not a directory. The API pages through
@@ -68,6 +65,7 @@ defmodule AbuubaWeb.ProfileLive do
            client_ip: AbuubaWeb.ClientIP.of_socket(socket),
            email_subscription_said: nil
          )
+         |> PostActions.attach(lists: [:posts, :pinned])
          |> load_profile()}
 
       _ ->
@@ -470,66 +468,6 @@ defmodule AbuubaWeb.ProfileLive do
     act(socket, fn viewer, subject -> Relationships.put_note(viewer, subject, note) end)
   end
 
-  # The action bar is drawn on this screen, so the events it raises are
-  # answered here. See `AbuubaWeb.PostActions` for why the work behind them is
-  # one module rather than a copy per screen.
-  def handle_event(event, %{"id" => id}, socket) when event in @post_actions do
-    case PostActions.toggle(socket.assigns.viewer, event, id) do
-      {:ok, status} -> {:noreply, replace_post(socket, status)}
-      :error -> {:noreply, socket}
-    end
-  end
-
-  # The poll form is drawn by the same component as the action bar, so it is
-  # answered in the same place. See `AbuubaWeb.PostActions`.
-  def handle_event("vote", %{"poll_id" => poll_id} = params, socket) do
-    choices = params |> Map.get("choices", []) |> List.wrap()
-
-    case PostActions.vote(socket.assigns.viewer, poll_id, choices) do
-      {:ok, status} -> {:noreply, replace_post(socket, status)}
-      :error -> {:noreply, socket}
-    end
-  end
-
-  # There is no composer on this screen, so replying goes to the post, which
-  # has one. A box that appears on some screens and not others is worse than
-  # the same answer everywhere.
-  def handle_event("reply", %{"id" => id}, socket) do
-    case PostActions.page_of(socket.assigns.viewer, id) do
-      nil -> {:noreply, socket}
-      path -> {:noreply, push_navigate(socket, to: path)}
-    end
-  end
-
-  # The pencil is drawn by the same component as the rest of the bar, and the
-  # box to edit in is on the post's own page. Same answer as "reply" for the
-  # same reason: a composer that appears on some screens and not others is
-  # worse than the same answer everywhere.
-  def handle_event("edit", %{"id" => id}, socket) do
-    case PostActions.page_of(socket.assigns.viewer, id) do
-      nil -> {:noreply, socket}
-      path -> {:noreply, push_navigate(socket, to: path)}
-    end
-  end
-
-  # Drawn by the same component as the rest of the bar. A translation is not a
-  # change to the post, so it is put straight back into the list rather than
-  # re-read. See `AbuubaWeb.PostActions`.
-  def handle_event("translate", %{"id" => id}, socket) do
-    case PostActions.translate(socket.assigns.viewer, id, locale(socket)) do
-      {:ok, rendered} ->
-        {:noreply,
-         Enum.reduce(
-           [:posts, :pinned],
-           socket,
-           &update(&2, &1, fn posts -> PostActions.swap(posts, rendered) end)
-         )}
-
-      :error ->
-        {:noreply, put_flash(socket, :error, gettext("That could not be translated just now."))}
-    end
-  end
-
   def handle_event(_event, _params, socket), do: {:noreply, socket}
 
   ## Plumbing
@@ -897,15 +835,4 @@ defmodule AbuubaWeb.ProfileLive do
   # Rendered the way this screen renders the rest of them, then swapped in.
   # Both lists, because a pinned post is drawn twice on a profile and updating
   # one copy would leave the other showing the old count.
-  defp replace_post(socket, status) do
-    rendered = Entities.status(status, socket.assigns.viewer)
-
-    Enum.reduce(
-      [:posts, :pinned],
-      socket,
-      &update(&2, &1, fn posts -> PostActions.swap(posts, rendered) end)
-    )
-  end
-
-  defp locale(socket), do: socket.assigns[:locale] || Gettext.get_locale(AbuubaWeb.Gettext)
 end

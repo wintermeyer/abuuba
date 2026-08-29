@@ -7,7 +7,10 @@ favorisiert, teilt oder zitiert einen deiner Beiträge, folgt dir oder fragt
 danach, bearbeitet einen Beitrag, den du geteilt hast, oder eine Umfrage, an
 der du teilgenommen hast, ist zu Ende. Zusammengehörendes steht in einer
 Zeile: Zwölf Leute, die denselben Beitrag teilen, sind eine Sache, die passiert
-ist, und nicht zwölf, und der Beitrag selbst steht einmal darunter.
+ist, und nicht zwölf, und der Beitrag selbst steht einmal darunter. Dieser
+Beitrag hat dieselben Schaltflächen wie überall sonst: Du kannst ihn
+favorisieren, teilen, als Lesezeichen speichern, beantworten oder übersetzen,
+ohne die Spalte zu verlassen.
 
 Das Ende einer Umfrage erreicht auch die Person, die sie gestellt hat, denn die
 Antwort ist der Teil, der erst nach dem Beitrag kommt.
