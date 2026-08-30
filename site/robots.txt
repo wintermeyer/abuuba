@@ -1,6 +1,6 @@
-# abuuba.com is a public project site. Every page on it may be crawled and
-# indexed, by search engines and by AI crawlers alike. Nothing is disallowed
-# and no crawler is singled out.
+# abuuba.com is a public project site. Every page on it may be crawled,
+# indexed and used for training, by search engines and AI crawlers alike.
+# Nothing is disallowed and no crawler is singled out.
 #
 # https://abuuba.com/llms.txt is the same site laid out for an LLM agent.
 
