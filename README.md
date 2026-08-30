@@ -109,6 +109,27 @@ cheetah. So I initially wanted to call this project "Miracinonyx", but who can
 remember that? I looked through my stack of registered but unused domain names
 instead, and went with abuuba.
 
+## Not for the faint of heart
+
+abuuba is version 1.0.1 and has never served real members on the open internet.
+Every number above is measured and reproducible. None of it has been tested by
+anyone but me.
+
+The documentation is in this repository: a deployment guide, twenty-two pages
+for administrators, ten for users and ten more in German. What does not exist
+is everything that grows around software once other people run it. No forum
+thread from someone who hit your problem three years ago, no tutorial written
+by a stranger, no answer waiting for the question you have not thought to ask
+yet. Mastodon has had nearly ten years to accumulate that, and it is worth more
+than a feature list.
+
+**If you are new to running a fediverse server, run Mastodon.** It is good
+software, it is documented by thousands of people, and when it breaks at two in
+the morning somebody has already written down what to do.
+
+Run abuuba if you need the speed and an Elixir stack trace is something you can
+work with. That is the whole entry requirement, and it is a real one.
+
 ## Getting started for Developers
 
 You need Postgres on `localhost` and the Erlang and Elixir versions pinned in

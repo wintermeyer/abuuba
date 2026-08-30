@@ -90,7 +90,7 @@
         <div class="big a"><span class="n num">364</span><span class="l"><b>abuuba</b> · lines of JavaScript · 0 npm dependencies</span></div>
         <div class="big"><span class="n num">97,209</span><span class="l"><b>Mastodon</b> · lines of JavaScript · 1,428 lockfile entries</span></div>
       </div>
-      <p>Every one of those 1,428 packages is code written by somebody you have never heard of, and any one of them can turn out to be a timebomb. You install one thing, it quietly brings a hundred more, nobody reads any of them, and the day one goes off it is already running in your users' browsers. Less JavaScript is simply safer, and the safest of all is the JavaScript that was never there.</p>
+      <p>Less JavaScript is better. Fewer security problems to take care of.</p>
     </div>
   </section>
 
@@ -149,6 +149,16 @@
 
   <section class="band">
     <div class="wrap reveal">
+      <h2>Not for the <em>faint of heart</em>.</h2>
+      <p>abuuba is version 1.0.1 and has never served real members on the open internet. Every number above is measured and reproducible. None of it has been tested by anyone but me.</p>
+      <p>The documentation is here: a deployment guide, twenty-two pages for administrators, ten for users and ten more in German. What does not exist is everything that grows around software once other people run it. No forum thread from someone who hit your problem three years ago, no tutorial written by a stranger, no answer waiting for the question you have not thought to ask yet. Mastodon has had nearly ten years to accumulate that, and it is worth more than a feature list.</p>
+      <p><strong>If you are new to running a fediverse server, run Mastodon.</strong> It is good software, it is documented by thousands of people, and when it breaks at two in the morning somebody has already written down what to do.</p>
+      <p>Run abuuba if you need the speed and an Elixir stack trace is something you can work with. That is the whole entry requirement, and it is a real one.</p>
+    </div>
+  </section>
+
+  <section class="band">
+    <div class="wrap reveal">
       <h2>Already running Mastodon? <em>Take the server over.</em></h2>
       <p>Nothing has to be rebuilt. A Mastodon instance becomes an abuuba instance in place, keeping the domain it already has. That domain is the one thing a takeover cannot change: every post URL and every signature the old server published names it. <strong>Everything else moves.</strong> Accounts keep their passwords, posts keep their permalinks, followers stay followers, and the app on somebody's phone stays signed in, because the token it holds comes across too. Media, lists, filters, blocks and the whole moderation history follow.</p>
       <p>The importer is a dry run by default. It reads the old database, checks everything that has to be true, counts what would move, and writes nothing. A run that gets interrupted continues where it stopped, and afterwards <code>--verify</code> asks the old server, while it is still up, whether every post arrived and every key still signs.</p>
@@ -176,7 +186,7 @@ bin/abuuba eval 'Abuuba.Release.import_mastodon()'</pre>
   <section class="band">
     <div class="wrap reveal">
       <h2>Written with <em>agents</em>.</h2>
-      <p>One person built this, and that sentence is only honest with the next one: it was written with AI coding agents, every day, at a volume I could not have typed. Better said plainly than left for somebody to work out.</p>
+      <p>One person built this, and that sentence is only honest with the next one: it was written with AI coding agents, every day, at a volume I could not have typed.</p>
       <p>The speed is the least interesting part of it. What changed is that the tedious correct thing now happens every time, including on the days I would have talked myself out of it.</p>
       <ul class="nots">
         <li><b>4,387 tests</b>, written before the code rather than after it. "Test first" is a rule an agent keeps and a tired human negotiates with.</li>
@@ -184,7 +194,6 @@ bin/abuuba eval 'Abuuba.Release.import_mastodon()'</pre>
         <li><b>Ten user-guide pages and ten German translations of them.</b> A page changes in the same commit as the behaviour it describes, or the commit does not land.</li>
       </ul>
       <p>What it still needs me for: deciding what to build, what to refuse, and which of two working designs is the one to keep. An agent will do the wrong thing thoroughly and cheerfully. Every architectural call here is mine, and so is every mistake.</p>
-      <p>And it says so. Text an agent wrote in my name carries a line telling you it did, in commit messages, issues and pull requests. I would rather that be visible than tasteful.</p>
     </div>
   </section>
 
@@ -256,12 +265,18 @@ docker compose up -d</pre>
         <p class="handle"><a href="https://vutuv.de/abuuba">@abuuba@vutuv.de</a></p>
         <p class="note">Not on the fediverse? The same posts are a normal web page at <a href="https://vutuv.de/abuuba">vutuv.de/abuuba</a>. Nothing to install, no account, no login.</p>
       </div>
+      <p class="links">That account stays on topic. For the chatter around it, and for whatever else I am working on, follow me instead.</p>
+      <div class="follow">
+        <p class="handle"><a href="https://vutuv.de/wintermeyer">@wintermeyer@vutuv.de</a></p>
+        <p class="note">Stefan Wintermeyer. General updates and rather more opinions, not all of them about abuuba.</p>
+      </div>
+      <p class="links"><b>And now the shameless plug.</b> Both accounts live on <a href="https://vutuv.de">vutuv</a>, the business network I built abuuba for. It is open source under MIT, it is federated, so a vutuv profile and a Mastodon account can follow each other, and it is free, with no paid premium tier because nobody wants those. LinkedIn is annoying. <a href="https://vutuv.de">vutuv is not</a>. Go and register.</p>
     </div>
   </section>
 </main>
 
 <footer class="wrap">
-  <span>abuuba 1.0.0 · MIT licence · built by the founder of <a href="https://vutuv.de">vutuv</a>, because vutuv is fast and its peer was not.</span>
+  <span>abuuba 1.0.1 · MIT licence · built by the founder of <a href="https://vutuv.de">vutuv</a>, because vutuv is fast and its peer was not.</span>
   <nav aria-label="Secondary"><a href="press.html">Press</a><a href="impressum.html">Impressum</a><a href="datenschutz.html">Datenschutz</a><a href="https://github.com/wintermeyer/abuuba">GitHub</a></nav>
 </footer>
 
