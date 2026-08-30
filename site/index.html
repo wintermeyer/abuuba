@@ -311,14 +311,31 @@
     <div class="wrap reveal">
       <h2>Already running Mastodon? <em>Take the server over.</em></h2>
       <p>Nothing has to be rebuilt. A Mastodon instance becomes an abuuba instance in place, keeping the domain it already has. That domain is the one thing a takeover cannot change: every post URL and every signature the old server published names it. <strong>Everything else moves.</strong> Accounts keep their passwords, posts keep their permalinks, followers stay followers, and the app on somebody's phone stays signed in, because the token it holds comes across too. Media, lists, filters, blocks and the whole moderation history follow.</p>
-      <p>The importer is a dry run by default. It reads the old database, checks everything that has to be true, counts what would move, and writes nothing. A run that gets interrupted continues where it stopped, and afterwards <code>--verify</code> asks the old server, while it is still up, whether every post arrived and every key still signs.</p>
-<pre>mix abuuba.import           <i># a dry run, and the default</i>
-mix abuuba.import --execute <i># do it</i>
-mix abuuba.import --verify  <i># check it afterwards</i>
+      <p>The importer is a dry run by default. It reads the old database, checks everything that has to be true, counts what would move, and writes nothing. A run that gets interrupted continues where it stopped, and afterwards a verify pass asks the old server, while it is still up, whether every post arrived and every key still signs.</p>
+      <h3>Step by step, with the Docker image</h3>
+      <p>The reference deployment is two containers, abuuba and Postgres, in <a href="https://github.com/wintermeyer/abuuba/blob/main/docker-compose.yml"><code>docker-compose.yml</code></a>. Three things have to reach the container and none of them is there by default: the old database over the network, the old media directory as a mount, and the old server's keys. All three are in that file as a commented block. Uncomment it, put the values in <code>.env</code>, and the rest is one command with different arguments.</p>
+<pre><i># 1. Fill in .env and uncomment the takeover block in docker-compose.yml.</i>
 
-<i># and on a server, which runs a release and has no Mix:</i>
-bin/abuuba eval 'Abuuba.Release.import_mastodon()'</pre>
-      <p><strong>Back up before <code>--execute</code>.</strong> It is not reversible: it writes into abuuba's database, and the way back from an import that went wrong is restoring that database from before the run. The old instance is only ever read, so keep its backup until <code>--verify</code> comes back clean.</p>
+<i># 2. Create abuuba's own database, the one the import writes into.</i>
+docker compose run --rm abuuba bin/abuuba eval 'Abuuba.Release.migrate()'
+
+<i># 3. The dry run. It writes nothing. Read what it says before going on.</i>
+docker compose run --rm abuuba bin/abuuba eval 'Abuuba.Release.import_mastodon()'
+
+<i># 4. Back up both databases. Step 5 cannot be undone.</i>
+
+<i># 5. The import. Hours on a large instance, and safe to run again if it stops.</i>
+docker compose run --rm abuuba bin/abuuba eval 'Abuuba.Release.import_mastodon(execute: true)'
+
+<i># 6. While the old server is still reachable.</i>
+docker compose run --rm abuuba bin/abuuba eval 'Abuuba.Release.import_mastodon(verify: true)'
+
+<i># 7. Point the domain here and start serving.</i>
+docker compose up -d</pre>
+      <p><code>run --rm</code> and not <code>exec</code>, because the import is a job of its own and has to work before this instance has ever answered a request. The container is thrown away afterwards; what lets an interrupted import carry on is rows in the database, not anything in that container, so step 5 can be repeated as often as it takes.</p>
+      <p><strong>Two things only bite inside a container.</strong> <code>localhost</code> in <code>MASTODON_DATABASE_URL</code> means the container, not the host, so the old Postgres needs an address both can see: the host's address on the network they share, or Mastodon's service name if it runs in Docker too. And <code>MASTODON_MEDIA_ROOT</code> is the path <em>inside</em> the container, the right-hand side of the mount, never the host path.</p>
+      <p><strong>Back up before step 5.</strong> It is not reversible: it writes into abuuba's database, and the way back from an import that went wrong is restoring that database from before the run. The old instance is only ever read, so keep its backup until the verify pass comes back clean.</p>
+      <p>Running from source instead of the image? The same three steps are <code>mix abuuba.import</code>, <code>--execute</code> and <code>--verify</code>.</p>
       <p class="caption">What moves, what is deliberately left behind, and the two things not carried yet: <a href="https://github.com/wintermeyer/abuuba/blob/main/docs/admin/importing-from-mastodon.md">Taking over a Mastodon instance</a>.</p>
     </div>
   </section>
