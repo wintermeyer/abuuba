@@ -181,7 +181,7 @@ defmodule Abuuba.Importer.Identity do
   end
 
   defp detail(reason) do
-    "an encrypted column in the source did not decrypt (#{reason}); check ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY and ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT against the old server's environment"
+    "an encrypted column in the source did not decrypt (#{reason}); check MASTODON_ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY and MASTODON_ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT against the old server's environment"
   end
 
   ## Roles

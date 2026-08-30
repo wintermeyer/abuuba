@@ -45,6 +45,12 @@ It prints a password once and there is nowhere to look it up again. More about
 what that account can do, and how to make others, is in
 [roles and permissions](admin/roles.md).
 
+**Replacing a Mastodon instance instead of starting an empty one?** Do not run
+`docker compose up -d` yet. The takeover brings the accounts and their owners
+with it, so it goes between the migration and the first start, and it needs a
+few more variables and a mount:
+[taking over a Mastodon instance](admin/importing-from-mastodon.md).
+
 Images are published to `ghcr.io/wintermeyer/abuuba` for amd64 and arm64. Tags
 are `1.2.3`, `1.2`, `edge` (the current main), `sha-<commit>`, and `latest` on
 the newest release. Until the first release is tagged, `edge` is the only one
@@ -78,6 +84,11 @@ sudo systemctl enable --now abuuba
 The unit runs abuuba as its own user with most of the filesystem read-only. Keep
 that; a server that fetches and processes files from strangers is exactly the
 kind of program those restrictions exist for.
+
+Replacing a Mastodon instance on this machine? The takeover goes between the
+migration and `systemctl enable --now`, and it reads a few more variables from
+the same environment file:
+[taking over a Mastodon instance](admin/importing-from-mastodon.md).
 
 ## Configuration
 

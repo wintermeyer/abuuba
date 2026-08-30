@@ -17,6 +17,31 @@ mix abuuba.import --reset        # forget the checkpoints and start over
 mix abuuba.import --verify       # check an import that has already run
 ```
 
+That is the command in a checkout. On a server it is a function, because a
+server runs a release and a release has no Mix:
+
+```
+bin/abuuba eval 'Abuuba.Release.import_mastodon()'                # the dry run
+bin/abuuba eval 'Abuuba.Release.import_mastodon(execute: true)'
+bin/abuuba eval 'Abuuba.Release.import_mastodon(reset: true)'
+bin/abuuba eval 'Abuuba.Release.import_mastodon(verify: true)'
+```
+
+The same switches under different punctuation, and both are front ends for the
+same code, so neither can grow an option the other does not have. Most people
+will run the second form through the Docker image, which is
+[further down](#taking-over-from-the-docker-image).
+
+## Back up before `--execute`
+
+There is no undo. The dry run writes nothing, but `--execute` writes the whole
+of somebody's server into this database, and the only way back from an import
+that went wrong is restoring that database from before the run.
+
+The old instance is read and never written (the media tree included), so its own
+backup is the fallback for the takeover as a whole. Keep both until `--verify`
+comes back clean.
+
 ## The domain cannot change
 
 Every id, every URI and every signature the old server published names its
@@ -44,19 +69,73 @@ for every server on the machine.
 | `MASTODON_S3_BUCKET` | or the bucket they are in |
 | `MASTODON_LOCAL_DOMAIN` | what the old server called itself |
 
-And the secrets the old server ran with:
+And the secrets the old server ran with, copied out of its environment:
 
 ```
-SECRET_KEY_BASE
-ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY
-ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY
-ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT
-VAPID_PRIVATE_KEY
-VAPID_PUBLIC_KEY
+MASTODON_SECRET_KEY_BASE
+MASTODON_ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY
+MASTODON_ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY
+MASTODON_ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT
+MASTODON_VAPID_PRIVATE_KEY
+MASTODON_VAPID_PUBLIC_KEY
 ```
 
 Rows come across with encrypted columns in them — two-factor secrets, for one —
 and without the keys those columns are noise that looks like data.
+
+The prefix is not decoration and there is no fallback to the bare name.
+`SECRET_KEY_BASE` names two different keys, the old server's and this one's,
+and the process running the import holds both because a release cannot boot
+without its own. Reading the bare name where the prefixed one is missing would
+take abuuba's key for Mastodon's and pass every check with it, which is the
+kind of mistake that finishes successfully. So a variable nobody set stays
+unset, and the dry run names it.
+
+## Taking over from the Docker image
+
+The reference deployment is `docker-compose.yml`, and everything above happens
+inside a container there. Three things have to reach it, and none of them is in
+it by default: the old database over the network, the old media directory as a
+mount, and the variables. All three are in the compose file as a commented
+block: uncomment it, put the values in `.env`, and the rest is one command
+repeated with different arguments.
+
+In order, and the order is the point:
+
+```
+# 1. .env filled in, and the takeover block uncommented in docker-compose.yml.
+
+# 2. abuuba's own database, which the import writes into.
+docker compose run --rm abuuba bin/abuuba eval 'Abuuba.Release.migrate()'
+
+# 3. The dry run. Read what it says before going on.
+docker compose run --rm abuuba bin/abuuba eval 'Abuuba.Release.import_mastodon()'
+
+# 4. Back up both databases. Step 5 cannot be undone.
+
+# 5. The import itself. Hours, on a large instance.
+docker compose run --rm abuuba bin/abuuba eval 'Abuuba.Release.import_mastodon(execute: true)'
+
+# 6. While the old server is still reachable.
+docker compose run --rm abuuba bin/abuuba eval 'Abuuba.Release.import_mastodon(verify: true)'
+
+# 7. Point the domain here and start serving.
+docker compose up -d
+```
+
+`run --rm` rather than `exec`, because the import is a job of its own and has
+to work before this instance has ever served a request. The container it gets
+is thrown away afterwards; the checkpoints that let an interrupted import
+continue are rows in the database, not state in that container, so step 5 can
+be repeated as often as it takes.
+
+Two things that only bite inside a container. `localhost` in
+`MASTODON_DATABASE_URL` is the container, not the host, so the old Postgres
+needs an address both can see: the host's address on the network they share,
+or, when Mastodon runs in Docker too, its service name after joining that
+network. And `MASTODON_MEDIA_ROOT` is the path *inside* the container, which is
+the right-hand side of the mount (`/mastodon-media` in the commented block),
+never the host path.
 
 ## Which versions
 
@@ -195,6 +274,7 @@ the state would hand those accounts back on the day of the takeover, quietly.
 
 ```
 mix abuuba.import --verify
+docker compose run --rm abuuba bin/abuuba eval 'Abuuba.Release.import_mastodon(verify: true)'
 ```
 
 Run it while the old database is still reachable, because it works by comparing

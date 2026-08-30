@@ -150,8 +150,19 @@ to be true, and reports what a takeover would move, writing nothing until asked.
 Accounts, their owners, signing keys and OAuth credentials come across keeping
 their ids, so links keep resolving, passwords keep working and the app on
 somebody's phone stays signed in. `--verify` proves it against the old database
-afterwards. See [taking over a Mastodon instance](docs/admin/importing-from-mastodon.md);
-the short version is that the domain has to stay the same.
+afterwards. Back up both databases before `--execute`: that run is not
+reversible, and the way back from an import that went wrong is a restore.
+
+On a server there is no Mix, so the same command is a function in the release,
+and on the reference deployment it is the line the migration already uses:
+
+```
+docker compose run --rm abuuba bin/abuuba eval 'Abuuba.Release.import_mastodon()'
+```
+
+See [taking over a Mastodon instance](docs/admin/importing-from-mastodon.md)
+for the variables it needs, the mount the media comes through and the order the
+steps go in; the short version is that the domain has to stay the same.
 
 ## Performance
 

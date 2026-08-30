@@ -54,11 +54,29 @@ services:
       SMTP_PORT: ${SMTP_PORT:-587}
       SMTP_USERNAME: ${SMTP_USERNAME:-}
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      # Taking over a Mastodon instance. Uncomment for the migration, fill the
+      # values in .env, and take them out again when it is done: they are the
+      # old server's, and only the import ever reads them. Every name keeps its
+      # MASTODON_ prefix, SECRET_KEY_BASE included, and the reason is in
+      # docs/admin/importing-from-mastodon.md
+      # MASTODON_DATABASE_URL: ${MASTODON_DATABASE_URL:-}
+      # MASTODON_LOCAL_DOMAIN: ${MASTODON_LOCAL_DOMAIN:-}
+      # MASTODON_MEDIA_ROOT: /mastodon-media
+      # MASTODON_S3_BUCKET: ${MASTODON_S3_BUCKET:-}
+      # MASTODON_SECRET_KEY_BASE: ${MASTODON_SECRET_KEY_BASE:-}
+      # MASTODON_ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY: ${MASTODON_ACTIVE_RECORD_ENCRYPTION_PRIMARY_KEY:-}
+      # MASTODON_ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY: ${MASTODON_ACTIVE_RECORD_ENCRYPTION_DETERMINISTIC_KEY:-}
+      # MASTODON_ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT: ${MASTODON_ACTIVE_RECORD_ENCRYPTION_KEY_DERIVATION_SALT:-}
+      # MASTODON_VAPID_PRIVATE_KEY: ${MASTODON_VAPID_PRIVATE_KEY:-}
+      # MASTODON_VAPID_PUBLIC_KEY: ${MASTODON_VAPID_PUBLIC_KEY:-}
     volumes:
       # Uploads. Losing this volume loses every avatar, header and attachment
       # this instance has ever served, including the ones remote servers have
       # already linked to.
       - uploads:/app/uploads
+      # The old server's media directory, for a takeover. Read-only, because
+      # the import copies out of that tree and never writes to it.
+      # - /var/lib/mastodon/public/system:/mastodon-media:ro
     ports:
       # On localhost, because the reverse proxy in front of it is on the same
       # host. Change to "4000:4000" only if something else is doing TLS.

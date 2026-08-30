@@ -1,20 +1,3 @@
-defmodule Abuuba.ImporterTest.StubStep do
-  @moduledoc false
-  # A step that writes nothing, so the harness around the steps can be tested
-  # without one of the real ones and the whole source schema it reads.
-
-  @behaviour Abuuba.Importer.Step
-
-  @impl Abuuba.Importer.Step
-  def run(_opts), do: :ok
-
-  @impl Abuuba.Importer.Step
-  def check(_opts), do: []
-
-  @impl Abuuba.Importer.Step
-  def verify(_opts), do: [%{name: "stub", checked: 1, failures: []}]
-end
-
 defmodule Abuuba.ImporterTest do
   use Abuuba.DataCase, async: false
 
@@ -225,7 +208,7 @@ defmodule Abuuba.ImporterTest do
       {:error, problems} = Importer.check(Keyword.put(opts(), :secrets, %{}))
       problem = Enum.find(problems, &(&1.key == "secrets"))
 
-      assert problem.detail =~ "SECRET_KEY_BASE"
+      assert problem.detail =~ "VAPID_PUBLIC_KEY"
     end
 
     test "refuses a media root that is not there" do
@@ -250,6 +233,34 @@ defmodule Abuuba.ImporterTest do
         )
 
       assert length(problems) >= 2
+    end
+  end
+
+  describe "reading the old server's secrets" do
+    test "each comes from its MASTODON_ name" do
+      with_env(%{"MASTODON_SECRET_KEY_BASE" => "theirs"})
+
+      assert Importer.config()[:secrets]["SECRET_KEY_BASE"] == "theirs"
+    end
+
+    test "and the bare name is not read, because that one is ours" do
+      # `SECRET_KEY_BASE` names two different keys: the old server's, which
+      # decrypts what comes across, and this one's, which a release cannot boot
+      # without. Both are set in the process running the import, so reading the
+      # bare name as a fallback would take ours for theirs and pass every check
+      # with it. Unset has to stay unset.
+      with_env(%{"SECRET_KEY_BASE" => "ours", "MASTODON_SECRET_KEY_BASE" => nil})
+
+      assert Importer.config()[:secrets]["SECRET_KEY_BASE"] == ""
+    end
+
+    test "and a missing one is named the way an admin sets it" do
+      seed!()
+
+      {:error, problems} = Importer.check(Keyword.put(opts(), :secrets, %{}))
+      problem = Enum.find(problems, &(&1.key == "secrets"))
+
+      assert problem.detail =~ "MASTODON_SECRET_KEY_BASE"
     end
   end
 
@@ -376,9 +387,7 @@ defmodule Abuuba.ImporterTest do
       # Better than a run that reports success having moved nothing. The steps
       # are configuration, and an empty list is a misconfiguration rather than
       # a quiet no-op.
-      steps = Application.get_env(:abuuba, :import_steps)
-      Application.put_env(:abuuba, :import_steps, [])
-      on_exit(fn -> Application.put_env(:abuuba, :import_steps, steps) end)
+      with_steps([])
 
       assert {:error, :no_steps} = Importer.run(Keyword.put(opts(), :dry_run, false))
     end
@@ -387,24 +396,20 @@ defmodule Abuuba.ImporterTest do
       # The plan is what an admin is shown either way. A run that answered with
       # something else took the report down with it, at the end of an import
       # that had already written everything.
-      steps = Application.get_env(:abuuba, :import_steps)
-      Application.put_env(:abuuba, :import_steps, [Abuuba.ImporterTest.StubStep])
-      on_exit(fn -> Application.put_env(:abuuba, :import_steps, steps) end)
+      with_steps([Abuuba.ImportSteps.Stub])
 
       assert {:ok, plan} = Importer.run(Keyword.put(opts(), :dry_run, false))
 
       refute plan.dry_run
-      assert plan.outcomes["stub_step"] == :done
-      assert Importer.report(plan) =~ "stub_step"
+      assert plan.outcomes["stub"] == :done
+      assert Importer.report(plan) =~ "stub"
     end
 
     test "asks every step to prove itself, so a step added later is not skipped" do
       # Through `Code.ensure_loaded?/1`, because `function_exported?/3` answers
       # false for a module nothing has loaded yet — which in a release is every
       # module, and the verification would quietly check nothing.
-      steps = Application.get_env(:abuuba, :import_steps)
-      Application.put_env(:abuuba, :import_steps, [Abuuba.ImporterTest.StubStep])
-      on_exit(fn -> Application.put_env(:abuuba, :import_steps, steps) end)
+      with_steps([Abuuba.ImportSteps.Stub])
 
       assert {:ok, [%{name: "stub", checked: 1}]} = Importer.verify(opts())
     end
