@@ -82,6 +82,7 @@
   .band { padding: 72px 0; border-top: 1px solid var(--line); }
   .band h2 { margin: 0 0 8px; font: 400 clamp(1.9rem, 4.2vw, 3rem)/1.05 var(--display); letter-spacing: -0.01em; text-wrap: balance; }
   .band h2 em { font-style: normal; color: var(--accent); }
+  .band h3 { margin: 28px 0 8px; font: 500 .72rem/1 var(--body); letter-spacing: .16em; text-transform: uppercase; color: var(--accent); }
   .band > .wrap > p { max-width: 62ch; color: var(--muted); }
   .band > .wrap > p strong { color: var(--ink); font-weight: 500; }
   .reveal { opacity: 0; transform: translateY(14px); transition: opacity .6s ease, transform .6s ease; }
