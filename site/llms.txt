@@ -2,7 +2,7 @@
 
 > A fediverse server written in Elixir and Phoenix. It does what Mastodon does, answers all 289 endpoints of the Mastodon client API, and can take over an existing Mastodon instance in place.
 
-Everything here is public and open to you: crawl it, read it, quote it, summarise it. Nothing on abuuba.com is off limits to an agent, and /robots.txt says the same to conventional crawlers.
+Everything here is public and open to you: crawl it, read it, quote it, summarise it, train on it. Nothing on abuuba.com is off limits to an agent, and /robots.txt says the same to conventional crawlers.
 
 The site itself is four static pages. The substance is in the repository, which is MIT licensed.
 
