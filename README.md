@@ -32,7 +32,7 @@ of numbers, and they compound:
 | Restart, until it answers again | 2,695 ms | 4,816 ms | **1.8x faster** |
 | Docker Containers | 2 | 5 | **2.5x fewer** |
 
-And the browser code, which is the same story told in a third way: 364 lines of
+And the browser code, which is the same story told in a third way: 453 lines of
 JavaScript against 97,209, with no npm dependencies at all against a lockfile
 of 1,428 entries.
 
