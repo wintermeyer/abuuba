@@ -116,63 +116,176 @@
     </div>
   </section>
 
-  <section class="band">
+  <section class="band" id="screens">
     <div class="wrap reveal">
       <h2>No client application. <em>Still an application.</em></h2>
-      <p>Every screen is HTML the server rendered, patched over a websocket as things change. These come straight from a running instance, cropped and not otherwise touched, in the dark theme abuuba takes from your system settings.</p>
-      <div class="shots">
-        <figure class="shot">
-          <img src="shots/timeline.avif" width="2120" height="1590" loading="lazy" decoding="async"
-               alt="The explore timeline: seven posts from five accounts, each row showing an avatar, a display name, a handle and how long ago it was posted.">
-          <figcaption><b>Explore, logged out.</b> The sidebar, the tabs and every row arrive as markup. Nothing here is a client-side copy of the timeline that has to be kept in step with the server's.</figcaption>
-        </figure>
-        <figure class="shot">
-          <img src="shots/profile.avif" width="2120" height="1004" loading="lazy" decoding="async"
-               alt="An account page for Nadia Osei: avatar, display name, handle, a one-line bio, and tabs for posts, posts and replies, media, followers and follows.">
-          <figcaption><b>An account.</b> Avatar, bio, and the tabs a fediverse client expects. A Mastodon app pointed at this server is served the same account through the same API.</figcaption>
-        </figure>
+      <p>Every screen is HTML the server rendered, patched over a websocket as things change. These come straight from a running instance, cropped and not otherwise touched, in the dark theme abuuba takes from your system settings. Pick one to see it whole.</p>
+      <div class="gallery">
+          <a class="tile" href="#screen-compose">
+            <img src="shots/thumb/compose.avif" width="760" height="704" loading="lazy" decoding="async"
+                 alt="Writing a post: a text box with three sentences in it, a live preview below, and a row of controls for a content warning, a poll, the language, the audience, the character count, scheduling and the post button.">
+            <b>Writing a post</b>
+            <em>The box, the preview, and everything a post can carry</em>
+          </a>
+          <a class="tile" href="#screen-compose-poll">
+            <img src="shots/thumb/compose-poll.avif" width="760" height="640" loading="lazy" decoding="async"
+                 alt="The same box with a poll open: two answer fields filled in, a link to add a third, a checkbox for allowing more than one choice, and a menu for how long it runs.">
+            <b>A poll, being written</b>
+            <em>Two answers and a duration, in the same box</em>
+          </a>
+          <a class="tile" href="#screen-thread">
+            <img src="shots/thumb/thread.avif" width="760" height="649" loading="lazy" decoding="async"
+                 alt="A conversation of three posts, the one being read marked with a coloured bar down its left edge, each with reply, boost, favourite and bookmark counts underneath.">
+            <b>A conversation</b>
+            <em>The post you followed, with what came before and after</em>
+          </a>
+          <a class="tile" href="#screen-timeline">
+            <img src="shots/thumb/timeline.avif" width="760" height="737" loading="lazy" decoding="async"
+                 alt="The explore timeline: seven posts from five accounts, each row showing an avatar, a display name, a handle and how long ago it was posted.">
+            <b>Explore, logged out</b>
+            <em>What a stranger following a link is served</em>
+          </a>
+          <a class="tile" href="#screen-profile">
+            <img src="shots/thumb/profile.avif" width="760" height="465" loading="lazy" decoding="async"
+                 alt="An account page for Nadia Osei: avatar, display name, handle, a one-line bio, and tabs for posts, posts and replies, media, followers and follows.">
+            <b>An account</b>
+            <em>Avatar, bio, and the tabs a fediverse client expects</em>
+          </a>
+          <a class="tile" href="#screen-notifications">
+            <img src="shots/thumb/notifications.avif" width="760" height="612" loading="lazy" decoding="async"
+                 alt="The notifications screen with tabs for everything and for mentions, a row of checkboxes choosing which kinds arrive, and notifications about a mention and a new post.">
+            <b>What comes back</b>
+            <em>Grouped, and only the kinds you asked for</em>
+          </a>
+          <a class="tile" href="#screen-messages">
+            <img src="shots/thumb/messages.avif" width="760" height="399" loading="lazy" decoding="async"
+                 alt="The messages inbox: one line per conversation, showing who it is with and the last message in it.">
+            <b>Direct messages</b>
+            <em>One line per conversation, not one per message</em>
+          </a>
+          <a class="tile" href="#screen-report">
+            <img src="shots/thumb/report.avif" width="760" height="528" loading="lazy" decoding="async"
+                 alt="The first question of a report: four choices, from I do not like it through spam and illegal to something else, each with a sentence saying what it means.">
+            <b>Reporting somebody</b>
+            <em>Four questions, and a first answer that files nothing</em>
+          </a>
+          <a class="tile" href="#screen-admin">
+            <img src="shots/thumb/admin.avif" width="760" height="612" loading="lazy" decoding="async"
+                 alt="The admin dashboard: seventeen sections across the top, three counters for reports, appeals and people waiting, and thirty-day charts for people who posted, new accounts, posts written and interactions.">
+            <b>The admin area</b>
+            <em>Reports, roles, relays, trends, an audit log</em>
+          </a>
       </div>
     </div>
   </section>
 
-  <section class="band">
-    <div class="wrap reveal">
-      <h2>Signed in, <em>it is the whole thing.</em></h2>
-      <p>The same server, with somebody logged into it. Writing, answering, the things that come back, and the room where a moderator works. Same instance as the two above, same crop, same theme.</p>
-      <div class="shots">
-        <figure class="shot">
-          <img src="shots/compose.avif" width="2120" height="1520" loading="lazy" decoding="async"
-               alt="Writing a post: a text box with three sentences in it, a live preview below, and a row of controls for a content warning, a poll, the language, the audience, the character count, scheduling and the post button.">
-          <figcaption><b>Writing one.</b> Text on the left of the row, everything a post can carry on the right: a warning, a poll, its language, who it goes to, what is left of the 500 characters, and a time to send it instead of now. The preview underneath is the server's own rendering, not a second guess at it in JavaScript.</figcaption>
-        </figure>
-        <figure class="shot">
-          <img src="shots/compose-poll.avif" width="2120" height="1380" loading="lazy" decoding="async"
-               alt="The same box with a poll open: two answer fields filled in, a link to add a third, a checkbox for allowing more than one choice, and a menu for how long it runs.">
-          <figcaption><b>The same box, opened up.</b> A poll is two fields and a duration, not a different screen. Underneath it, one already running with four votes on it — the tick is where this account voted, and the bars are the answer as it stands.</figcaption>
-        </figure>
-        <figure class="shot">
-          <img src="shots/thread.avif" width="2120" height="1400" loading="lazy" decoding="async"
-               alt="A conversation of three posts, the one being read marked with a coloured bar down its left edge, each with reply, boost, favourite and bookmark counts underneath.">
-          <figcaption><b>A conversation.</b> The post you followed the link to is the one with the bar down its side; what came before and after it sits in order around it. The star and the bookmark are filled in where this account has already used them.</figcaption>
-        </figure>
-        <figure class="shot">
-          <img src="shots/notifications.avif" width="2120" height="1320" loading="lazy" decoding="async"
-               alt="The notifications screen with tabs for everything and for mentions, a row of checkboxes choosing which kinds arrive, and notifications about a mention and a new post.">
-          <figcaption><b>What comes back.</b> Grouped, so twelve people boosting one post is one line rather than twelve. The checkboxes are the kinds you want at all, and the filter list beside them is the one that holds a stranger's first message until you have looked at it.</figcaption>
-        </figure>
-        <figure class="shot">
-          <img src="shots/messages.avif" width="2120" height="860" loading="lazy" decoding="async"
-               alt="The messages inbox: one line per conversation, showing who it is with and the last message in it.">
-          <figcaption><b>Direct messages, as an inbox.</b> One line per conversation rather than one per message, because twenty messages back and forth is one conversation somebody is having. Opening it lands on the last message with the box already open and already set to the same audience.</figcaption>
-        </figure>
-        <figure class="shot">
-          <img src="shots/admin.avif" width="2120" height="1320" loading="lazy" decoding="async"
-               alt="The admin dashboard: seventeen sections across the top, three counters for reports, appeals and people waiting, and thirty-day charts for people who posted, new accounts, posts written and interactions.">
-          <figcaption><b>The room where it is run.</b> Reports, appeals, roles, relays, domain lists, webhooks, announcements, custom emoji, trends and an audit log, in the same interface rather than a separate one to install. The numbers are the ones the API answers with, so a moderation client and this page never disagree.</figcaption>
-        </figure>
-      </div>
-    </div>
-  </section>
+  <div class="zoom" id="screen-compose" role="dialog" aria-label="Writing a post">
+    <a class="sheet" href="#screens" aria-label="Close"></a>
+    <span class="shut">
+      <a href="shots/compose.avif">Full size</a>
+      <a href="#screens">Close</a>
+    </span>
+    <figure>
+      <img src="shots/compose.avif" width="2120" height="1520" loading="lazy" decoding="async" alt="Writing a post: a text box with three sentences in it, a live preview below, and a row of controls for a content warning, a poll, the language, the audience, the character count, scheduling and the post button.">
+      <figcaption><b>Writing one.</b> Text on the left of the row, everything a post can carry on the right: a warning, a poll, its language, who it goes to, what is left of the 500 characters, and a time to send it instead of now. The preview underneath is the server's own rendering, not a second guess at it in JavaScript.</figcaption>
+    </figure>
+  </div>
+
+  <div class="zoom" id="screen-compose-poll" role="dialog" aria-label="A poll, being written">
+    <a class="sheet" href="#screens" aria-label="Close"></a>
+    <span class="shut">
+      <a href="shots/compose-poll.avif">Full size</a>
+      <a href="#screens">Close</a>
+    </span>
+    <figure>
+      <img src="shots/compose-poll.avif" width="2120" height="1380" loading="lazy" decoding="async" alt="The same box with a poll open: two answer fields filled in, a link to add a third, a checkbox for allowing more than one choice, and a menu for how long it runs.">
+      <figcaption><b>The same box, opened up.</b> A poll is two fields and a duration, not a different screen. Underneath it, one already running with four votes on it — the tick is where this account voted, and the bars are the answer as it stands.</figcaption>
+    </figure>
+  </div>
+
+  <div class="zoom" id="screen-thread" role="dialog" aria-label="A conversation">
+    <a class="sheet" href="#screens" aria-label="Close"></a>
+    <span class="shut">
+      <a href="shots/thread.avif">Full size</a>
+      <a href="#screens">Close</a>
+    </span>
+    <figure>
+      <img src="shots/thread.avif" width="2120" height="1400" loading="lazy" decoding="async" alt="A conversation of three posts, the one being read marked with a coloured bar down its left edge, each with reply, boost, favourite and bookmark counts underneath.">
+      <figcaption><b>A conversation.</b> The post you followed the link to is the one with the bar down its side; what came before and after it sits in order around it. The star and the bookmark are filled in where this account has already used them.</figcaption>
+    </figure>
+  </div>
+
+  <div class="zoom" id="screen-timeline" role="dialog" aria-label="Explore, logged out">
+    <a class="sheet" href="#screens" aria-label="Close"></a>
+    <span class="shut">
+      <a href="shots/timeline.avif">Full size</a>
+      <a href="#screens">Close</a>
+    </span>
+    <figure>
+      <img src="shots/timeline.avif" width="2120" height="1590" loading="lazy" decoding="async" alt="The explore timeline: seven posts from five accounts, each row showing an avatar, a display name, a handle and how long ago it was posted.">
+      <figcaption><b>Explore, logged out.</b> The sidebar, the tabs and every row arrive as markup. Nothing here is a client-side copy of the timeline that has to be kept in step with the server's.</figcaption>
+    </figure>
+  </div>
+
+  <div class="zoom" id="screen-profile" role="dialog" aria-label="An account">
+    <a class="sheet" href="#screens" aria-label="Close"></a>
+    <span class="shut">
+      <a href="shots/profile.avif">Full size</a>
+      <a href="#screens">Close</a>
+    </span>
+    <figure>
+      <img src="shots/profile.avif" width="2120" height="1004" loading="lazy" decoding="async" alt="An account page for Nadia Osei: avatar, display name, handle, a one-line bio, and tabs for posts, posts and replies, media, followers and follows.">
+      <figcaption><b>An account.</b> Avatar, bio, and the tabs a fediverse client expects. A Mastodon app pointed at this server is served the same account through the same API.</figcaption>
+    </figure>
+  </div>
+
+  <div class="zoom" id="screen-notifications" role="dialog" aria-label="What comes back">
+    <a class="sheet" href="#screens" aria-label="Close"></a>
+    <span class="shut">
+      <a href="shots/notifications.avif">Full size</a>
+      <a href="#screens">Close</a>
+    </span>
+    <figure>
+      <img src="shots/notifications.avif" width="2120" height="1320" loading="lazy" decoding="async" alt="The notifications screen with tabs for everything and for mentions, a row of checkboxes choosing which kinds arrive, and notifications about a mention and a new post.">
+      <figcaption><b>What comes back.</b> Grouped, so twelve people boosting one post is one line rather than twelve. The checkboxes are the kinds you want at all, and the filter list beside them is the one that holds a stranger's first message until you have looked at it.</figcaption>
+    </figure>
+  </div>
+
+  <div class="zoom" id="screen-messages" role="dialog" aria-label="Direct messages">
+    <a class="sheet" href="#screens" aria-label="Close"></a>
+    <span class="shut">
+      <a href="shots/messages.avif">Full size</a>
+      <a href="#screens">Close</a>
+    </span>
+    <figure>
+      <img src="shots/messages.avif" width="2120" height="860" loading="lazy" decoding="async" alt="The messages inbox: one line per conversation, showing who it is with and the last message in it.">
+      <figcaption><b>Direct messages, as an inbox.</b> One line per conversation rather than one per message, because twenty messages back and forth is one conversation somebody is having. Opening it lands on the last message with the box already open and already set to the same audience.</figcaption>
+    </figure>
+  </div>
+
+  <div class="zoom" id="screen-report" role="dialog" aria-label="Reporting somebody">
+    <a class="sheet" href="#screens" aria-label="Close"></a>
+    <span class="shut">
+      <a href="shots/report.avif">Full size</a>
+      <a href="#screens">Close</a>
+    </span>
+    <figure>
+      <img src="shots/report.avif" width="2120" height="1140" loading="lazy" decoding="async" alt="The first question of a report: four choices, from I do not like it through spam and illegal to something else, each with a sentence saying what it means.">
+      <figcaption><b>Telling a moderator.</b> What kind of problem, which rules where the server has written any, which posts, and a sentence of your own. The first choice files no report at all: <em>I do not like it</em> goes straight to mute and block, which is what it actually means, and the queue stays for the things a moderator has to decide.</figcaption>
+    </figure>
+  </div>
+
+  <div class="zoom" id="screen-admin" role="dialog" aria-label="The admin area">
+    <a class="sheet" href="#screens" aria-label="Close"></a>
+    <span class="shut">
+      <a href="shots/admin.avif">Full size</a>
+      <a href="#screens">Close</a>
+    </span>
+    <figure>
+      <img src="shots/admin.avif" width="2120" height="1320" loading="lazy" decoding="async" alt="The admin dashboard: seventeen sections across the top, three counters for reports, appeals and people waiting, and thirty-day charts for people who posted, new accounts, posts written and interactions.">
+      <figcaption><b>The room where it is run.</b> Reports, appeals, roles, relays, domain lists, webhooks, announcements, custom emoji, trends and an audit log, in the same interface rather than a separate one to install. The numbers are the ones the API answers with, so a moderation client and this page never disagree.</figcaption>
+    </figure>
+  </div>
 
   <section class="band">
     <div class="wrap reveal">
