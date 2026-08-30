@@ -150,8 +150,12 @@ web interface has no button for that yet; apps that speak the Mastodon API do.
 
 ## Follows
 
-Everybody you follow, with a checkbox each. Tick several and unfollow them in
-one press rather than one at a time.
+If your account approves its followers, whoever is waiting is at the top of
+this page: **Let them follow** or **Turn them away**, one at a time. Somebody
+you turn away is not told, and can ask again.
+
+Below that, everybody you follow, with a checkbox each. Tick several and
+unfollow them in one press rather than one at a time.
 
 ## Security
 

@@ -26,8 +26,9 @@ Stummschalten entstanden sind, beim nächsten Neuladen. Gelöscht wird nichts,
 deshalb ist beim Aufheben alles sofort wieder da.
 
 Stummschalten wirkt überall dort, wo Beiträge auftauchen, nicht nur in der
-Timeline: auch aus der Suche und aus den Antworten unter einem Thread ist die
-Person verschwunden, und ebenso alles von ihr, was jemand anderes teilt.
+Timeline: auch aus der Suche, aus Entdecken, von jeder Hashtag-Seite und aus
+den Antworten unter einem Thread ist die Person verschwunden, und ebenso alles
+von ihr, was jemand anderes teilt.
 
 ## Blockieren
 

@@ -24,8 +24,9 @@ drawn, so what they posted before you muted them goes too, on the next reload.
 Nothing is deleted, which is why unmuting brings all of it straight back.
 
 Muting reaches everywhere posts are shown, not only the timeline: they are
-gone from search results and from the replies under a thread as well, and so
-is anything of theirs that somebody else boosts.
+gone from search results, from explore, from every hashtag page and from the
+replies under a thread as well, and so is anything of theirs that somebody
+else boosts.
 
 ## Blocking
 

@@ -169,7 +169,7 @@ defmodule AbuubaWeb.SettingsLive do
           filters={@filters}
           blocked_domains={@blocked_domains}
         />
-        <.follows :if={@section == :follows} following={@following} />
+        <.follows :if={@section == :follows} following={@following} requests={@requests} />
         <.security :if={@section == :security} logins={@logins} />
         <.applications :if={@section == :applications} applications={@applications} />
         <.account :if={@section == :account} account={@account} />
@@ -845,8 +845,50 @@ defmodule AbuubaWeb.SettingsLive do
 
   attr :following, :list, required: true
 
+  attr :requests, :list, required: true
+
   defp follows(assigns) do
     ~H"""
+    <section :if={@requests != []} class="mt-4 rounded border border-base-300 p-3">
+      <h3 class="font-semibold">{gettext("Waiting for your answer")}</h3>
+      <p class="mt-1 text-sm text-base-content/70">
+        {gettext(
+          "Your account asks before letting somebody follow it. Turning one away tells them nothing, and they can ask again."
+        )}
+      </p>
+
+      <ul class="mt-3 divide-y divide-base-300">
+        <li :for={person <- @requests} class="flex flex-wrap items-center gap-3 py-2">
+          <span class="min-w-0 flex-1">
+            <a href={"/@" <> Account.acct(person)} class="font-medium">
+              {Account.display_name(person)}
+            </a>
+            <span class="block text-sm text-base-content/60">@{Account.acct(person)}</span>
+          </span>
+
+          <span class="flex shrink-0 gap-2">
+            <button
+              type="button"
+              phx-click="accept_request"
+              phx-value-id={person.id}
+              class="btn btn-sm btn-primary"
+            >
+              {gettext("Let them follow")}
+            </button>
+
+            <button
+              type="button"
+              phx-click="reject_request"
+              phx-value-id={person.id}
+              class="btn btn-sm"
+            >
+              {gettext("Turn them away")}
+            </button>
+          </span>
+        </li>
+      </ul>
+    </section>
+
     <p class="mt-2 text-base-content/70">
       {gettext("Tick anybody you want to stop following, then press the button once.")}
     </p>
@@ -1312,6 +1354,14 @@ defmodule AbuubaWeb.SettingsLive do
     socket |> assign(account: account, saved?: true) |> then(&{:noreply, &1})
   end
 
+  def handle_event("accept_request", %{"id" => id}, socket) do
+    {:noreply, answer_request(socket, id, &Relationships.accept_follow_request/1)}
+  end
+
+  def handle_event("reject_request", %{"id" => id}, socket) do
+    {:noreply, answer_request(socket, id, &Relationships.reject_follow_request/1)}
+  end
+
   def handle_event("accept_all_requests", _params, socket) do
     Relationships.accept_all_follow_requests(socket.assigns.account)
 
@@ -1653,6 +1703,21 @@ defmodule AbuubaWeb.SettingsLive do
 
   def handle_event(_event, _params, socket), do: {:noreply, socket}
 
+  # Read back through `pending_followers/2` rather than trusted from the
+  # button: the id arrives from the page, and the only request this account
+  # may answer is one that is waiting on it.
+  defp answer_request(socket, id, answer) do
+    account = socket.assigns.account
+
+    with {:ok, asker_id} <- Snowflake.cast(id),
+         %{} = asker <- Abuuba.Accounts.get_account(asker_id),
+         %{} = request <- Relationships.get_follow_request(asker, account) do
+      answer.(request)
+    end
+
+    socket |> assign(saved?: true) |> load(:follows)
+  end
+
   ## Plumbing
 
   # The section that was saved, not always the profile: privacy and aliases save
@@ -1737,6 +1802,11 @@ defmodule AbuubaWeb.SettingsLive do
     [
       following:
         if(section == :follows, do: Relationships.following(account, %{limit: 200}), else: []),
+      requests:
+        if(section == :follows,
+          do: Relationships.pending_followers(account, %{limit: 200}),
+          else: []
+        ),
       applications:
         if(section == :applications, do: OAuth.authorized_applications(user), else: []),
       severances: if(section == :strikes, do: Domains.severance_summary(account), else: []),

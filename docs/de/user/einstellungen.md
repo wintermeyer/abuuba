@@ -165,8 +165,12 @@ die Mastodon-API sprechen, können es.
 
 ## Folge ich
 
-Alle, denen du folgst, mit je einem Kästchen. Mehrere ankreuzen und in einem
-Zug entfolgen, statt einzeln nacheinander.
+Wenn dein Konto Follower erst bestätigt, steht oben auf dieser Seite, wer
+wartet: **Folgen lassen** oder **Ablehnen**, einzeln. Wer abgelehnt wird,
+erfährt nichts davon und kann erneut anfragen.
+
+Darunter alle, denen du folgst, mit je einem Kästchen. Mehrere ankreuzen und
+in einem Zug entfolgen, statt einzeln nacheinander.
 
 ## Sicherheit
 

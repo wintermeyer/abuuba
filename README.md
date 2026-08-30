@@ -111,7 +111,7 @@ instead, and went with abuuba.
 
 ## Not for the faint of heart
 
-abuuba is version 1.0.2 and has never served real members on the open internet.
+abuuba is version 1.0.3 and has never served real members on the open internet.
 Every number above is measured and reproducible. None of it has been tested by
 anyone but me.
 
