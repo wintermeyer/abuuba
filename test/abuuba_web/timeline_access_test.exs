@@ -34,9 +34,18 @@ defmodule AbuubaWeb.TimelineAccessTest do
     %{author: author}
   end
 
+  # Approved as well as confirmed: `Auth.check_sign_in/1` refuses an account
+  # still waiting for a moderator, so a fixture without it is not "somebody
+  # signed in" -- it is somebody the sign-in would turn away.
   defp signed_in(conn) do
     account = account_fixture()
-    user = user_fixture(%{account_id: account.id, confirmed_at: DateTime.utc_now()})
+
+    user =
+      user_fixture(%{
+        account_id: account.id,
+        confirmed_at: DateTime.utc_now(),
+        approved: true
+      })
 
     conn
     |> Phoenix.ConnTest.init_test_session(%{})

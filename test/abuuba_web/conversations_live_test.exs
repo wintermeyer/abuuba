@@ -40,6 +40,44 @@ defmodule AbuubaWeb.ConversationsLiveTest do
     status
   end
 
+  # Opening a conversation is opening it to answer it, and it landed on the
+  # last message with an empty box set to public. Typing the obvious reply
+  # there sent a private exchange to everybody.
+  describe "opening a conversation" do
+    test "arrives ready to answer it", %{conn: conn, reader: reader, sender: sender} do
+      message(sender, reader, "just between us")
+
+      {:ok, live, _html} = live(conn, ~p"/conversations")
+      live |> element("button[phx-click='open']") |> render_click()
+
+      {path, _flash} = assert_redirect(live)
+
+      assert path =~ "compose=reply"
+    end
+
+    test "and the box it opens is set to the message's own audience", %{
+      conn: conn,
+      reader: reader,
+      sender: sender
+    } do
+      # The half that matters. An empty public box on a private message is how
+      # somebody answers one to everybody.
+      message(sender, reader, "still just between us")
+
+      {:ok, live, _html} = live(conn, ~p"/conversations")
+      live |> element("button[phx-click='open']") |> render_click()
+
+      {path, _flash} = assert_redirect(live)
+      {:ok, arrived, _html} = live(conn, path)
+
+      assert render(arrived) =~ "Replying to"
+
+      assert arrived
+             |> element(~s(button[phx-click="set_visibility"][phx-value-visibility="direct"]))
+             |> render() =~ ~s(aria-pressed="true")
+    end
+  end
+
   describe "the inbox" do
     test "says so when there is nothing in it", %{conn: conn} do
       html = conn |> get(~p"/conversations") |> html_response(200)
@@ -76,7 +114,7 @@ defmodule AbuubaWeb.ConversationsLiveTest do
       assert {:error, {:live_redirect, %{to: to}}} =
                live |> element("button[phx-click='open']") |> render_click()
 
-      assert to == "/@bob/#{status.id}"
+      assert to == "/@bob/#{status.id}?compose=reply"
       refute Conversations.get(reader, row.id).unread
     end
 

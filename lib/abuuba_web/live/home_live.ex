@@ -317,12 +317,31 @@ defmodule AbuubaWeb.HomeLive do
   # button not being drawn is not the same as the event being refused.
   def handle_event("edit", %{"id" => id}, socket) do
     account = socket.assigns.account
+    status = status_by_id(id, account)
 
-    case status_by_id(id, account) do
-      %{account_id: author_id} = status when author_id == account.id ->
-        {:noreply, open_compose(socket, editing: status)}
+    if PostActions.own?(status, account) do
+      {:noreply, open_compose(socket, editing: status)}
+    else
+      {:noreply, socket}
+    end
+  end
 
-      _ ->
+  # The same shared decision the other five screens attach, answered here
+  # because this screen keeps a stream rather than a list and knows how to take
+  # a row out of one.
+  def handle_event("delete", %{"id" => id}, socket) do
+    case PostActions.delete(socket.assigns.account, id) do
+      {:ok, status} ->
+        # Its own row and every row that is a boost of it: the boost is drawn
+        # under the booster's id, so taking out only the post's own id leaves
+        # the words of a deleted post on screen under a flash saying it is
+        # gone.
+        {:noreply,
+         socket
+         |> stream_delete(:statuses, %{"id" => to_string(status.id)})
+         |> put_flash(:info, PostActions.gone())}
+
+      :error ->
         {:noreply, socket}
     end
   end

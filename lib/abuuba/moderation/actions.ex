@@ -61,6 +61,15 @@ defmodule Abuuba.Moderation.Actions do
   def take(%Account{} = moderator, %Account{} = target, action, opts \\ []) do
     with :ok <- allowed?(action),
          {:ok, strike} <- apply_and_record(moderator, target, action, opts) do
+      # After the commit, for the reason the comment inside the transaction
+      # gives: a broadcast is the one thing here that does not come back when
+      # it rolls back. Announced from inside, a suspension that failed on its
+      # strike still threw every page of an account nobody had suspended back
+      # to the sign-in screen -- and one that succeeded raced its own commit,
+      # so a page redrawing on the message could read the rows from before it
+      # and come back signed in.
+      shut_the_pages(target, action)
+
       AuditLog.record(moderator, "account.#{action}", :account, target.id, %{
         "strike_id" => strike.id
       })
@@ -427,10 +436,20 @@ defmodule Abuuba.Moderation.Actions do
         :ok
 
       user ->
-        Auth.delete_all_session_tokens(user)
+        Auth.delete_all_session_tokens(user, announce: false)
         OAuth.revoke_all_for(user)
     end
   end
+
+  # The half of `close_the_door/1` that has to wait for the commit.
+  defp shut_the_pages(target, action) when action in ~w(suspend disable) do
+    case Repo.get_by(User, account_id: target.id) do
+      nil -> :ok
+      user -> Auth.sessions_revoked(user)
+    end
+  end
+
+  defp shut_the_pages(_target, _action), do: :ok
 
   defp lift(nil, _action), do: :ok
 

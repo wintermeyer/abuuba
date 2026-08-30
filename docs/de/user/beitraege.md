@@ -240,7 +240,9 @@ wenn es aus demselben Thread gewachsen ist. Für dich sind es zwei Gespräche,
 also sind es zwei Zeilen.
 
 Eines zu öffnen markiert es als gelesen und zeigt den Thread auf der Seite der
-letzten Nachricht. **Als ungelesen markieren** stellt das zurück, und beides
+letzten Nachricht – das Eingabefeld steht schon offen, auf der letzten Nachricht
+und auf demselben Publikum: Eine Antwort in einem privaten Gespräch bleibt
+darin. **Als ungelesen markieren** stellt das zurück, und beides
 gilt nur für dich: Für die anderen im Thread ändert sich nichts. **Entfernen**
 nimmt es nur aus deinem Posteingang; niemand sonst verliert etwas, und eine
 spätere Nachricht holt es zurück.
@@ -318,7 +320,12 @@ seine Follower gerichtet hat. Eigene Emoji bleiben unangetastet, statt in etwas
 
 ## Löschen
 
-Einen Beitrag zu löschen gibt dir seinen Text zurück – das ist es, was
+Der Papierkorb unter einem eigenen Beitrag löscht ihn, überall wo er auftaucht:
+in einer Timeline, auf einem Profil, auf seiner eigenen Seite. Vorher wirst du
+gefragt, denn ein Löschen geht an jeden Server mit einer Kopie und nichts holt
+es zurück.
+
+Über die API gibt dir das Löschen den Text zurück – das ist es, was
 „löschen und neu schreiben“ in deiner App tut: Es löscht den Beitrag und legt
 den Text zurück ins Eingabefeld.
 

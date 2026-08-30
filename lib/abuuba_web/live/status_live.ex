@@ -54,6 +54,28 @@ defmodule AbuubaWeb.StatusLive do
     end
   end
 
+  # The other half of the reply and edit buttons on a screen with no composer:
+  # they send the reader here and say in the address what they came to do. A
+  # value that is neither, or an edit of somebody else's post, opens nothing --
+  # the box being closed is the safe answer to a URL somebody typed.
+  @impl Phoenix.LiveView
+  def handle_params(%{"compose" => "reply"}, _uri, socket) do
+    {:noreply, open_compose(socket, reply_to: socket.assigns.status)}
+  end
+
+  def handle_params(%{"compose" => "edit"}, _uri, socket) do
+    viewer = socket.assigns.viewer
+    status = socket.assigns.status
+
+    if viewer && status.account_id == viewer.id do
+      {:noreply, open_compose(socket, editing: status)}
+    else
+      {:noreply, socket}
+    end
+  end
+
+  def handle_params(_params, _uri, socket), do: {:noreply, socket}
+
   @impl Phoenix.LiveView
   def render(assigns) do
     ~H"""
@@ -133,6 +155,25 @@ defmodule AbuubaWeb.StatusLive do
         {:noreply, open_compose(socket, editing: status)}
 
       _ ->
+        {:noreply, socket}
+    end
+  end
+
+  # The one action that can take away the page you are standing on. Deleting
+  # the post this page is about leaves nothing to reload, so it goes to the
+  # author's profile; deleting a reply in the thread reloads it in place.
+  def handle_event("delete", %{"id" => id}, socket) do
+    case PostActions.delete(socket.assigns.viewer, id) do
+      {:ok, status} ->
+        socket = put_flash(socket, :info, PostActions.gone())
+
+        if status.id == socket.assigns.status.id do
+          {:noreply, push_navigate(socket, to: ~p"/@#{socket.assigns.author.username}")}
+        else
+          {:noreply, load_thread(socket)}
+        end
+
+      :error ->
         {:noreply, socket}
     end
   end

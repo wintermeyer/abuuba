@@ -906,9 +906,15 @@ defmodule AbuubaWeb.SettingsLive do
         {gettext("Signing out everywhere ends every session, including this one.")}
       </p>
 
-      <button type="button" phx-click="sign_out_everywhere" class="btn">
-        {gettext("Sign out everywhere")}
-      </button>
+      <div class="flex flex-wrap gap-3">
+        <.link href={~p"/logout"} method="delete" class="btn">
+          {gettext("Sign out")}
+        </.link>
+
+        <button type="button" phx-click="sign_out_everywhere" class="btn">
+          {gettext("Sign out everywhere")}
+        </button>
+      </div>
     </div>
 
     <h3 class="mt-8 font-semibold">{gettext("Recent sign-ins")}</h3>

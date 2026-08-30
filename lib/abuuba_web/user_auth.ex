@@ -104,27 +104,106 @@ defmodule AbuubaWeb.UserAuth do
 
   @doc """
   Makes the signed-in user available to a LiveView.
+
+  Every page of this server's own interface is a LiveView, so this is the twin
+  of `fetch_current_scope/2` and has to ask the same question: a session that
+  exists is not the same as a session that may be used. It asked only the
+  first, which left a suspended account signed in on every live page.
+
+  A LiveView also asks once and then holds the answer for as long as the socket
+  lives, so the mount subscribes to the user's sessions and shuts the page down
+  when they are revoked. Without it a moderator's decision took effect whenever
+  the person happened to reload, and "sign out everywhere" left the browser it
+  was pressed in signed in.
   """
   def on_mount(:mount_current_scope, _params, session, socket) do
-    user = session["user_token"] && Auth.get_user_by_session_token(session["user_token"])
-
-    {:cont, Phoenix.Component.assign(socket, :current_scope, %{user: user})}
+    # A public page goes on being a public page: it is drawn again as a
+    # stranger would get it, rather than answering "you have to be signed in to
+    # see that page" about a page anybody can see. Drawn again rather than
+    # patched, because the reader is not only in the scope -- every screen
+    # takes an account out of it at mount and hands that to the action bar, so
+    # anything short of a fresh mount leaves the buttons live.
+    {:cont, socket |> assign_scope(session) |> watch_sessions(:draw_it_again)}
   end
 
   def on_mount(:ensure_authenticated, _params, session, socket) do
-    case session["user_token"] && Auth.get_user_by_session_token(session["user_token"]) do
-      %User{} = user ->
-        {:cont, Phoenix.Component.assign(socket, :current_scope, %{user: user})}
+    socket = assign_scope(socket, session)
 
-      _ ->
-        {:halt,
-         socket
-         |> Phoenix.LiveView.put_flash(
-           :error,
-           gettext("You have to be signed in to see that page.")
-         )
-         |> Phoenix.LiveView.redirect(to: ~p"/login")}
+    case socket.assigns.current_scope do
+      %{user: %User{}} -> {:cont, watch_sessions(socket, :send_them_to_sign_in)}
+      _ -> {:halt, to_login(socket)}
     end
+  end
+
+  defp assign_scope(socket, session) do
+    user = session["user_token"] && Auth.get_user_by_session_token(session["user_token"])
+
+    Phoenix.Component.assign(socket, :current_scope, %{user: usable(user)})
+  end
+
+  # Only worth a subscription on a connected socket: the dead render is one
+  # request and is gone before anything could be revoked.
+  #
+  # Straight to PubSub rather than through `Abuuba.Timelines.Broadcast`, which
+  # every other subscriber here uses. That one keeps a per-topic listener count
+  # for deciding whether a timeline is worth rendering, and buys it with a
+  # `GenServer.call` and a monitor through a single process -- on the connect
+  # path of every page, for a count nothing reads on this topic. On a reconnect
+  # storm that process is where every socket would queue.
+  defp watch_sessions(%{assigns: %{current_scope: %{user: %User{} = user}}} = socket, answer) do
+    if Phoenix.LiveView.connected?(socket) do
+      Phoenix.PubSub.subscribe(Abuuba.PubSub, Auth.sessions_topic(user.id))
+
+      socket
+      |> remember_where(answer)
+      |> Phoenix.LiveView.attach_hook(:session_revoked, :handle_info, fn
+        {:sessions, :revoked}, socket -> {:halt, answer(answer, socket)}
+        _message, socket -> {:cont, socket}
+      end)
+    else
+      socket
+    end
+  end
+
+  defp watch_sessions(socket, _answer), do: socket
+
+  # Where the reader is, so a public page can send them to it again. Only that
+  # answer needs it: a `handle_info` hook is not told the address, and the
+  # sign-in page is the same address wherever they were.
+  # `socket.router` is nil for a LiveView rendered inside another one, and
+  # attaching a `handle_params` hook to one of those raises. Nothing nests a
+  # LiveView today; this is so that the first one to do it does not crash at
+  # mount for a reason nobody would look for here.
+  defp remember_where(%{router: nil} = socket, _answer), do: socket
+
+  defp remember_where(socket, :draw_it_again) do
+    Phoenix.LiveView.attach_hook(socket, :session_here, :handle_params, fn _params, uri, socket ->
+      {:cont, Phoenix.Component.assign(socket, :session_here, here(uri))}
+    end)
+  end
+
+  defp remember_where(socket, _answer), do: socket
+
+  # Query string included: a reader on `/search?q=hello` who is drawn again at
+  # `/search` has lost their results, which reads as the page having emptied
+  # itself.
+  defp here(uri) do
+    case URI.parse(uri) do
+      %URI{path: path, query: nil} -> path
+      %URI{path: path, query: query} -> path <> "?" <> query
+    end
+  end
+
+  defp answer(:send_them_to_sign_in, socket), do: to_login(socket)
+
+  defp answer(:draw_it_again, socket) do
+    Phoenix.LiveView.push_navigate(socket, to: socket.assigns[:session_here] || ~p"/")
+  end
+
+  defp to_login(socket) do
+    socket
+    |> Phoenix.LiveView.put_flash(:error, gettext("You have to be signed in to see that page."))
+    |> Phoenix.LiveView.redirect(to: ~p"/login")
   end
 
   defp maybe_write_remember_me(conn, token, %{"remember_me" => "true"}) do

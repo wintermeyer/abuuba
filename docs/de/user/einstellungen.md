@@ -173,8 +173,11 @@ Zug entfolgen, statt einzeln nacheinander.
 Passwort ändern, wofür das aktuelle nötig ist: Sonst gehört das Konto dem, der
 an einen unbeaufsichtigten Bildschirm tritt.
 
-Die Anmeldung in zwei Schritten hat eine eigene Seite. **Überall abmelden**
-beendet jede Sitzung, auch die, in der du gerade sitzt.
+Die Anmeldung in zwei Schritten hat eine eigene Seite. **Abmelden** beendet
+diese eine Sitzung und lässt deine anderen Geräte in Ruhe; es steht auch in der
+Seitenleiste unter der Navigation, auf jeder Seite. **Überall abmelden** beendet
+jede Sitzung, auch die, in der du gerade sitzt — das ist der Griff für einen
+Rechner, dem du nicht mehr traust.
 
 
 **Letzte Anmeldungen** listet die jüngsten Versuche an deinem Konto mit

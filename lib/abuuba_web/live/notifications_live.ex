@@ -60,7 +60,7 @@ defmodule AbuubaWeb.NotificationsLive do
        viewer: account,
        types: stored_types(socket.assigns.current_scope.user)
      )
-     |> PostActions.attach(put_back: &put_status_back/2)}
+     |> PostActions.attach(put_back: &put_status_back/2, remove: &drop_status/2)}
   end
 
   # This screen draws the action bar like the other five, but its posts are not
@@ -77,6 +77,16 @@ defmodule AbuubaWeb.NotificationsLive do
     do: %{group | status: rendered}
 
   defp swap_group(group, _rendered), do: group
+
+  # A deleted post takes its whole group with it. `Statuses.delete_status/1`
+  # has already forgotten the notifications about it, so leaving the group on
+  # screen would show a row that a reload no longer has.
+  defp drop_status(socket, id) do
+    update(socket, :groups, &Enum.reject(&1, fn group -> group_of?(group, id) end))
+  end
+
+  defp group_of?(%{status: %{} = status}, id), do: PostActions.about?(status, id)
+  defp group_of?(_group, _id), do: false
 
   @impl Phoenix.LiveView
   def handle_params(_params, _uri, socket) do
