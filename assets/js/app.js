@@ -25,6 +25,7 @@ import {LiveSocket} from "phoenix_live_view"
 import {installHotkeys, announce} from "./hotkeys"
 import {Compose, FocalPoint} from "./compose"
 import {installPostKeys} from "./posts"
+import {installLocalTime} from "./localtime"
 import {hooks as colocatedHooks} from "phoenix-colocated/abuuba"
 import topbar from "../vendor/topbar"
 
@@ -107,5 +108,6 @@ window.addEventListener("phx:page-loading-stop", () => {
 })
 
 installPostKeys()
+installLocalTime()
 
 window.addEventListener("abuuba:announce", (event) => announce(event.detail.message))

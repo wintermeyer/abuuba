@@ -169,6 +169,12 @@ the one you are using, which is the one to reach for on a computer you no
 longer trust.
 
 
+Times on this page, and everywhere else a date and a clock time appear, are
+shown in your own timezone: the server stores every one in UTC and your
+browser converts it, so daylight saving on the day in question is right
+rather than approximately right. With scripting turned off you get the same
+instant marked UTC instead, which is awkward and still true.
+
 **Recent sign-ins** lists the last attempts on your account with the time, the
 address they came from and the browser — the failed ones too. Somebody else
 trying your password is the thing worth spotting early, and nothing else here

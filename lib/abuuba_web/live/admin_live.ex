@@ -985,7 +985,7 @@ defmodule AbuubaWeb.AdminLive do
           <span class="min-w-0 flex-1">
             <span class="block text-sm">{plain_text(status.text)}</span>
             <span class="block text-sm text-base-content/60">
-              {Formats.datetime(status.inserted_at)} · {status.visibility}
+              <.at value={status.inserted_at} /> · {status.visibility}
             </span>
           </span>
           <button
@@ -1139,10 +1139,10 @@ defmodule AbuubaWeb.AdminLive do
         <p class="whitespace-pre-wrap break-words">{announcement.text}</p>
         <p class="mt-1 text-sm text-base-content/60">
           <span :if={announcement.published}>
-            {gettext("Published")} {Formats.datetime(announcement.published_at)}
+            {gettext("Published")} <.at value={announcement.published_at} />
           </span>
           <span :if={not announcement.published and announcement.scheduled_at}>
-            {gettext("Goes up")} {Formats.datetime(announcement.scheduled_at)}
+            {gettext("Goes up")} <.at value={announcement.scheduled_at} />
           </span>
           <span :if={not announcement.published and is_nil(announcement.scheduled_at)}>
             {gettext("Not published")}
@@ -1630,7 +1630,7 @@ defmodule AbuubaWeb.AdminLive do
             {relay_state(relay.state)}
             <span :if={relay.last_delivery_at}>
               · {gettext("last sent %{when}",
-                when: Formats.datetime(relay.last_delivery_at)
+                when: Formats.datetime(relay.last_delivery_at, zone: true)
               )}
             </span>
           </span>
@@ -1892,7 +1892,7 @@ defmodule AbuubaWeb.AdminLive do
             </span>
             <span class="font-mono">{delivery.event}</span>
             <span class="text-base-content/60">
-              {Formats.datetime(delivery.inserted_at)}
+              <.at value={delivery.inserted_at} />
             </span>
             <span :if={delivery.error} class="text-error">{delivery.error}</span>
           </li>
@@ -2288,7 +2288,7 @@ defmodule AbuubaWeb.AdminLive do
           <span class="font-medium">{entry.target_label}</span>
         </p>
         <p class="text-sm text-base-content/60">
-          {Formats.datetime(entry.inserted_at)}
+          <.at value={entry.inserted_at} />
         </p>
       </li>
     </ul>

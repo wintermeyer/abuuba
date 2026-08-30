@@ -184,6 +184,12 @@ jede Sitzung, auch die, in der du gerade sitzt — das ist der Griff für einen
 Rechner, dem du nicht mehr traust.
 
 
+Zeiten auf dieser Seite, und überall sonst, wo ein Datum mit Uhrzeit steht,
+erscheinen in deiner eigenen Zeitzone: Der Server speichert jede in UTC, dein
+Browser rechnet um. Damit stimmt auch die Sommerzeit des jeweiligen Tages und
+nicht nur ungefähr. Ohne JavaScript siehst du stattdessen denselben Zeitpunkt
+mit UTC gekennzeichnet – unbequem, aber richtig.
+
 **Letzte Anmeldungen** listet die jüngsten Versuche an deinem Konto mit
 Zeitpunkt, Adresse und Browser — auch die gescheiterten. Dass jemand anderes
 dein Passwort probiert, ist genau das, was man früh mitbekommen sollte, und
