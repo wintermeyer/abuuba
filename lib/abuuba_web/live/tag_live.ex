@@ -23,6 +23,7 @@ defmodule AbuubaWeb.TagLive do
   alias Abuuba.Settings
   alias Abuuba.Statuses
   alias Abuuba.Statuses.Tag
+  alias Abuuba.Timelines
   alias AbuubaWeb.API.Entities
   alias AbuubaWeb.Meta
   alias AbuubaWeb.PostActions
@@ -121,9 +122,13 @@ defmodule AbuubaWeb.TagLive do
     if Settings.public_timelines_readable?(viewer), do: tag_posts(tag, viewer), else: []
   end
 
+  # Through `Timelines.tag/3`, which is what the API answers this question
+  # with. `Statuses.tag_timeline/2` is the bare query and is never told who
+  # is reading, so this page showed a reader the posts of people they had
+  # blocked or muted -- hidden everywhere else, and sitting here.
   defp tag_posts(tag, viewer) do
-    tag
-    |> Statuses.tag_timeline(limit: @page_size)
+    tag.name
+    |> Timelines.tag(viewer, %{limit: @page_size})
     |> Entities.statuses(viewer, filter_context: "public")
     |> Enum.reject(&hidden?/1)
   end

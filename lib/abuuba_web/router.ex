@@ -299,6 +299,10 @@ defmodule AbuubaWeb.Router do
 
     live_session :signed_in,
       on_mount: [{AbuubaWeb.UserAuth, :ensure_authenticated}, AbuubaWeb.LocaleHook] do
+      live "/follow-requests", FollowRequestsLive
+      live "/report/@:username", ReportLive
+      live "/bookmarks", SavedLive, :bookmarks
+      live "/favourites", SavedLive, :favourites
       live "/settings/two-factor", TwoFactorSettingsLive
       live "/settings", SettingsLive, :index
       live "/settings/profile", SettingsLive, :profile

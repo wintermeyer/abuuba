@@ -153,6 +153,10 @@ web interface has no button for that yet; apps that speak the Mastodon API do.
 Everybody you follow, with a checkbox each. Tick several and unfollow them in
 one press rather than one at a time.
 
+People waiting for *you* are not here: they are on their own page, which the
+navigation shows with a count while anybody is waiting. See
+[follow requests](safety.md#follow-requests).
+
 ## Security
 
 Change your password, which needs your current one: otherwise somebody who

@@ -168,6 +168,10 @@ die Mastodon-API sprechen, können es.
 Alle, denen du folgst, mit je einem Kästchen. Mehrere ankreuzen und in einem
 Zug entfolgen, statt einzeln nacheinander.
 
+Wer auf *dich* wartet, steht nicht hier, sondern auf einer eigenen Seite, die
+die Navigation mit einer Zahl anzeigt, solange jemand wartet. Siehe
+[Folgeanfragen](sicherheit.md#folgeanfragen).
+
 ## Sicherheit
 
 Passwort ändern, wofür das aktuelle nötig ist: Sonst gehört das Konto dem, der

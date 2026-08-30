@@ -24,8 +24,9 @@ drawn, so what they posted before you muted them goes too, on the next reload.
 Nothing is deleted, which is why unmuting brings all of it straight back.
 
 Muting reaches everywhere posts are shown, not only the timeline: they are
-gone from search results and from the replies under a thread as well, and so
-is anything of theirs that somebody else boosts.
+gone from search results, from explore, from every hashtag page and from the
+replies under a thread as well, and so is anything of theirs that somebody
+else boosts.
 
 ## Blocking
 
@@ -84,20 +85,39 @@ certain.
 
 Fuller description in [notifications](notifications.md).
 
+## Follow requests
+
+If you turned on **Approve followers first** under privacy, nobody follows you
+without your say-so. Whoever is waiting is on their own page, and the
+navigation shows a **Follow requests** entry with a count for as long as
+somebody is — it is not there when nobody is waiting, which on most accounts
+is always.
+
+**Let them follow** or **Turn them away**, one at a time. Turning somebody away
+tells them nothing and leaves no mark, so they can ask again; there is no way
+to refuse somebody permanently short of blocking them.
+
 ## Reporting somebody
 
 Reports go to the moderators of this server, and — if you choose — to the
 moderators of the sender's server as well.
 
-**The web interface here does not have a report button yet.** Reporting works
-through the API, so a Mastodon-compatible app can file one. If you cannot use
-an app, mail the address on the server's [about page](public-pages.md); a
-moderator reading a description is slower than a report but not worse.
+**Report** is on a profile beside Mute and Block, and under the **…** on any
+post. It asks four short questions: what kind of problem it is, which rules it
+breaks if you picked that, which posts a moderator should read, and anything
+you want to say in your own words. Nothing is sent until the last press.
 
-A report can name several posts, add a sentence about what is wrong, and
-optionally forward a copy to the other server. Forwarding is worth it for
-spam and worth thinking about for a personal dispute, since it tells the other
-side who complained.
+The first option is **I do not like it**, and it files no report at all. It
+goes straight to mute and block, because that is what it is: something you do
+not want to see rather than something a moderator can decide. Mute and block
+are offered after a real report as well — somebody has to read it, and in the
+meantime you do not have to keep seeing the person.
+
+The rules question only appears if this server has written any down. Where an
+account is on another server you are also asked whether to send a copy of the
+report there, without your name. Forwarding is worth it for spam and worth
+thinking about for a personal dispute, since it tells the other side that
+somebody here complained.
 
 ## Forgotten your password
 

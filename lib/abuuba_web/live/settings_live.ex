@@ -209,6 +209,16 @@ defmodule AbuubaWeb.SettingsLive do
         <p class="text-sm text-base-content/60">{section_hint(action)}</p>
       </li>
     </ul>
+
+    <%!-- Not settings, and here anyway: the two lists live in the sidebar,
+    which a phone does not draw, and this is the page somebody on a phone
+    opens when they are looking for something about their own account. --%>
+    <p class="mt-6 text-sm text-base-content/60">
+      {gettext("Looking for what you saved?")}
+      <.link navigate={~p"/bookmarks"} class="link">{gettext("Bookmarks")}</.link>
+      {gettext("and")}
+      <.link navigate={~p"/favourites"} class="link">{gettext("Favourites")}</.link>.
+    </p>
     """
   end
 

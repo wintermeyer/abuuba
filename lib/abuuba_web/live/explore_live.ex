@@ -34,6 +34,7 @@ defmodule AbuubaWeb.ExploreLive do
   alias Abuuba.Settings
   alias Abuuba.Statuses
   alias Abuuba.Statuses.Formatter
+  alias Abuuba.Timelines
   alias Abuuba.Trends
   alias AbuubaWeb.API.Entities
   alias AbuubaWeb.Meta
@@ -192,9 +193,15 @@ defmodule AbuubaWeb.ExploreLive do
       |> Enum.map(& &1.subject)
       |> Statuses.get_statuses()
 
-    recent = if readable?(viewer), do: Statuses.public_timeline(limit: @page_size), else: []
+    recent =
+      if readable?(viewer), do: Timelines.public(viewer, %{limit: @page_size}), else: []
 
+    # `Timelines.public/2` answers the reader's blocks and mutes; what is
+    # trending arrives from a counter that knows nobody, so the same question
+    # is asked of those rows one at a time. Without it this page showed a
+    # reader the posts of people they had blocked.
     dedupe(trending ++ recent)
+    |> Enum.reject(&Statuses.hidden_for?(&1, viewer))
     |> Entities.statuses(viewer, filter_context: "public")
     |> Enum.reject(&hidden?/1)
   end

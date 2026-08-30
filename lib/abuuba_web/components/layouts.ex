@@ -140,6 +140,16 @@ defmodule AbuubaWeb.Layouts do
       <.nav_link :for={item <- @items} item={item} />
 
       <div class="mt-auto flex flex-col gap-1 px-3 py-2 text-sm">
+        <%!-- Below the six rather than among them: the list above is also the
+        bar along the bottom of a phone, and these two are the reader's own
+        filing rather than a place they go. A narrow screen reaches them from
+        the settings overview. --%>
+        <.link :if={@signed_in} navigate={~p"/bookmarks"} class="link link-hover">
+          {gettext("Bookmarks")}
+        </.link>
+        <.link :if={@signed_in} navigate={~p"/favourites"} class="link link-hover">
+          {gettext("Favourites")}
+        </.link>
         <a href={~p"/shortcuts"} class="link link-hover">{gettext("Keyboard shortcuts")}</a>
         <.link :if={@signed_in} href={~p"/logout"} method="delete" class="link link-hover">
           {gettext("Sign out")}
@@ -227,9 +237,23 @@ defmodule AbuubaWeb.Layouts do
 
   defp unread_conversations(_user), do: 0
 
+  # Drawn only while somebody is waiting, which is how the reference
+  # implementation does it and is the only way it earns a place in a
+  # navigation this short: on a server where nobody approves their followers
+  # a permanent entry is a permanent reminder of nothing. It is also the one
+  # entry that has to be here rather than in the settings, because a request
+  # is somebody waiting on an answer.
+  defp follow_requests(%{account_id: account_id}) when not is_nil(account_id) do
+    Abuuba.Relationships.pending_follower_count(account_id)
+  end
+
+  defp follow_requests(_user), do: 0
+
   # Signed out, the only useful destinations are the public ones. Showing a
   # "Home" that answers 422 would be an interface arguing with itself.
   defp nav_items(%{user: user}) when not is_nil(user) do
+    waiting = follow_requests(user)
+
     [
       %{path: ~p"/home", label: gettext("Home"), icon: "hero-home"},
       %{
@@ -247,7 +271,7 @@ defmodule AbuubaWeb.Layouts do
       %{path: ~p"/explore", label: gettext("Explore"), icon: "hero-hashtag"},
       %{path: ~p"/search", label: gettext("Search"), icon: "hero-magnifying-glass"},
       %{path: ~p"/settings", label: gettext("Settings"), icon: "hero-cog-6-tooth"}
-    ]
+    ] ++ waiting_item(waiting)
   end
 
   defp nav_items(_scope) do
@@ -256,6 +280,19 @@ defmodule AbuubaWeb.Layouts do
       %{path: ~p"/explore", label: gettext("Explore"), icon: "hero-hashtag"},
       %{path: ~p"/search", label: gettext("Search"), icon: "hero-magnifying-glass"},
       %{path: ~p"/login", label: gettext("Log in"), icon: "hero-arrow-right-on-rectangle"}
+    ]
+  end
+
+  defp waiting_item(0), do: []
+
+  defp waiting_item(count) do
+    [
+      %{
+        path: ~p"/follow-requests",
+        label: gettext("Follow requests"),
+        icon: "hero-user-plus",
+        badge: count
+      }
     ]
   end
 
