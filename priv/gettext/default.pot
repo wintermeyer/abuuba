@@ -11,28 +11,28 @@
 msgid ""
 msgstr ""
 
-#: lib/abuuba_web/formats.ex:103
+#: lib/abuuba_web/formats.ex:125
 #, elixir-autogen, elixir-format
 msgid "1 day ago"
 msgid_plural "%{count} days ago"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/abuuba_web/formats.ex:102
+#: lib/abuuba_web/formats.ex:124
 #, elixir-autogen, elixir-format
 msgid "1 hour ago"
 msgid_plural "%{count} hours ago"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/abuuba_web/formats.ex:101
+#: lib/abuuba_web/formats.ex:123
 #, elixir-autogen, elixir-format
 msgid "1 minute ago"
 msgid_plural "%{count} minutes ago"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/abuuba_web/components/core_components.ex:399
+#: lib/abuuba_web/components/core_components.ex:428
 #, elixir-autogen, elixir-format
 msgid "Actions"
 msgstr ""
@@ -69,12 +69,12 @@ msgstr ""
 msgid "We can't find the internet"
 msgstr ""
 
-#: lib/abuuba_web/components/core_components.ex:105
+#: lib/abuuba_web/components/core_components.ex:134
 #, elixir-autogen, elixir-format
 msgid "close"
 msgstr ""
 
-#: lib/abuuba_web/formats.ex:100
+#: lib/abuuba_web/formats.ex:122
 #, elixir-autogen, elixir-format
 msgid "just now"
 msgstr ""
@@ -662,7 +662,7 @@ msgstr ""
 #: lib/abuuba_web/components/layouts.ex:258
 #: lib/abuuba_web/components/layouts.ex:279
 #: lib/abuuba_web/live/home_live.ex:55
-#: lib/abuuba_web/live/settings_live.ex:2330
+#: lib/abuuba_web/live/settings_live.ex:2328
 #, elixir-autogen, elixir-format
 msgid "Home"
 msgstr ""
@@ -689,14 +689,14 @@ msgstr ""
 #: lib/abuuba_web/components/layouts.ex:261
 #: lib/abuuba_web/live/notification_settings_live.ex:31
 #: lib/abuuba_web/live/notifications_live.ex:59
-#: lib/abuuba_web/live/settings_live.ex:2331
+#: lib/abuuba_web/live/settings_live.ex:2329
 #, elixir-autogen, elixir-format
 msgid "Notifications"
 msgstr ""
 
 #: lib/abuuba_web/components/layouts.ex:273
 #: lib/abuuba_web/live/settings_live.ex:121
-#: lib/abuuba_web/live/settings_live.ex:2139
+#: lib/abuuba_web/live/settings_live.ex:2137
 #, elixir-autogen, elixir-format
 msgid "Settings"
 msgstr ""
@@ -718,39 +718,39 @@ msgid_plural "%{count} new posts"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/abuuba_web/components/status_component.ex:300
+#: lib/abuuba_web/components/status_component.ex:316
 #, elixir-autogen, elixir-format
 msgid "%{count} vote"
 msgid_plural "%{count} votes"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/abuuba_web/components/status_component.ex:154
+#: lib/abuuba_web/components/status_component.ex:170
 #, elixir-autogen, elixir-format
 msgid "%{name} boosted"
 msgstr ""
 
-#: lib/abuuba_web/components/status_component.ex:239
+#: lib/abuuba_web/components/status_component.ex:255
 #, elixir-autogen, elixir-format
 msgid "Attachment"
 msgstr ""
 
-#: lib/abuuba_web/components/status_component.ex:438
+#: lib/abuuba_web/components/status_component.ex:454
 #, elixir-autogen, elixir-format
 msgid "Bookmark"
 msgstr ""
 
-#: lib/abuuba_web/components/status_component.ex:415
+#: lib/abuuba_web/components/status_component.ex:431
 #, elixir-autogen, elixir-format
 msgid "Boost"
 msgstr ""
 
-#: lib/abuuba_web/components/status_component.ex:309
+#: lib/abuuba_web/components/status_component.ex:325
 #, elixir-autogen, elixir-format
 msgid "Closed"
 msgstr ""
 
-#: lib/abuuba_web/components/status_component.ex:427
+#: lib/abuuba_web/components/status_component.ex:443
 #, elixir-autogen, elixir-format
 msgid "Favourite"
 msgstr ""
@@ -760,13 +760,13 @@ msgstr ""
 msgid "Follow some people and their posts will appear here."
 msgstr ""
 
-#: lib/abuuba_web/components/status_component.ex:267
+#: lib/abuuba_web/components/status_component.ex:283
 #: lib/abuuba_web/live/compose_component.ex:594
 #, elixir-autogen, elixir-format
 msgid "Poll"
 msgstr ""
 
-#: lib/abuuba_web/components/status_component.ex:403
+#: lib/abuuba_web/components/status_component.ex:419
 #, elixir-autogen, elixir-format
 msgid "Reply"
 msgstr ""
@@ -776,7 +776,7 @@ msgstr ""
 msgid "That vote could not be counted."
 msgstr ""
 
-#: lib/abuuba_web/components/status_component.ex:277
+#: lib/abuuba_web/components/status_component.ex:293
 #, elixir-autogen, elixir-format
 msgid "Vote"
 msgstr ""
@@ -786,7 +786,7 @@ msgstr ""
 msgid "You have reached the end."
 msgstr ""
 
-#: lib/abuuba_web/components/status_component.ex:285
+#: lib/abuuba_web/components/status_component.ex:301
 #, elixir-autogen, elixir-format
 msgid "Your choice"
 msgstr ""
@@ -847,19 +847,19 @@ msgid "Allow more than one choice"
 msgstr ""
 
 #: lib/abuuba_web/live/compose_component.ex:1675
-#: lib/abuuba_web/live/settings_live.ex:2325
+#: lib/abuuba_web/live/settings_live.ex:2323
 #, elixir-autogen, elixir-format
 msgid "Anyone"
 msgstr ""
 
 #: lib/abuuba_web/live/compose_component.ex:1666
-#: lib/abuuba_web/live/settings_live.ex:2320
+#: lib/abuuba_web/live/settings_live.ex:2318
 #, elixir-autogen, elixir-format
 msgid "Anyone, and listed everywhere"
 msgstr ""
 
 #: lib/abuuba_web/live/compose_component.ex:1667
-#: lib/abuuba_web/live/settings_live.ex:2321
+#: lib/abuuba_web/live/settings_live.ex:2319
 #, elixir-autogen, elixir-format
 msgid "Anyone, but not in public timelines"
 msgstr ""
@@ -885,7 +885,7 @@ msgstr ""
 msgid "Do not reply to this person"
 msgstr ""
 
-#: lib/abuuba_web/components/status_component.ex:449
+#: lib/abuuba_web/components/status_component.ex:465
 #: lib/abuuba_web/live/admin_live.ex:1775
 #, elixir-autogen, elixir-format
 msgid "Edit"
@@ -914,13 +914,13 @@ msgstr ""
 
 #: lib/abuuba_web/live/admin_live.ex:3427
 #: lib/abuuba_web/live/compose_component.ex:1677
-#: lib/abuuba_web/live/settings_live.ex:2327
+#: lib/abuuba_web/live/settings_live.ex:2325
 #, elixir-autogen, elixir-format
 msgid "Nobody"
 msgstr ""
 
 #: lib/abuuba_web/live/compose_component.ex:1668
-#: lib/abuuba_web/live/settings_live.ex:2322
+#: lib/abuuba_web/live/settings_live.ex:2320
 #, elixir-autogen, elixir-format
 msgid "Only the people who follow you"
 msgstr ""
@@ -931,7 +931,7 @@ msgid "Only the people you name"
 msgstr ""
 
 #: lib/abuuba_web/live/compose_component.ex:1676
-#: lib/abuuba_web/live/settings_live.ex:2326
+#: lib/abuuba_web/live/settings_live.ex:2324
 #, elixir-autogen, elixir-format
 msgid "People who follow you"
 msgstr ""
@@ -1210,8 +1210,8 @@ msgid "A note only you can read"
 msgstr ""
 
 #: lib/abuuba_web/live/profile_live.ex:196
-#: lib/abuuba_web/live/report_live.ex:285
-#: lib/abuuba_web/live/report_live.ex:297
+#: lib/abuuba_web/live/report_live.ex:288
+#: lib/abuuba_web/live/report_live.ex:300
 #, elixir-autogen, elixir-format
 msgid "Block"
 msgstr ""
@@ -1240,7 +1240,7 @@ msgstr ""
 
 #: lib/abuuba_web/live/profile_live.ex:188
 #: lib/abuuba_web/live/report_live.ex:273
-#: lib/abuuba_web/live/report_live.ex:280
+#: lib/abuuba_web/live/report_live.ex:283
 #, elixir-autogen, elixir-format
 msgid "Mute"
 msgstr ""
@@ -1305,7 +1305,7 @@ msgstr ""
 msgid "Unmute"
 msgstr ""
 
-#: lib/abuuba_web/components/core_components.ex:53
+#: lib/abuuba_web/components/core_components.ex:82
 #, elixir-autogen, elixir-format
 msgid "Verified"
 msgstr ""
@@ -1516,8 +1516,8 @@ msgstr ""
 
 #: lib/abuuba_web/live/notifications_live.ex:469
 #: lib/abuuba_web/live/profile_live.ex:799
-#: lib/abuuba_web/live/settings_live.ex:2123
-#: lib/abuuba_web/live/settings_live.ex:2261
+#: lib/abuuba_web/live/settings_live.ex:2121
+#: lib/abuuba_web/live/settings_live.ex:2259
 #, elixir-autogen, elixir-format
 msgid "Follows"
 msgstr ""
@@ -1779,7 +1779,7 @@ msgid "About you"
 msgstr ""
 
 #: lib/abuuba_web/live/admin_live.ex:3378
-#: lib/abuuba_web/live/settings_live.ex:2126
+#: lib/abuuba_web/live/settings_live.ex:2124
 #, elixir-autogen, elixir-format
 msgid "Account"
 msgstr ""
@@ -1794,22 +1794,22 @@ msgstr ""
 msgid "Add a filter"
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2119
+#: lib/abuuba_web/live/settings_live.ex:2117
 #, elixir-autogen, elixir-format
 msgid "Appearance"
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2297
+#: lib/abuuba_web/live/settings_live.ex:2295
 #, elixir-autogen, elixir-format
 msgid "Applies to your public posts only."
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2125
+#: lib/abuuba_web/live/settings_live.ex:2123
 #, elixir-autogen, elixir-format
 msgid "Apps"
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2150
+#: lib/abuuba_web/live/settings_live.ex:2148
 #, elixir-autogen, elixir-format
 msgid "Apps that have been let into your account."
 msgstr ""
@@ -1819,7 +1819,7 @@ msgstr ""
 msgid "Apps you have signed in to. Taking one back out signs it out immediately."
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2292
+#: lib/abuuba_web/live/settings_live.ex:2290
 #, elixir-autogen, elixir-format
 msgid "Ask before letting somebody follow you"
 msgstr ""
@@ -1829,7 +1829,7 @@ msgstr ""
 msgid "Change the password"
 msgstr ""
 
-#: lib/abuuba_web/components/status_component.ex:463
+#: lib/abuuba_web/components/status_component.ex:479
 #: lib/abuuba_web/live/admin_live.ex:998
 #: lib/abuuba_web/live/settings_live.ex:766
 #, elixir-autogen, elixir-format
@@ -1841,7 +1841,7 @@ msgstr ""
 msgid "Display name"
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2308
+#: lib/abuuba_web/live/settings_live.ex:2306
 #, elixir-autogen, elixir-format
 msgid "Do not play media on its own"
 msgstr ""
@@ -1851,12 +1851,12 @@ msgstr ""
 msgid "Each line has to be a web address, one per line."
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2293
+#: lib/abuuba_web/live/settings_live.ex:2291
 #, elixir-autogen, elixir-format
 msgid "Every follow becomes a request you answer."
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2148
+#: lib/abuuba_web/live/settings_live.ex:2146
 #, elixir-autogen, elixir-format
 msgid "Everybody you follow, and a way to stop."
 msgstr ""
@@ -1871,33 +1871,33 @@ msgstr ""
 msgid "Fields"
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2122
-#: lib/abuuba_web/live/settings_live.ex:2267
+#: lib/abuuba_web/live/settings_live.ex:2120
+#: lib/abuuba_web/live/settings_live.ex:2265
 #, elixir-autogen, elixir-format
 msgid "Filters"
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2349
+#: lib/abuuba_web/live/settings_live.ex:2347
 #, elixir-autogen, elixir-format
 msgid "Fold it behind a warning"
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2350
+#: lib/abuuba_web/live/settings_live.ex:2348
 #, elixir-autogen, elixir-format
 msgid "Hide it completely"
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2298
+#: lib/abuuba_web/live/settings_live.ex:2296
 #, elixir-autogen, elixir-format
 msgid "Hide who I follow and who follows me"
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2306
+#: lib/abuuba_web/live/settings_live.ex:2304
 #, elixir-autogen, elixir-format
 msgid "Higher contrast"
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2144
+#: lib/abuuba_web/live/settings_live.ex:2142
 #, elixir-autogen, elixir-format
 msgid "How the interface behaves and reads."
 msgstr ""
@@ -1907,17 +1907,17 @@ msgstr ""
 msgid "Label"
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2296
+#: lib/abuuba_web/live/settings_live.ex:2294
 #, elixir-autogen, elixir-format
 msgid "Let search engines index my posts"
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2294
+#: lib/abuuba_web/live/settings_live.ex:2292
 #, elixir-autogen, elixir-format
 msgid "List me in the directory"
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2301
+#: lib/abuuba_web/live/settings_live.ex:2299
 #, elixir-autogen, elixir-format
 msgid "Marks the account as a bot, which some people filter on."
 msgstr ""
@@ -1942,47 +1942,47 @@ msgstr ""
 msgid "Only the people you name is missing on purpose: as a default it turns every post you forget to change into a message to nobody."
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2151
+#: lib/abuuba_web/live/settings_live.ex:2149
 #, elixir-autogen, elixir-format
 msgid "Other accounts of yours, and moving between them."
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2313
+#: lib/abuuba_web/live/settings_live.ex:2311
 #, elixir-autogen, elixir-format
 msgid "Overrides your system setting if it is wrong for you."
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2117
+#: lib/abuuba_web/live/settings_live.ex:2115
 #, elixir-autogen, elixir-format
 msgid "Overview"
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2120
+#: lib/abuuba_web/live/settings_live.ex:2118
 #, elixir-autogen, elixir-format
 msgid "Posting"
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2121
+#: lib/abuuba_web/live/settings_live.ex:2119
 #, elixir-autogen, elixir-format
 msgid "Privacy"
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2118
+#: lib/abuuba_web/live/settings_live.ex:2116
 #, elixir-autogen, elixir-format
 msgid "Profile"
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2334
+#: lib/abuuba_web/live/settings_live.ex:2332
 #, elixir-autogen, elixir-format
 msgid "Profiles"
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2332
+#: lib/abuuba_web/live/settings_live.ex:2330
 #, elixir-autogen, elixir-format
 msgid "Public timelines"
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2305
+#: lib/abuuba_web/live/settings_live.ex:2303
 #, elixir-autogen, elixir-format
 msgid "Reduce motion"
 msgstr ""
@@ -1999,7 +1999,7 @@ msgstr ""
 msgid "Remove"
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2124
+#: lib/abuuba_web/live/settings_live.ex:2122
 #, elixir-autogen, elixir-format
 msgid "Security"
 msgstr ""
@@ -2014,7 +2014,7 @@ msgstr ""
 msgid "Signing out everywhere ends every session, including this one."
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2316
+#: lib/abuuba_web/live/settings_live.ex:2314
 #, elixir-autogen, elixir-format
 msgid "Stops the first send when a picture has no description."
 msgstr ""
@@ -2025,7 +2025,7 @@ msgid "Take it back out"
 msgstr ""
 
 #: lib/abuuba_web/live/admin_live.ex:3746
-#: lib/abuuba_web/live/settings_live.ex:2113
+#: lib/abuuba_web/live/settings_live.ex:2111
 #, elixir-autogen, elixir-format
 msgid "That could not be saved. Check what you typed."
 msgstr ""
@@ -2040,17 +2040,17 @@ msgstr ""
 msgid "The language you usually write in"
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2299
+#: lib/abuuba_web/live/settings_live.ex:2297
 #, elixir-autogen, elixir-format
 msgid "The lists stop being public; the follows themselves still work."
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2300
+#: lib/abuuba_web/live/settings_live.ex:2298
 #, elixir-autogen, elixir-format
 msgid "This account posts automatically"
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2333
+#: lib/abuuba_web/live/settings_live.ex:2331
 #, elixir-autogen, elixir-format
 msgid "Threads"
 msgstr ""
@@ -2070,7 +2070,7 @@ msgstr ""
 msgid "Up to four rows shown on your profile. The order here is the order there."
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2307
+#: lib/abuuba_web/live/settings_live.ex:2305
 #, elixir-autogen, elixir-format
 msgid "Use my system's font"
 msgstr ""
@@ -2080,7 +2080,7 @@ msgstr ""
 msgid "Value"
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2309
+#: lib/abuuba_web/live/settings_live.ex:2307
 #, elixir-autogen, elixir-format
 msgid "Warn me about missing descriptions"
 msgstr ""
@@ -2090,7 +2090,7 @@ msgstr ""
 msgid "What it does"
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2145
+#: lib/abuuba_web/live/settings_live.ex:2143
 #, elixir-autogen, elixir-format
 msgid "What the compose box starts with."
 msgstr ""
@@ -2106,7 +2106,7 @@ msgstr ""
 msgid "Where it applies"
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2146
+#: lib/abuuba_web/live/settings_live.ex:2144
 #, elixir-autogen, elixir-format
 msgid "Who can find you and who has to ask to follow."
 msgstr ""
@@ -2121,7 +2121,7 @@ msgstr ""
 msgid "Who new posts go to"
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2147
+#: lib/abuuba_web/live/settings_live.ex:2145
 #, elixir-autogen, elixir-format
 msgid "Words and phrases you would rather not see."
 msgstr ""
@@ -2131,7 +2131,7 @@ msgstr ""
 msgid "You are not following anybody yet."
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2295
+#: lib/abuuba_web/live/settings_live.ex:2293
 #, elixir-autogen, elixir-format
 msgid "Your account appears on this server's public directory page."
 msgstr ""
@@ -2141,7 +2141,7 @@ msgstr ""
 msgid "Your current password"
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2143
+#: lib/abuuba_web/live/settings_live.ex:2141
 #, elixir-autogen, elixir-format
 msgid "Your name, what you say about yourself, your fields."
 msgstr ""
@@ -2151,7 +2151,7 @@ msgstr ""
 msgid "Your other accounts"
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2149
+#: lib/abuuba_web/live/settings_live.ex:2147
 #, elixir-autogen, elixir-format
 msgid "Your password, two-factor, and signing out."
 msgstr ""
@@ -2307,12 +2307,12 @@ msgstr ""
 msgid "servers known"
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:1878
+#: lib/abuuba_web/live/settings_live.ex:1876
 #, elixir-autogen, elixir-format
 msgid "A warning"
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2154
+#: lib/abuuba_web/live/settings_live.ex:2152
 #, elixir-autogen, elixir-format
 msgid "Anything a moderator here has decided about your account."
 msgstr ""
@@ -2322,7 +2322,7 @@ msgstr ""
 msgid "Appeal this"
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2127
+#: lib/abuuba_web/live/settings_live.ex:2125
 #, elixir-autogen, elixir-format
 msgid "Moderation"
 msgstr ""
@@ -2332,7 +2332,7 @@ msgstr ""
 msgid "Nothing here. No moderator here has taken any action about your account."
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:1862
+#: lib/abuuba_web/live/settings_live.ex:1860
 #, elixir-autogen, elixir-format
 msgid "Say something about why you think it was wrong."
 msgstr ""
@@ -2342,13 +2342,13 @@ msgstr ""
 msgid "Say why you think this was wrong"
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:1881
+#: lib/abuuba_web/live/settings_live.ex:1879
 #, elixir-autogen, elixir-format
 msgid "Some of your posts were deleted"
 msgstr ""
 
 #: lib/abuuba_web/live/settings_live.ex:1218
-#: lib/abuuba_web/live/settings_live.ex:1858
+#: lib/abuuba_web/live/settings_live.ex:1856
 #, elixir-autogen, elixir-format
 msgid "The window for appealing this has passed."
 msgstr ""
@@ -2358,37 +2358,37 @@ msgstr ""
 msgid "What a moderator here has decided about your account, and what you were told."
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:1873
+#: lib/abuuba_web/live/settings_live.ex:1871
 #, elixir-autogen, elixir-format
 msgid "You appealed this and the appeal was turned down."
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:1872
+#: lib/abuuba_web/live/settings_live.ex:1870
 #, elixir-autogen, elixir-format
 msgid "You appealed this and the appeal was upheld."
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:1874
+#: lib/abuuba_web/live/settings_live.ex:1872
 #, elixir-autogen, elixir-format
 msgid "You have appealed this. Nobody has decided yet."
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:1879
+#: lib/abuuba_web/live/settings_live.ex:1877
 #, elixir-autogen, elixir-format
 msgid "Your account was disabled"
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:1882
+#: lib/abuuba_web/live/settings_live.ex:1880
 #, elixir-autogen, elixir-format
 msgid "Your account was limited"
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:1883
+#: lib/abuuba_web/live/settings_live.ex:1881
 #, elixir-autogen, elixir-format
 msgid "Your account was suspended"
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:1880
+#: lib/abuuba_web/live/settings_live.ex:1878
 #, elixir-autogen, elixir-format
 msgid "Your posts were marked sensitive"
 msgstr ""
@@ -2796,7 +2796,7 @@ msgstr ""
 msgid "the server"
 msgstr ""
 
-#: lib/abuuba_web/components/status_component.ex:307
+#: lib/abuuba_web/components/status_component.ex:323
 #: lib/abuuba_web/live/admin_live.ex:1090
 #, elixir-autogen, elixir-format
 msgid "%{count} person"
@@ -2845,7 +2845,7 @@ msgstr ""
 msgid "What more people than usual are posting about, then everything else, newest first."
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2111
+#: lib/abuuba_web/live/settings_live.ex:2109
 #, elixir-autogen, elixir-format
 msgid "%{uses} of %{max} used"
 msgstr ""
@@ -2865,7 +2865,7 @@ msgstr ""
 msgid "Announcements"
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2156
+#: lib/abuuba_web/live/settings_live.ex:2154
 #, elixir-autogen, elixir-format
 msgid "Codes that let somebody you know sign up."
 msgstr ""
@@ -2905,7 +2905,7 @@ msgstr ""
 msgid "In effect from %{date}"
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2128
+#: lib/abuuba_web/live/settings_live.ex:2126
 #, elixir-autogen, elixir-format
 msgid "Invites"
 msgstr ""
@@ -3001,7 +3001,7 @@ msgstr ""
 msgid "everybody was told"
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2108
+#: lib/abuuba_web/live/settings_live.ex:2106
 #, elixir-autogen, elixir-format
 msgid "used %{count} time"
 msgid_plural "used %{count} times"
@@ -3110,7 +3110,7 @@ msgstr ""
 msgid "approval only"
 msgstr ""
 
-#: lib/abuuba_web/components/status_component.ex:339
+#: lib/abuuba_web/components/status_component.ex:355
 #, elixir-autogen, elixir-format
 msgid "by %{name}"
 msgstr ""
@@ -3122,12 +3122,12 @@ msgstr ""
 msgid "That could not be translated just now."
 msgstr ""
 
-#: lib/abuuba_web/components/status_component.ex:477
+#: lib/abuuba_web/components/status_component.ex:493
 #, elixir-autogen, elixir-format
 msgid "Translate"
 msgstr ""
 
-#: lib/abuuba_web/components/status_component.ex:131
+#: lib/abuuba_web/components/status_component.ex:147
 #, elixir-autogen, elixir-format
 msgid "Translated by %{provider}. Reload the page for the original."
 msgstr ""
@@ -3137,133 +3137,133 @@ msgstr ""
 msgid "This account has been disabled. Contact the moderators."
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2007
+#: lib/abuuba_web/live/settings_live.ex:2005
 #, elixir-autogen, elixir-format
 msgid "%{count} could not be brought over"
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:1998
+#: lib/abuuba_web/live/settings_live.ex:1996
 #, elixir-autogen, elixir-format
 msgid "%{done} of %{total} read, %{imported} brought over."
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:1914
+#: lib/abuuba_web/live/settings_live.ex:1912
 #, elixir-autogen, elixir-format
 msgid "Boosts and polls. A boost points at somebody else's post, which the archive does not contain, and a poll's votes could not be true here."
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2071
+#: lib/abuuba_web/live/settings_live.ex:2069
 #, elixir-autogen, elixir-format
 msgid "Choose an archive first."
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:1895
+#: lib/abuuba_web/live/settings_live.ex:1893
 #, elixir-autogen, elixir-format
 msgid "Every fediverse server can give you a zip of everything you posted. Upload one here and your posts come back, with their pictures and their original dates."
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2094
+#: lib/abuuba_web/live/settings_live.ex:2092
 #, elixir-autogen, elixir-format
 msgid "Finished."
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2129
+#: lib/abuuba_web/live/settings_live.ex:2127
 #, elixir-autogen, elixir-format
 msgid "Import"
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:1920
+#: lib/abuuba_web/live/settings_live.ex:1918
 #, elixir-autogen, elixir-format
 msgid "Imported posts stay off everybody's timeline and off the network. They appear on your profile, in the order you wrote them."
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2086
+#: lib/abuuba_web/live/settings_live.ex:2084
 #, elixir-autogen, elixir-format
 msgid "One archive at a time."
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2159
+#: lib/abuuba_web/live/settings_live.ex:2157
 #, elixir-autogen, elixir-format
 msgid "Read an archive of your posts from another server back in."
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2093
+#: lib/abuuba_web/live/settings_live.ex:2091
 #, elixir-autogen, elixir-format
 msgid "Reading your archive."
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2095
+#: lib/abuuba_web/live/settings_live.ex:2093
 #, elixir-autogen, elixir-format
 msgid "That archive could not be read."
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2067
+#: lib/abuuba_web/live/settings_live.ex:2065
 #, elixir-autogen, elixir-format
 msgid "That could not be read. Upload the archive your old server gave you."
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2082
-#: lib/abuuba_web/live/settings_live.ex:2087
+#: lib/abuuba_web/live/settings_live.ex:2080
+#: lib/abuuba_web/live/settings_live.ex:2085
 #, elixir-autogen, elixir-format
 msgid "That could not be uploaded."
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2084
+#: lib/abuuba_web/live/settings_live.ex:2082
 #, elixir-autogen, elixir-format
 msgid "That file is too large."
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2085
+#: lib/abuuba_web/live/settings_live.ex:2083
 #, elixir-autogen, elixir-format
 msgid "That is not an archive file."
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:1904
+#: lib/abuuba_web/live/settings_live.ex:1902
 #, elixir-autogen, elixir-format
 msgid "The old addresses. Your posts lived on another domain and cannot live there again, so every link to one of them stays broken."
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2092
+#: lib/abuuba_web/live/settings_live.ex:2090
 #, elixir-autogen, elixir-format
 msgid "Waiting to start."
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:1901
+#: lib/abuuba_web/live/settings_live.ex:1899
 #, elixir-autogen, elixir-format
 msgid "What cannot come with them"
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:1909
+#: lib/abuuba_web/live/settings_live.ex:1907
 #, elixir-autogen, elixir-format
 msgid "Your followers. A follow is an agreement between two servers and one of them is gone; they have to follow this account."
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2098
+#: lib/abuuba_web/live/settings_live.ex:2096
 #, elixir-autogen, elixir-format
 msgid "a boost, which cannot come with you"
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2100
+#: lib/abuuba_web/live/settings_live.ex:2098
 #, elixir-autogen, elixir-format
 msgid "a poll, which cannot come with you"
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2101
+#: lib/abuuba_web/live/settings_live.ex:2099
 #, elixir-autogen, elixir-format
 msgid "it has no date, so it has nowhere to go"
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2104
+#: lib/abuuba_web/live/settings_live.ex:2102
 #, elixir-autogen, elixir-format
 msgid "the file is not an archive"
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2102
+#: lib/abuuba_web/live/settings_live.ex:2100
 #, elixir-autogen, elixir-format
 msgid "the post could not be found"
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2103
+#: lib/abuuba_web/live/settings_live.ex:2101
 #, elixir-autogen, elixir-format
 msgid "this server would not accept it"
 msgstr ""
@@ -3273,7 +3273,7 @@ msgstr ""
 msgid "Accept all"
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:1953
+#: lib/abuuba_web/live/settings_live.ex:1951
 #, elixir-autogen, elixir-format
 msgid "Add to it"
 msgstr ""
@@ -3283,7 +3283,7 @@ msgstr ""
 msgid "After a move, everybody who followed you arrives at once. This accepts all of them, which is the same answer you already gave them."
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:1971
+#: lib/abuuba_web/live/settings_live.ex:1969
 #, elixir-autogen, elixir-format
 msgid "An archive of your posts"
 msgstr ""
@@ -3303,19 +3303,19 @@ msgstr ""
 msgid "I came back"
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:1984
+#: lib/abuuba_web/live/settings_live.ex:1982
 #, elixir-autogen, elixir-format
 msgid "Import archive"
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:1961
+#: lib/abuuba_web/live/settings_live.ex:1959
 #, elixir-autogen, elixir-format
 msgid "Import list"
 msgstr ""
 
 #: lib/abuuba_web/live/settings_live.ex:1082
-#: lib/abuuba_web/live/settings_live.ex:1933
-#: lib/abuuba_web/live/settings_live.ex:2264
+#: lib/abuuba_web/live/settings_live.ex:1931
+#: lib/abuuba_web/live/settings_live.ex:2262
 #, elixir-autogen, elixir-format
 msgid "Lists"
 msgstr ""
@@ -3330,7 +3330,7 @@ msgstr ""
 msgid "Move to another account"
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2057
+#: lib/abuuba_web/live/settings_live.ex:2055
 #, elixir-autogen, elixir-format
 msgid "Nobody could be found at that address."
 msgstr ""
@@ -3340,22 +3340,22 @@ msgstr ""
 msgid "Other servers are being told to follow the new account instead. Anybody who follows you from this server has already been moved over."
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:1957
+#: lib/abuuba_web/live/settings_live.ex:1955
 #, elixir-autogen, elixir-format
 msgid "Replace it with the file"
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2047
+#: lib/abuuba_web/live/settings_live.ex:2045
 #, elixir-autogen, elixir-format
 msgid "That account does not name this one as one of yours. Add this account's address to its aliases first."
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2058
+#: lib/abuuba_web/live/settings_live.ex:2056
 #, elixir-autogen, elixir-format
 msgid "That is this account."
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:1935
+#: lib/abuuba_web/live/settings_live.ex:1933
 #, elixir-autogen, elixir-format
 msgid "The CSV files your old server gives you: follows, blocks, mutes, domain blocks, lists, bookmarks, filters. Upload one at a time, under the name it came with."
 msgstr ""
@@ -3370,12 +3370,12 @@ msgstr ""
 msgid "This account has moved."
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:1950
+#: lib/abuuba_web/live/settings_live.ex:1948
 #, elixir-autogen, elixir-format
 msgid "What to do with what is here"
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2053
+#: lib/abuuba_web/live/settings_live.ex:2051
 #, elixir-autogen, elixir-format
 msgid "You moved recently. An account can only be moved once every %{days} days."
 msgstr ""
@@ -3841,20 +3841,20 @@ msgstr ""
 msgid "A copy of everything"
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2271
+#: lib/abuuba_web/live/settings_live.ex:2269
 #, elixir-autogen, elixir-format
 msgid "Being built"
 msgstr ""
 
 #: lib/abuuba_web/live/settings_live.ex:822
-#: lib/abuuba_web/live/settings_live.ex:2265
+#: lib/abuuba_web/live/settings_live.ex:2263
 #, elixir-autogen, elixir-format
 msgid "Blocked servers"
 msgstr ""
 
 #: lib/abuuba_web/live/admin_live.ex:1316
 #: lib/abuuba_web/live/admin_live.ex:1331
-#: lib/abuuba_web/live/settings_live.ex:2262
+#: lib/abuuba_web/live/settings_live.ex:2260
 #, elixir-autogen, elixir-format
 msgid "Blocks"
 msgstr ""
@@ -3863,7 +3863,7 @@ msgstr ""
 #: lib/abuuba_web/live/saved_live.ex:88
 #: lib/abuuba_web/live/saved_live.ex:94
 #: lib/abuuba_web/live/settings_live.ex:218
-#: lib/abuuba_web/live/settings_live.ex:2266
+#: lib/abuuba_web/live/settings_live.ex:2264
 #, elixir-autogen, elixir-format
 msgid "Bookmarks"
 msgstr ""
@@ -3873,7 +3873,7 @@ msgstr ""
 msgid "Build me a copy"
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2273
+#: lib/abuuba_web/live/settings_live.ex:2271
 #, elixir-autogen, elixir-format
 msgid "Did not work"
 msgstr ""
@@ -3883,12 +3883,12 @@ msgstr ""
 msgid "Download"
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2130
+#: lib/abuuba_web/live/settings_live.ex:2128
 #, elixir-autogen, elixir-format
 msgid "Export"
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2263
+#: lib/abuuba_web/live/settings_live.ex:2261
 #, elixir-autogen, elixir-format
 msgid "Mutes"
 msgstr ""
@@ -3908,7 +3908,7 @@ msgstr ""
 msgid "Pictures and video are not in the file. It holds their addresses, which work while this server does."
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2272
+#: lib/abuuba_web/live/settings_live.ex:2270
 #, elixir-autogen, elixir-format
 msgid "Ready"
 msgstr ""
@@ -3928,7 +3928,7 @@ msgstr ""
 msgid "There is nothing of that kind to export."
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2270
+#: lib/abuuba_web/live/settings_live.ex:2268
 #, elixir-autogen, elixir-format
 msgid "Waiting to start"
 msgstr ""
@@ -3974,7 +3974,7 @@ msgstr ""
 msgid "Everything here is yours to take, and the account is yours to close."
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2162
+#: lib/abuuba_web/live/settings_live.ex:2160
 #, elixir-autogen, elixir-format
 msgid "Take a copy of everything, or close the account for good."
 msgstr ""
@@ -4965,12 +4965,12 @@ msgid_plural "%{count} signed up"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/abuuba_web/live/settings_live.ex:2240
+#: lib/abuuba_web/live/settings_live.ex:2238
 #, elixir-autogen, elixir-format
 msgid "Avatar"
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2241
+#: lib/abuuba_web/live/settings_live.ex:2239
 #, elixir-autogen, elixir-format
 msgid "Header"
 msgstr ""
@@ -4986,7 +4986,7 @@ msgstr ""
 msgid "None yet."
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2081
+#: lib/abuuba_web/live/settings_live.ex:2079
 #, elixir-autogen, elixir-format
 msgid "One picture at a time."
 msgstr ""
@@ -5001,19 +5001,19 @@ msgstr ""
 msgid "Take it off"
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2079
-#: lib/abuuba_web/live/settings_live.ex:2234
+#: lib/abuuba_web/live/settings_live.ex:2077
+#: lib/abuuba_web/live/settings_live.ex:2232
 #, elixir-autogen, elixir-format
 msgid "That is not a picture this server can use. Try a JPEG, PNG, GIF or WebP."
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2229
-#: lib/abuuba_web/live/settings_live.ex:2236
+#: lib/abuuba_web/live/settings_live.ex:2227
+#: lib/abuuba_web/live/settings_live.ex:2234
 #, elixir-autogen, elixir-format
 msgid "That picture could not be saved."
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2076
+#: lib/abuuba_web/live/settings_live.ex:2074
 #, elixir-autogen, elixir-format
 msgid "That picture is too large. The limit is on the line above."
 msgstr ""
@@ -5072,7 +5072,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #: lib/abuuba_web/live/settings_live.ex:703
-#: lib/abuuba_web/live/settings_live.ex:1808
+#: lib/abuuba_web/live/settings_live.ex:1806
 #, elixir-autogen, elixir-format
 msgid "Subject"
 msgstr ""
@@ -5122,7 +5122,7 @@ msgstr ""
 msgid "you@example.com"
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:1809
+#: lib/abuuba_web/live/settings_live.ex:1807
 #, elixir-autogen, elixir-format
 msgid "Message"
 msgstr ""
@@ -5583,22 +5583,22 @@ msgstr ""
 msgid "What you see from them"
 msgstr ""
 
-#: lib/abuuba_web/components/status_component.ex:507
+#: lib/abuuba_web/components/status_component.ex:523
 #, elixir-autogen, elixir-format
 msgid "More"
 msgstr ""
 
-#: lib/abuuba_web/components/status_component.ex:520
+#: lib/abuuba_web/components/status_component.ex:536
 #, elixir-autogen, elixir-format
 msgid "Mute this conversation"
 msgstr ""
 
-#: lib/abuuba_web/components/status_component.ex:527
+#: lib/abuuba_web/components/status_component.ex:543
 #, elixir-autogen, elixir-format
 msgid "Stops its notifications and takes it out of your timeline. Nobody is told."
 msgstr ""
 
-#: lib/abuuba_web/components/status_component.ex:519
+#: lib/abuuba_web/components/status_component.ex:535
 #, elixir-autogen, elixir-format
 msgid "Unmute this conversation"
 msgstr ""
@@ -5858,8 +5858,8 @@ msgstr ""
 msgid "Warned"
 msgstr ""
 
-#: lib/abuuba_web/live/settings_live.ex:2254
-#: lib/abuuba_web/live/settings_live.ex:2257
+#: lib/abuuba_web/live/settings_live.ex:2252
+#: lib/abuuba_web/live/settings_live.ex:2255
 #, elixir-autogen, elixir-format
 msgid "%{size} MB"
 msgstr ""
@@ -5879,7 +5879,7 @@ msgstr ""
 msgid "This account approves its followers. Your request is waiting for an answer."
 msgstr ""
 
-#: lib/abuuba_web/components/status_component.ex:459
+#: lib/abuuba_web/components/status_component.ex:475
 #, elixir-autogen, elixir-format
 msgid "Delete this post? Other servers are told to forget it too."
 msgstr ""
@@ -5920,22 +5920,22 @@ msgstr ""
 msgid "Are there posts that show it?"
 msgstr ""
 
-#: lib/abuuba_web/live/report_live.ex:297
+#: lib/abuuba_web/live/report_live.ex:300
 #, elixir-autogen, elixir-format
 msgid "Blocked"
 msgstr ""
 
-#: lib/abuuba_web/live/report_live.ex:303
+#: lib/abuuba_web/live/report_live.ex:306
 #, elixir-autogen, elixir-format
 msgid "Done"
 msgstr ""
 
-#: lib/abuuba_web/live/report_live.ex:287
+#: lib/abuuba_web/live/report_live.ex:290
 #, elixir-autogen, elixir-format
 msgid "Everything mute does, and they cannot follow you or read your posts. They can tell."
 msgstr ""
 
-#: lib/abuuba_web/live/report_live.ex:374
+#: lib/abuuba_web/live/report_live.ex:379
 #, elixir-autogen, elixir-format
 msgid "I do not like it"
 msgstr ""
@@ -5950,27 +5950,27 @@ msgstr ""
 msgid "Include this post"
 msgstr ""
 
-#: lib/abuuba_web/live/report_live.ex:392
+#: lib/abuuba_web/live/report_live.ex:396
 #, elixir-autogen, elixir-format
 msgid "It breaks the rules of this server"
 msgstr ""
 
-#: lib/abuuba_web/live/report_live.ex:384
+#: lib/abuuba_web/live/report_live.ex:388
 #, elixir-autogen, elixir-format
 msgid "It does not fit any of the above."
 msgstr ""
 
-#: lib/abuuba_web/live/report_live.ex:378
+#: lib/abuuba_web/live/report_live.ex:383
 #, elixir-autogen, elixir-format
 msgid "It is illegal"
 msgstr ""
 
-#: lib/abuuba_web/live/report_live.ex:375
+#: lib/abuuba_web/live/report_live.ex:380
 #, elixir-autogen, elixir-format
 msgid "It is not something you want to see. This tells nobody."
 msgstr ""
 
-#: lib/abuuba_web/live/report_live.ex:376
+#: lib/abuuba_web/live/report_live.ex:381
 #, elixir-autogen, elixir-format
 msgid "It is spam"
 msgstr ""
@@ -5980,12 +5980,12 @@ msgstr ""
 msgid "Looking for what you saved?"
 msgstr ""
 
-#: lib/abuuba_web/live/report_live.ex:377
+#: lib/abuuba_web/live/report_live.ex:382
 #, elixir-autogen, elixir-format
 msgid "Malicious links, fake engagement, or the same thing over and over."
 msgstr ""
 
-#: lib/abuuba_web/live/report_live.ex:280
+#: lib/abuuba_web/live/report_live.ex:283
 #, elixir-autogen, elixir-format
 msgid "Muted"
 msgstr ""
@@ -6026,7 +6026,7 @@ msgstr ""
 msgid "Report %{name}"
 msgstr ""
 
-#: lib/abuuba_web/components/status_component.ex:538
+#: lib/abuuba_web/components/status_component.ex:554
 #, elixir-autogen, elixir-format
 msgid "Report this post"
 msgstr ""
@@ -6036,7 +6036,7 @@ msgstr ""
 msgid "Send the report"
 msgstr ""
 
-#: lib/abuuba_web/live/report_live.ex:383
+#: lib/abuuba_web/live/report_live.ex:388
 #, elixir-autogen, elixir-format
 msgid "Something else"
 msgstr ""
@@ -6086,12 +6086,12 @@ msgstr ""
 msgid "While you wait, you do not have to keep seeing them."
 msgstr ""
 
-#: lib/abuuba_web/live/report_live.ex:379
+#: lib/abuuba_web/live/report_live.ex:384
 #, elixir-autogen, elixir-format
 msgid "You believe it breaks the law here or where you are."
 msgstr ""
 
-#: lib/abuuba_web/live/report_live.ex:393
+#: lib/abuuba_web/live/report_live.ex:397
 #, elixir-autogen, elixir-format
 msgid "You know which rule it breaks."
 msgstr ""
@@ -6104,4 +6104,9 @@ msgstr ""
 #: lib/abuuba_web/live/settings_live.ex:219
 #, elixir-autogen, elixir-format
 msgid "and"
+msgstr ""
+
+#: lib/abuuba_web/formats.ex:73
+#, elixir-autogen, elixir-format
+msgid "%{time} UTC"
 msgstr ""

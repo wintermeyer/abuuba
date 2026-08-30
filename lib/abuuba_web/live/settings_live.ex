@@ -939,7 +939,7 @@ defmodule AbuubaWeb.SettingsLive do
         <span class={["font-medium", not login.success && "text-error"]}>
           {if login.success, do: gettext("Signed in"), else: gettext("Refused")}
         </span>
-        <span>{Formats.datetime(login.inserted_at)}</span>
+        <span><.at value={login.inserted_at} /></span>
         <span :if={login.ip} class="text-base-content/60">{login.ip}</span>
         <span :if={login.user_agent} class="w-full truncate text-base-content/60">
           {login.user_agent}
@@ -1109,7 +1109,7 @@ defmodule AbuubaWeb.SettingsLive do
         <span class="min-w-0 flex-1">
           <span class="font-medium">{archive_state(archive.state)}</span>
           <span class="block text-sm text-base-content/60">
-            {Formats.datetime(archive.inserted_at)}
+            <.at value={archive.inserted_at} />
           </span>
         </span>
         <a

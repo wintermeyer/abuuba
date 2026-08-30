@@ -29,9 +29,38 @@ defmodule AbuubaWeb.CoreComponents do
   use Phoenix.Component
   use Gettext, backend: AbuubaWeb.Gettext
 
+  alias AbuubaWeb.Formats
+
   alias Phoenix.HTML.Form
 
   alias Phoenix.LiveView.JS
+
+  @doc """
+  An absolute time, in the reader's own zone.
+
+  Split between the two halves that each know something the other does not.
+  The server knows the instant and writes it into `datetime`, where it cannot
+  be misread. The browser knows which zone the reader is in and what daylight
+  saving was doing on that date, which is a database this server does not
+  carry and does not want to fetch and refresh over the network for the sake
+  of a line on the security page.
+
+  So the text is the true instant marked UTC, and `assets/js/localtime.js`
+  replaces it with the local rendering as soon as it runs. With no script the
+  reader gets something inconvenient and true, which is the trade the other way
+  round from what this replaces: a local-looking time that was two hours out
+  for anybody in Berlin and said so nowhere.
+
+      <.at value={login.inserted_at} />
+  """
+  attr :value, :any, required: true, doc: "a DateTime or NaiveDateTime, stored UTC"
+  attr :rest, :global
+
+  def at(assigns) do
+    ~H"""
+    <time datetime={Formats.iso(@value)} data-local {@rest}>{Formats.datetime(@value, zone: true)}</time>
+    """
+  end
 
   @doc """
   The mark beside a profile field whose link was checked.

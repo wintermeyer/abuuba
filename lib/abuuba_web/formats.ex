@@ -58,10 +58,32 @@ defmodule AbuubaWeb.Formats do
         |> Keyword.put_new(:time_format, :short)
       end
 
+    {label?, opts} = Keyword.pop(opts, :zone, false)
+
     case Cldr.DateTime.to_string(value, opts) do
-      {:ok, formatted} -> formatted
-      {:error, _reason} -> fallback(value)
+      {:ok, formatted} -> with_zone(formatted, label?)
+      {:error, _reason} -> with_zone(fallback(value), label?)
     end
+  end
+
+  # One string with a placeholder rather than a formatted time with the word
+  # stuck on the end: where the zone goes in a sentence is the translation's
+  # business, and some languages do not put it last.
+  defp with_zone(formatted, false), do: formatted
+  defp with_zone(formatted, true), do: gettext("%{time} UTC", time: formatted)
+
+  @doc """
+  The same instant, written so a machine cannot misread it.
+
+  This is what goes in a `datetime` attribute. `Z` on the end rather than a
+  bare local-looking string: every timestamp in this database is UTC, and a
+  browser parsing one without a zone is a browser guessing.
+  """
+  @spec iso(DateTime.t() | NaiveDateTime.t()) :: String.t()
+  def iso(%NaiveDateTime{} = value), do: value |> DateTime.from_naive!("Etc/UTC") |> iso()
+
+  def iso(%DateTime{} = value) do
+    value |> DateTime.truncate(:second) |> DateTime.to_iso8601()
   end
 
   @doc """
