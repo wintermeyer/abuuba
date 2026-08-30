@@ -24,6 +24,7 @@ defmodule Abuuba.Accounts.Auth do
   alias Abuuba.Repo
   alias Abuuba.Roles
   alias Abuuba.Settings
+  alias Abuuba.Timelines.Broadcast
   alias Abuuba.Webhooks
   alias Ecto.Multi
 
@@ -379,12 +380,50 @@ defmodule Abuuba.Accounts.Auth do
 
   @doc """
   Ends every session a user has, which is what a password change should do.
+
+  The pages this server renders are LiveViews, and a LiveView reads the session
+  once, when it mounts. Deleting the rows refuses the *next* request and leaves
+  every page that is open right now exactly as it was -- so a suspended account
+  went on posting through the compose box until somebody reloaded it, and "sign
+  out everywhere" left the browser it was pressed in signed in. The same
+  reasoning `Abuuba.Streaming.revoked/1` already applies to a stream, which
+  authenticates once for the same reason.
   """
-  @spec delete_all_session_tokens(User.t()) :: :ok
-  def delete_all_session_tokens(%User{} = user) do
+  @spec delete_all_session_tokens(User.t(), keyword()) :: :ok
+  def delete_all_session_tokens(%User{} = user, opts \\ []) do
     Repo.delete_all(UserToken.by_user_and_contexts_query(user, ["session"]))
+
+    # `announce: false` for a caller inside a transaction, which has to make
+    # the announcement itself once that transaction has committed: a broadcast
+    # is the one thing here that does not roll back.
+    if Keyword.get(opts, :announce, true), do: sessions_revoked(user), else: :ok
+  end
+
+  @doc """
+  Tells the pages this server has already drawn that their session is dead.
+
+  Its own function because deleting the rows is not the only way sessions end:
+  a password reset takes them out inside a transaction (`reset_password/2`),
+  and announcing from inside the write meant that path silently did not --
+  which is the one path whose whole purpose is somebody else being in your
+  account.
+  """
+  @spec sessions_revoked(User.t()) :: :ok
+  def sessions_revoked(%User{} = user) do
+    Broadcast.announce(sessions_topic(user.id), {:sessions, :revoked})
+
     :ok
   end
+
+  @doc """
+  Where a live page listens for the moment its session stops being any good.
+
+  Per user rather than per token, because the raw token is only ever in the
+  browser's cookie -- what is stored here is its hash, so the server cannot
+  name one session from the outside.
+  """
+  @spec sessions_topic(integer()) :: String.t()
+  def sessions_topic(user_id), do: "user_sessions:#{user_id}"
 
   ## Confirmation
 
@@ -506,9 +545,16 @@ defmodule Abuuba.Accounts.Auth do
     |> OAuth.revoke_all_multi(user)
     |> Repo.transaction()
     |> case do
-      {:ok, %{confirmed: user}} -> {:ok, user}
-      {:error, :user, changeset, _changes} -> {:error, changeset}
-      _ -> :error
+      {:ok, %{confirmed: user}} ->
+        sessions_revoked(user)
+
+        {:ok, user}
+
+      {:error, :user, changeset, _changes} ->
+        {:error, changeset}
+
+      _ ->
+        :error
     end
   end
 

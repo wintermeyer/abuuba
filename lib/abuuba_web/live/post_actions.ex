@@ -31,6 +31,7 @@ defmodule AbuubaWeb.PostActions do
   use Gettext, backend: AbuubaWeb.Gettext
 
   alias Abuuba.Accounts.Account
+  alias Abuuba.Snowflake
   alias Abuuba.Statuses
   alias Abuuba.Statuses.Poll
   alias Abuuba.Statuses.Status
@@ -38,6 +39,9 @@ defmodule AbuubaWeb.PostActions do
   alias AbuubaWeb.API.Entities
 
   @toggles ~w(favourite boost bookmark)
+
+  # What a screen with no composer can ask a post's page to open on arrival.
+  @composers ~w(reply edit)
 
   @doc """
   The events this handles.
@@ -55,7 +59,7 @@ defmodule AbuubaWeb.PostActions do
   attached screen passing a check that is no longer true.
   """
   @spec answers() :: [String.t()]
-  def answers, do: Enum.sort(@toggles ++ ~w(edit reply translate vote))
+  def answers, do: Enum.sort(@toggles ++ ~w(delete edit reply translate vote))
 
   @doc """
   Performs one, answering with the post as it now stands.
@@ -182,6 +186,29 @@ defmodule AbuubaWeb.PostActions do
   end
 
   @doc """
+  Takes back a post the reader wrote, answering with the one that is gone.
+
+  Ownership is asked here rather than trusted from the button, for the reason
+  in "Read, then decide" above and one more: the event can be sent without the
+  button ever being drawn, so the only place the question can be answered is
+  the one that acts on it.
+
+  `:error` where there is nobody signed in, the id names nothing they can see,
+  or the post is somebody else's -- all three mean the same thing to a caller,
+  which is that nothing has left the screen.
+  """
+  @spec delete(Account.t() | nil, String.t() | integer()) :: {:ok, Status.t()} | :error
+  def delete(viewer, id)
+
+  def delete(%Account{} = viewer, id) do
+    status = find(viewer, id)
+
+    if own?(status, viewer), do: Statuses.delete_status(status), else: :error
+  end
+
+  def delete(_viewer, _id), do: :error
+
+  @doc """
   Puts a freshly rendered post in place of the one it supersedes.
 
   For the screens that hold their posts in a plain list. A stream has its own
@@ -199,23 +226,60 @@ defmodule AbuubaWeb.PostActions do
 
   For the screens with no composer: replying there goes to the post rather than
   opening a box, which is the same answer on all of them.
+
+  `:compose` says what the reader came to do, and the post's page opens the box
+  on arrival. Without it the button sent them to a page with a closed composer,
+  so "Reply" did nothing once they got there and "Edit" showed an empty box on
+  the post they meant to change. The accepted values are `composers/0`, which
+  is what `AbuubaWeb.StatusLive` matches on, so the two ends cannot drift.
   """
-  @spec page_of(Account.t() | nil, String.t() | integer()) :: String.t() | nil
-  def page_of(viewer, id) do
+  @spec page_of(Account.t() | nil, String.t() | integer(), keyword()) :: String.t() | nil
+  def page_of(viewer, id, opts \\ []) do
     with %Status{} = status <- find(viewer, id),
          %Account{} = account <- Abuuba.Repo.get(Account, status.account_id) do
-      "/@#{Account.acct(account)}/#{status.id}"
+      "/@#{Account.acct(account)}/#{status.id}#{compose_query(opts[:compose])}"
     else
       _nothing -> nil
     end
   end
 
+  @doc """
+  What `:compose` accepts, and what a post's page answers.
+  """
+  @spec composers() :: [String.t()]
+  def composers, do: @composers
+
+  defp compose_query(nil), do: ""
+
+  defp compose_query(what) do
+    case to_string(what) do
+      known when known in @composers -> "?compose=#{known}"
+      _unknown -> ""
+    end
+  end
+
+  @doc """
+  Whether this post is the reader's own.
+
+  Asked of the `%Status{}` rather than of the button that raised the event: the
+  event can be sent without the button ever being drawn, so the only place the
+  question can be answered is the one that acts on it.
+  """
+  @spec own?(Status.t(), Account.t() | nil) :: boolean()
+  def own?(%Status{account_id: account_id}, %Account{id: account_id}), do: true
+  def own?(_status, _viewer), do: false
+
   # `get_status/2` is what applies the viewer's own visibility, so a post
   # somebody cannot see answers nil here rather than being acted on.
+  #
+  # `Snowflake.cast/1` rather than `Integer.parse/1`, which reads a number too
+  # big for the column and hands it to Ecto, where it is a cast error that
+  # takes the socket down. Every button on the action bar comes through here,
+  # so one id nobody could have meant emptied the page.
   defp find(viewer, id) do
-    case Integer.parse(to_string(id)) do
-      {number, ""} -> Statuses.get_status(number, viewer)
-      _not_a_number -> nil
+    case Snowflake.cast(id) do
+      {:ok, number} -> Statuses.get_status(number, viewer)
+      :error -> nil
     end
   end
 
@@ -245,60 +309,83 @@ defmodule AbuubaWeb.PostActions do
   """
   @spec attach(Phoenix.LiveView.Socket.t(), keyword()) :: Phoenix.LiveView.Socket.t()
   def attach(socket, opts) do
-    put_back = put_back_fun(opts)
+    ways = ways(opts)
 
     Phoenix.LiveView.attach_hook(socket, :post_actions, :handle_event, fn event, params, socket ->
-      handle(event, params, socket, put_back)
+      handle(event, params, socket, ways)
     end)
   end
 
   # `:lists` covers every screen that keeps posts in plain lists, which is most
-  # of them. `:put_back` is for the one that does not — the notifications page
-  # holds each post inside the group of notifications about it — and is the
-  # same division of labour the moduledoc describes: this decides what an
-  # action does, the screen decides where the answer goes.
-  defp put_back_fun(opts) do
-    case Keyword.fetch(opts, :put_back) do
+  # of them. `:put_back` and `:remove` are for the one that does not — the
+  # notifications page holds each post inside the group of notifications about
+  # it — and are the same division of labour the moduledoc describes: this
+  # decides what an action does, the screen decides where the answer goes.
+  #
+  # Two ways rather than one because the actions divide in two: everything but
+  # a delete redraws a post where it was, and a delete takes it off the screen.
+  defp ways(opts) do
+    %{
+      put_back: way(opts, :put_back, &lists_put_back/1),
+      remove: way(opts, :remove, &lists_remove/1)
+    }
+  end
+
+  defp way(opts, key, from_lists) do
+    case Keyword.fetch(opts, key) do
       {:ok, fun} when is_function(fun, 2) -> fun
-      :error -> lists_put_back(opts |> Keyword.fetch!(:lists) |> List.wrap())
+      :error -> opts |> Keyword.fetch!(:lists) |> List.wrap() |> from_lists.()
     end
   end
 
-  defp lists_put_back(lists), do: &swap_lists(&1, lists, &2)
+  defp lists_put_back(lists), do: &update_lists(&1, lists, fn posts -> swap(posts, &2) end)
 
-  defp swap_lists(socket, lists, rendered) do
-    Enum.reduce(lists, socket, fn list, acc ->
-      Phoenix.Component.update(acc, list, &swap(&1, rendered))
-    end)
+  defp lists_remove(lists),
+    do: &update_lists(&1, lists, fn posts -> Enum.reject(posts, fn p -> about?(p, &2) end) end)
+
+  @doc """
+  Whether a drawn post is the one with this id, boost included.
+
+  A boost is drawn as the boost row, and the action bar on it acts on the
+  post inside (`@status["reblog"] || @status`). So the id a delete answers
+  with is the original's, while the row it has to come off is the boost's --
+  and matching only the row's own id left the words of a deleted post sitting
+  on screen under a flash saying it was gone.
+  """
+  @spec about?(map(), String.t()) :: boolean()
+  def about?(post, id), do: post["id"] == id or get_in(post, ["reblog", "id"]) == id
+
+  defp update_lists(socket, lists, fun) do
+    Enum.reduce(lists, socket, fn list, acc -> Phoenix.Component.update(acc, list, fun) end)
   end
 
-  defp handle(event, %{"id" => id}, socket, put_back) when event in @toggles do
+  defp handle(event, %{"id" => id}, socket, ways) when event in @toggles do
     case toggle(socket.assigns.viewer, event, id) do
-      {:ok, status} -> {:halt, rendered_back(socket, status, put_back)}
+      {:ok, status} -> {:halt, rendered_back(socket, status, ways.put_back)}
       :error -> {:halt, socket}
     end
   end
 
-  defp handle("vote", %{"poll_id" => poll_id} = params, socket, put_back) do
+  defp handle("vote", %{"poll_id" => poll_id} = params, socket, ways) do
     choices = params |> Map.get("choices", []) |> List.wrap()
 
     case vote(socket.assigns.viewer, poll_id, choices) do
-      {:ok, status} -> {:halt, rendered_back(socket, status, put_back)}
+      {:ok, status} -> {:halt, rendered_back(socket, status, ways.put_back)}
       :error -> {:halt, socket}
     end
   end
 
-  defp handle(event, %{"id" => id}, socket, _put_back) when event in ~w(reply edit) do
-    case page_of(socket.assigns.viewer, id) do
+  defp handle(event, %{"id" => id}, socket, _ways) when event in @composers do
+    case page_of(socket.assigns.viewer, id, compose: event) do
       nil -> {:halt, socket}
       path -> {:halt, Phoenix.LiveView.push_navigate(socket, to: path)}
     end
   end
 
-  defp handle("translate", %{"id" => id}, socket, put_back) do
+  defp handle("translate", %{"id" => id}, socket, ways) do
     case translate(socket.assigns.viewer, id, locale(socket)) do
       {:ok, rendered} ->
-        {:halt, put_back.(socket, rendered)}
+        {:halt, ways.put_back.(socket, rendered)}
 
       :error ->
         {:halt,
@@ -310,12 +397,35 @@ defmodule AbuubaWeb.PostActions do
     end
   end
 
-  defp handle(_event, _params, socket, _put_back), do: {:cont, socket}
+  defp handle("delete", %{"id" => id}, socket, ways) do
+    case delete(socket.assigns.viewer, id) do
+      {:ok, status} ->
+        {:halt,
+         socket
+         |> ways.remove.(to_string(status.id))
+         |> Phoenix.LiveView.put_flash(:info, gone())}
+
+      :error ->
+        {:halt, socket}
+    end
+  end
+
+  defp handle(_event, _params, socket, _ways), do: {:cont, socket}
 
   # Rendered the way the screen rendered the rest of them, then handed back.
   defp rendered_back(socket, %Status{} = status, put_back) do
     put_back.(socket, Entities.status(status, socket.assigns.viewer))
   end
+
+  @doc """
+  What a screen says once a post is gone.
+
+  Public because the two screens with a composer answer `delete` themselves --
+  one has a stream to take a row out of, the other may have to leave the page
+  -- and a delete that reports nothing looks like a button that did nothing.
+  """
+  @spec gone() :: String.t()
+  def gone, do: gettext("That post is gone.")
 
   @doc """
   The language to translate into for this reader.

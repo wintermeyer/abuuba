@@ -80,6 +80,36 @@ defmodule AbuubaWeb.ShellTest do
       assert {:ok, _live, html} = live(conn, ~p"/notifications")
       assert html =~ "Notifications"
     end
+
+    # `DELETE /logout` has always answered; nothing in the interface asked it.
+    # The only way out anybody could find was "Sign out everywhere" on the
+    # security page, which ends the sessions on every other device too -- so
+    # signing off a shared computer cost somebody their phone.
+    test "signed in, it offers a way to sign out", %{conn: conn} do
+      html = conn |> log_in() |> get(~p"/shortcuts") |> html_response(200)
+
+      assert html =~ ~s(href="/logout")
+      assert html =~ "Sign out"
+    end
+
+    test "signed out, there is nothing to sign out of", %{conn: conn} do
+      html = conn |> get(~p"/shortcuts") |> html_response(200)
+
+      refute page(html) =~ "/logout"
+    end
+
+    test "the way out it offers is the one the router answers", %{conn: conn} do
+      # A link that reads "Sign out" and leaves the session alone is worse than
+      # no link, so this follows it rather than trusting the href.
+      conn = log_in(conn)
+
+      assert get_session(conn, :user_token)
+
+      signed_out = conn |> recycle() |> delete(~p"/logout")
+
+      assert redirected_to(signed_out) == ~p"/"
+      refute get_session(signed_out, :user_token)
+    end
   end
 
   describe "keyboard shortcuts" do

@@ -221,6 +221,28 @@ defmodule AbuubaWeb.PasswordResetTest do
       assert %User{} = Auth.get_user_by_email_and_password(user.email, @password)
     end
 
+    # The rows go inside the transaction here rather than through
+    # `delete_all_session_tokens/1`, so this path is the one that would
+    # silently not announce -- and it is the one whose whole purpose is
+    # somebody else being in the account. A page left open is a session that
+    # is still working.
+    test "closes the pages those sessions had open", %{conn: conn, user: user} do
+      intruder =
+        conn
+        |> Phoenix.ConnTest.init_test_session(%{})
+        |> Plug.Conn.put_session(:user_token, Auth.create_session_token(user))
+
+      {:ok, live, _html} = live(intruder, ~p"/home")
+
+      Phoenix.ConnTest.build_conn()
+      |> post(~p"/reset-password/#{token_for(user)}", %{
+        "user" => %{"password" => @new_password}
+      })
+      |> redirected_to()
+
+      assert_redirect(live, ~p"/login")
+    end
+
     test "burns the link", %{conn: conn, user: user} do
       token = token_for(user)
 

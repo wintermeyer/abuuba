@@ -158,8 +158,11 @@ one press rather than one at a time.
 Change your password, which needs your current one: otherwise somebody who
 walks up to an unlocked screen owns the account.
 
-Two-factor authentication has its own page. **Sign out everywhere** ends every
-session including the one you are using.
+Two-factor authentication has its own page. **Sign out** ends this session and
+leaves your other devices alone; it is also in the sidebar, under the
+navigation, on every page. **Sign out everywhere** ends every session including
+the one you are using, which is the one to reach for on a computer you no
+longer trust.
 
 
 **Recent sign-ins** lists the last attempts on your account with the time, the

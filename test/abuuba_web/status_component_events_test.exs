@@ -84,7 +84,7 @@ defmodule AbuubaWeb.StatusComponentEventsTest do
     # A canary on the list itself. A new button added to the component makes
     # this fail before the per-screen check below can be trusted, because a
     # screen cannot answer an event nobody knew about.
-    assert events_raised() == ~w(bookmark boost edit favourite reply translate vote)
+    assert events_raised() == ~w(bookmark boost delete edit favourite reply translate vote)
   end
 
   test "every screen that draws a post is one this checked" do

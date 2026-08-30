@@ -768,6 +768,16 @@ defmodule AbuubaWeb.SettingsLiveTest do
 
       refute Auth.get_user_by_session_token(token)
     end
+
+    # The section's own description promises "your password, two-factor, and
+    # signing out", and the only way out it offered ended the session on every
+    # other device as well.
+    test "offers signing out of this device alone, beside signing out of all", %{conn: conn} do
+      {:ok, _live, html} = live(conn, ~p"/settings/security")
+
+      assert html =~ ~s(href="/logout")
+      assert html =~ "Sign out everywhere"
+    end
   end
 
   describe "applications" do

@@ -52,7 +52,7 @@ defmodule AbuubaWeb.Layouts do
       live timeline renders on every arriving post. As an attribute it is
       rebuilt only when `@current_scope` actually changes, which is where the
       badge can have moved. --%>
-      <.side_nav items={nav_items(@current_scope)} />
+      <.side_nav items={nav_items(@current_scope)} signed_in={@current_scope[:user] != nil} />
 
       <main id="main" tabindex="-1" class="min-w-0 border-base-300 lg:border-x">
         <h1 :if={@page_title} class="sr-only">{@page_title}</h1>
@@ -124,6 +124,7 @@ defmodule AbuubaWeb.Layouts do
   somebody else is describing one interface.
   """
   attr :items, :list, required: true
+  attr :signed_in, :boolean, default: false, doc: "whether there is a session to end"
 
   def side_nav(assigns) do
     ~H"""
@@ -138,8 +139,11 @@ defmodule AbuubaWeb.Layouts do
 
       <.nav_link :for={item <- @items} item={item} />
 
-      <div class="mt-auto px-3 py-2 text-sm">
+      <div class="mt-auto flex flex-col gap-1 px-3 py-2 text-sm">
         <a href={~p"/shortcuts"} class="link link-hover">{gettext("Keyboard shortcuts")}</a>
+        <.link :if={@signed_in} href={~p"/logout"} method="delete" class="link link-hover">
+          {gettext("Sign out")}
+        </.link>
       </div>
     </nav>
     """

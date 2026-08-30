@@ -34,6 +34,7 @@ defmodule AbuubaWeb.ConversationsLive do
   alias Abuuba.Statuses.Formatter
   alias Abuuba.Streaming
   alias AbuubaWeb.API.Entities
+  alias AbuubaWeb.PostActions
 
   @page_size 20
 
@@ -149,14 +150,13 @@ defmodule AbuubaWeb.ConversationsLive do
   # The last message's own page, which renders the thread around it. A
   # conversation whose last message has since been deleted keeps its row and
   # its people, so this falls back to the inbox rather than to a 404.
+  #
+  # With the box open, because opening a conversation is opening it to answer.
+  # That also decides the audience: the composer takes a reply's visibility
+  # from the post it answers, and the empty box this used to land on defaults
+  # to public -- so the obvious reply to a private message went to everybody.
   defp path_to(row, account) do
-    with id when not is_nil(id) <- row.last_status_id,
-         %{} = status <- Statuses.get_status(id, account),
-         %{} = author <- Accounts.get_account(status.account_id) do
-      ~p"/@#{Account.acct(author)}/#{status.id}"
-    else
-      _ -> ~p"/conversations"
-    end
+    PostActions.page_of(account, row.last_status_id, compose: :reply) || ~p"/conversations"
   end
 
   defp load(socket) do

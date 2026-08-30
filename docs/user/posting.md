@@ -224,7 +224,9 @@ A conversation with a different set of people in it is a different line, even
 when it grew out of the same thread. To you they are two conversations, so they
 are two lines.
 
-Opening one marks it read and shows the thread on the last message's page.
+Opening one marks it read and shows the thread on the last message's page, with
+the box already open on the last message and already set to the same audience:
+an answer to a private conversation stays inside it.
 **Mark unread** puts it back, and is yours alone: neither marking changes
 anything for anybody else in the thread. **Remove** takes it out of your inbox
 only; nobody else loses anything, and a later message brings it back.
@@ -300,9 +302,13 @@ that no longer works.
 
 ## Deleting
 
-Deleting a post hands its text back, which is what "delete and redraft" in your
-app is doing: it deletes the post and puts what you wrote back in the compose
-box.
+The bin under a post of your own deletes it, wherever the post appears: a
+timeline, a profile, its own page. You are asked first, because a delete goes
+out to every server holding a copy and nothing brings it back.
+
+Through the API, deleting a post hands its text back, which is what "delete and
+redraft" in your app is doing: it deletes the post and puts what you wrote back
+in the compose box.
 
 Other servers are asked to delete their copy. Whether they do is up to them,
 and a server that was offline when you deleted may not hear about it at all.

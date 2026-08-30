@@ -12,12 +12,18 @@
 | `suspend` | Hidden from everybody, data purged after a grace window; the owner cannot sign in either |
 
 Disabling and suspending both end the sessions and app tokens the account
-already had, so the decision takes effect on the next request rather than the
-next time somebody signs out. Every request checks in any case -- an account
-that is suspended or disabled is refused by the API and by the pages here
-alike -- but a session token that still works is a live credential, and
-revoking the app tokens is also what closes a streaming connection, which
-authenticates once when it connects.
+already had, so the decision takes effect at once rather than the next time
+somebody signs out. Every request checks in any case -- an account that is
+suspended or disabled is refused by the API and by the pages here alike -- but
+a session token that still works is a live credential, and revoking the app
+tokens is also what closes a streaming connection, which authenticates once
+when it connects.
+
+Pages this server had already drawn are closed too. They are LiveViews, which
+read the session once when they open and hold the answer for as long as the
+browser stays on them, so a page left open was the one place a decision did not
+reach: it went on working, compose box and all, until somebody reloaded. Ending
+the sessions now sends every open page back to the sign-in screen.
 
 `none` is a real action, not a placeholder. Telling somebody is a moderation
 decision, and the most common one.

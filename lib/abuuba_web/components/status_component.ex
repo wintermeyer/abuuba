@@ -343,6 +343,15 @@ defmodule AbuubaWeb.StatusComponent do
     """
   end
 
+  # Which controls are the author's own. Once, rather than on each button that
+  # asks: two spellings of "is this mine" in one template is two to keep in
+  # step. What it decides is what is drawn; whether the event is allowed is
+  # answered again where it is acted on, because the event can be sent without
+  # the button ever existing.
+  defp own?(_status, nil), do: false
+  defp own?(%{"account" => %{"id" => id}}, viewer_id), do: id == viewer_id
+  defp own?(_status, _viewer_id), do: false
+
   # A card with nothing to say is worse than no card: an empty box under a post
   # tells a reader the link is broken when it is only uninformative.
   defp card?(%{"card" => %{"title" => title}}) when title != "", do: true
@@ -422,7 +431,7 @@ defmodule AbuubaWeb.StatusComponent do
       </button>
 
       <button
-        :if={@viewer_id && @status["account"]["id"] == @viewer_id}
+        :if={own?(@status, @viewer_id)}
         type="button"
         phx-click="edit"
         phx-value-id={@status["id"]}
@@ -430,6 +439,20 @@ defmodule AbuubaWeb.StatusComponent do
       >
         <span class="hero-pencil-square size-4" aria-hidden="true" />
         <span class="sr-only">{gettext("Edit")}</span>
+      </button>
+
+      <%!-- Your own posts only, and asked about first: a delete goes out to
+      every server that has a copy and nothing brings it back. --%>
+      <button
+        :if={own?(@status, @viewer_id)}
+        type="button"
+        phx-click="delete"
+        phx-value-id={@status["id"]}
+        data-confirm={gettext("Delete this post? Other servers are told to forget it too.")}
+        class="flex items-center gap-1"
+      >
+        <span class="hero-trash size-4" aria-hidden="true" />
+        <span class="sr-only">{gettext("Delete")}</span>
       </button>
 
       <%!-- Only where the server can actually translate and the post is in
