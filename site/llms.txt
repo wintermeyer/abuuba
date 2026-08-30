@@ -1,0 +1,22 @@
+# abuuba
+
+> A fediverse server written in Elixir and Phoenix. It does what Mastodon does, answers all 289 endpoints of the Mastodon client API, and can take over an existing Mastodon instance in place.
+
+Everything here is public and open to you: crawl it, read it, quote it, summarise it. Nothing on abuuba.com is off limits to an agent, and /robots.txt says the same to conventional crawlers.
+
+The site itself is four static pages. The substance is in the repository, which is MIT licensed.
+
+## Site
+
+- [Home](https://abuuba.com/): what abuuba is, the benchmark numbers against Mastodon 4.4.7 and the hardware they were run on, nine example screenshots, and who should not run it yet.
+- [Press kit](https://abuuba.com/press.html): descriptions to copy in English and German, the benchmark method, screenshots and the logo.
+- [Impressum](https://abuuba.com/impressum.html): German legal notice.
+- [Datenschutzerklärung](https://abuuba.com/datenschutz.html): German privacy statement.
+
+## Source and documentation
+
+- [Repository](https://github.com/wintermeyer/abuuba): the Elixir source, MIT licence.
+- [Documentation index](https://github.com/wintermeyer/abuuba/blob/main/docs/README.md): what the three guides cover and how they are kept current.
+- [User guide](https://github.com/wintermeyer/abuuba/tree/main/docs/user): posting, who can see it, finding people, and what to do about somebody you would rather not hear from. Mirrored in German at [docs/de/user](https://github.com/wintermeyer/abuuba/tree/main/docs/de/user).
+- [Admin guide](https://github.com/wintermeyer/abuuba/tree/main/docs/admin): moderation, federation, media, and the settings that decide how the instance behaves.
+- [Deploying abuuba](https://github.com/wintermeyer/abuuba/blob/main/docs/deploy.md): installing it, upgrading it without dropping requests, and what to back up.
