@@ -15,7 +15,14 @@ What a release does have is `bin/abuuba eval`, which calls plain functions:
 bin/abuuba eval 'Abuuba.Release.migrate()'
 bin/abuuba eval 'Abuuba.Release.rollback(Abuuba.Repo, 20260101120000)'
 bin/abuuba eval 'Abuuba.Release.bootstrap_owner(%{username: "alice", email: "alice@example.com"})'
+bin/abuuba eval 'Abuuba.Release.import_mastodon()'
 ```
+
+The last one is the exception to the paragraph above: a takeover happens on a
+server, before there is a checkout anywhere near it, so `mix abuuba.import` and
+`Abuuba.Release.import_mastodon/1` are two front ends for one piece of code and
+the release keeps the dry run, the checks and the report. See
+[taking over a Mastodon instance](importing-from-mastodon.md).
 
 Any public context function works the same way, so a one-off can be done by
 hand:

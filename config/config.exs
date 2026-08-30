@@ -91,8 +91,8 @@ config :abuuba,
   ecto_repos: [Abuuba.Repo],
   generators: [timestamp_type: :utc_datetime]
 
-# What `mix abuuba.import` runs, in the order it runs them. Listed here rather
-# than inside the runner so that a step added later cannot be left out of it.
+# What an import runs, in the order it runs them. Listed here rather than
+# inside the runner so that a step added later cannot be left out of it.
 config :abuuba, :import_steps, [
   Abuuba.Importer.Identity,
   Abuuba.Importer.Content,

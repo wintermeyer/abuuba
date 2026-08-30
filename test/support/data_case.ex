@@ -62,6 +62,42 @@ defmodule Abuuba.DataCase do
   end
 
   @doc """
+  Environment variables for one test, put back afterwards. A `nil` unsets one.
+
+      with_env(%{"MASTODON_DATABASE_URL" => url, "MASTODON_S3_BUCKET" => nil})
+
+  Only in an `async: false` case. The environment is one global map shared by
+  every test process, so a concurrent test reads whatever this one has just
+  put there.
+  """
+  def with_env(vars) do
+    previous = Map.new(vars, fn {name, _value} -> {name, System.get_env(name)} end)
+
+    put_env(vars)
+    on_exit(fn -> put_env(previous) end)
+  end
+
+  defp put_env(vars) do
+    Enum.each(vars, fn
+      {name, nil} -> System.delete_env(name)
+      {name, value} -> System.put_env(name, value)
+    end)
+  end
+
+  @doc """
+  The import steps registered for one test, put back afterwards.
+
+  They are application configuration, so this has the same `async: false`
+  requirement `with_env/1` does.
+  """
+  def with_steps(steps) do
+    previous = Application.get_env(:abuuba, :import_steps)
+
+    Application.put_env(:abuuba, :import_steps, steps)
+    on_exit(fn -> Application.put_env(:abuuba, :import_steps, previous) end)
+  end
+
+  @doc """
   A helper that transforms changeset errors into a map of messages.
 
       assert {:error, changeset} = Accounts.create_user(%{password: "short"})

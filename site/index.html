@@ -153,7 +153,11 @@
       <p>The importer is a dry run by default. It reads the old database, checks everything that has to be true, counts what would move, and writes nothing. A run that gets interrupted continues where it stopped, and afterwards <code>--verify</code> asks the old server, while it is still up, whether every post arrived and every key still signs.</p>
 <pre>mix abuuba.import           <i># a dry run, and the default</i>
 mix abuuba.import --execute <i># do it</i>
-mix abuuba.import --verify  <i># check it afterwards</i></pre>
+mix abuuba.import --verify  <i># check it afterwards</i>
+
+<i># and on a server, which runs a release and has no Mix:</i>
+bin/abuuba eval 'Abuuba.Release.import_mastodon()'</pre>
+      <p><strong>Back up before <code>--execute</code>.</strong> It is not reversible: it writes into abuuba's database, and the way back from an import that went wrong is restoring that database from before the run. The old instance is only ever read, so keep its backup until <code>--verify</code> comes back clean.</p>
       <p class="caption">What moves, what is deliberately left behind, and the two things not carried yet: <a href="https://github.com/wintermeyer/abuuba/blob/main/docs/admin/importing-from-mastodon.md">Taking over a Mastodon instance</a>.</p>
     </div>
   </section>

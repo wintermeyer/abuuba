@@ -2,16 +2,21 @@ defmodule Abuuba.Release do
   @moduledoc """
   The few things that have to happen outside the application, in a release.
 
-  A release has no Mix, so `mix ecto.migrate` does not exist on a server. These
-  are the same jobs, callable from `bin/abuuba eval`, and they start only the
-  repository rather than the whole application: migrating a database while the
-  web server is already serving from it is how a deploy takes the site down
-  with it.
+  A release has no Mix, so `mix ecto.migrate` does not exist on a server, and
+  neither does any other task an operator needs. These are the same jobs,
+  callable from `bin/abuuba eval`.
+
+  The migrations start the repository and nothing else: migrating a database
+  while the web server is already serving from it is how a deploy takes the
+  site down with it. The two that write through the ordinary contexts —
+  `bootstrap_owner/1` and `import_mastodon/1` — start the whole application,
+  because that is what those contexts need under them.
   """
 
   alias Abuuba.Accounts.Account
   alias Abuuba.Accounts.Auth
   alias Abuuba.Accounts.User
+  alias Abuuba.Importer.CLI
   alias Abuuba.Roles
 
   @app :abuuba
@@ -163,6 +168,31 @@ defmodule Abuuba.Release do
          {:ok, role} <- Roles.administrator_role(),
          {:ok, user} <- Roles.assign(user, role) do
       {:ok, %{account: account, user: user, password: password}}
+    end
+  end
+
+  @doc """
+  Takes over a Mastodon instance, from a release.
+
+      bin/abuuba eval 'Abuuba.Release.import_mastodon()'                # a dry run
+      bin/abuuba eval 'Abuuba.Release.import_mastodon(execute: true)'   # do it
+      bin/abuuba eval 'Abuuba.Release.import_mastodon(verify: true)'    # check it afterwards
+      bin/abuuba eval 'Abuuba.Release.import_mastodon(reset: true)'     # forget them, then dry run
+
+  `mix abuuba.import` under a different name, because a takeover is run on a
+  server and a server has no Mix. Both call `Abuuba.Importer.CLI`, which starts
+  the application for them — with no queues and no HTTP listener, for reasons
+  that are written down there.
+
+  A run that cannot start raises, so `bin/abuuba eval` exits non-zero and a
+  script around it stops. The dry run is the default here as it is there:
+  nothing is written unless `execute: true` says so.
+  """
+  @spec import_mastodon([CLI.option()]) :: :ok
+  def import_mastodon(opts \\ []) do
+    case CLI.run(opts) do
+      {:ok, output} -> IO.puts(output)
+      {:error, output} -> raise output
     end
   end
 

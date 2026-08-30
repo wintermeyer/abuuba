@@ -99,13 +99,20 @@ defmodule Abuuba.Importer do
       media_root: System.get_env("MASTODON_MEDIA_ROOT"),
       media_bucket: System.get_env("MASTODON_S3_BUCKET"),
       local_domain: System.get_env("MASTODON_LOCAL_DOMAIN") || URIs.local_domain(),
-      secrets: Map.new(@required_secrets, &{&1, System.get_env(&1) || ""}),
+      secrets: Map.new(@required_secrets, &{&1, source_secret(&1)}),
       prefix: "",
       dry_run: true
     ]
 
     Keyword.merge(defaults, overrides)
   end
+
+  # Under a `MASTODON_` name, and only that name. One of the six is
+  # `SECRET_KEY_BASE`, which this server also has and cannot boot without, so a
+  # release always has one set: reading the bare name as a fallback would take
+  # abuuba's own key for the old server's and pass every check with it. A
+  # variable nobody set has to stay unset, or the failure is silent.
+  defp source_secret(name), do: System.get_env("MASTODON_" <> name) || ""
 
   @doc """
   Checks everything that has to be true before an import can start.
@@ -355,7 +362,11 @@ defmodule Abuuba.Importer do
       [
         %{
           key: "secrets",
-          detail: "missing from the environment: #{Enum.join(missing, ", ")}"
+          # Named the way an admin sets them, which is with the prefix. An
+          # error that names `SECRET_KEY_BASE` sends somebody to the variable
+          # this server needs for itself.
+          detail:
+            "missing from the environment: #{Enum.map_join(missing, ", ", &("MASTODON_" <> &1))}"
         }
       ]
     end
