@@ -170,10 +170,11 @@ defmodule AbuubaWeb.UserAuth do
   # Where the reader is, so a public page can send them to it again. Only that
   # answer needs it: a `handle_info` hook is not told the address, and the
   # sign-in page is the same address wherever they were.
+  #
   # `socket.router` is nil for a LiveView rendered inside another one, and
   # attaching a `handle_params` hook to one of those raises. Nothing nests a
-  # LiveView today; this is so that the first one to do it does not crash at
-  # mount for a reason nobody would look for here.
+  # LiveView today; the clause is so that the first one to do it does not crash
+  # at mount for a reason nobody would look for here.
   defp remember_where(%{router: nil} = socket, _answer), do: socket
 
   defp remember_where(socket, :draw_it_again) do
