@@ -140,6 +140,34 @@
   .shot figcaption { max-width: 62ch; margin-top: 14px; font-size: .9rem; color: var(--muted); }
   .shot figcaption b { color: var(--ink); font-weight: 500; }
 
+  /* A wall of screens rather than a column of them. The tile is a cropped
+     preview; the whole picture opens on a click. No script: the overlay is a
+     :target, so it has an address, the back button closes it, and it works
+     with JavaScript turned off like the rest of the page. */
+  .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 24px 20px; margin-top: 32px; }
+  .tile { display: block; }
+  .tile img { display: block; width: 100%; height: auto; aspect-ratio: 16 / 10; object-fit: cover; object-position: left top; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); transition: border-color .18s ease, transform .18s ease; }
+  .tile:hover img, .tile:focus-visible img { border-color: var(--accent); transform: translateY(-2px); }
+  .tile b { display: block; margin-top: 9px; font-size: .875rem; font-weight: 500; color: var(--ink); }
+  .tile em { display: block; font-style: normal; font-size: .8rem; line-height: 1.45; color: var(--muted); }
+  .tile:hover b { color: var(--accent); }
+
+  .zoom { position: fixed; inset: 0; z-index: 90; display: none; }
+  .zoom:target { display: grid; place-items: center; padding: clamp(14px, 4vw, 48px); }
+  .zoom .sheet { position: absolute; inset: 0; background: rgba(11, 8, 6, .94); }
+  .zoom figure { position: relative; margin: 0; display: flex; flex-direction: column; align-items: flex-start; max-height: 92vh; }
+  /* The picture gives way to the caption rather than the other way round: an
+     image tall enough to fill the screen would push the sentence saying what
+     it is off the bottom of it. */
+  .zoom img { display: block; width: auto; max-width: min(1180px, 92vw); height: auto; max-height: min(74vh, 820px); object-fit: contain; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+  .zoom figcaption { max-width: 74ch; margin-top: 14px; font-size: .9rem; color: var(--muted); }
+  .zoom figcaption b { color: var(--ink); font-weight: 500; }
+  /* A screenshot of a desktop shrunk onto a phone is not readable, so the file
+     itself is one tap away and the device can zoom it however it likes. */
+  .shut { position: absolute; top: 16px; right: 20px; z-index: 2; display: inline-flex; align-items: center; gap: 16px; padding: 8px 16px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); font-size: .82rem; }
+  .shut a { color: var(--muted); }
+  .shut a:hover { color: var(--accent); }
+
   @media (max-width: 860px) {
     .top nav { display: none; }
     .hero-grid, .story { grid-template-columns: 1fr; }
