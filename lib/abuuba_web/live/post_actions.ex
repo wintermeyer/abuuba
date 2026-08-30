@@ -46,6 +46,18 @@ defmodule AbuubaWeb.PostActions do
   def toggles, do: @toggles
 
   @doc """
+  Every event `attach/2` answers.
+
+  Stated rather than implied so the sweep in
+  `AbuubaWeb.StatusComponentEventsTest` can hold this list against the one the
+  component raises. Without it, attaching the hook counts as answering
+  everything, and a clause dropped from `handle/4` later would leave every
+  attached screen passing a check that is no longer true.
+  """
+  @spec answers() :: [String.t()]
+  def answers, do: Enum.sort(@toggles ++ ~w(edit reply translate vote))
+
+  @doc """
   Performs one, answering with the post as it now stands.
 
   `:error` where there is nobody signed in, the id names nothing, or the event

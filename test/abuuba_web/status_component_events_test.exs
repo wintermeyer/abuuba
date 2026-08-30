@@ -27,6 +27,8 @@ defmodule AbuubaWeb.StatusComponentEventsTest do
   """
   use ExUnit.Case, async: true
 
+  alias AbuubaWeb.PostActions
+
   @component "lib/abuuba_web/components/status_component.ex"
   @live_dir "lib/abuuba_web/live"
 
@@ -50,15 +52,33 @@ defmodule AbuubaWeb.StatusComponentEventsTest do
   end
 
   # Three honest answers, and nothing else counts. Either the screen attaches
-  # the shared wiring, or it answers the event itself, or it does not draw the
-  # controls at all.
+  # the shared wiring — and only for the events that wiring actually answers,
+  # which `PostActions.answers/0` states and the test below holds it to — or it
+  # answers the event itself, or it does not draw the controls at all.
   defp answers?(source, event) do
-    String.contains?(source, "PostActions.attach(") or
+    (String.contains?(source, "PostActions.attach(") and event in PostActions.answers()) or
       String.contains?(source, ~s|handle_event("#{event}"|) or
       (event in ~w(favourite boost bookmark) and String.contains?(source, "@post_actions"))
   end
 
-  defp interactive?(source), do: not String.contains?(source, "interactive={false}")
+  # Scoped to the render it sits on, not to the file. `interactive={false}`
+  # anywhere would otherwise excuse a whole screen from the sweep, which is the
+  # unscoped-exemption shape: the day a screen draws one inert post beside live
+  # ones, it would leave this check silently. A screen is exempt only when
+  # every post it draws is inert.
+  defp interactive?(source) do
+    ~r/<\.status\b[^>]*?\/>/s
+    |> Regex.scan(source)
+    |> Enum.map(fn [tag] -> tag end)
+    |> Enum.any?(&(not String.contains?(&1, "interactive={false}")))
+  end
+
+  test "the shared wiring answers exactly what the component raises" do
+    # The other half of `answers?/2` above. Attaching the hook is only a
+    # truthful answer for as long as the hook answers everything, so the two
+    # lists are compared rather than assumed to match.
+    assert PostActions.answers() == events_raised()
+  end
 
   test "the component raises the events this expects" do
     # A canary on the list itself. A new button added to the component makes
