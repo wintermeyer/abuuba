@@ -92,7 +92,23 @@ defmodule AbuubaWeb.StatusComponent do
       <.boost_line :if={@status["reblog"]} status={@status} id={@id} />
 
       <div class="flex gap-3">
-        <img src={@shown["account"]["avatar"]} alt="" class="size-10 shrink-0 rounded bg-base-300" />
+        <%!-- The element is drawn either way, empty where somebody has not set
+        a picture: `size-10 shrink-0` is what holds the text beside it in line,
+        and an `<img>` with an empty `src` is a broken image in every browser.
+        Every post by every account that has not uploaded one carried that
+        glyph, which on a new server is every post. --%>
+        <img
+          :if={@shown["account"]["avatar"] not in [nil, ""]}
+          src={@shown["account"]["avatar"]}
+          alt=""
+          class="size-10 shrink-0 rounded bg-base-300"
+        />
+        <div
+          :if={@shown["account"]["avatar"] in [nil, ""]}
+          class="size-10 shrink-0 rounded bg-base-300"
+          aria-hidden="true"
+        >
+        </div>
 
         <div class="min-w-0 flex-1">
           <div class="flex flex-wrap items-baseline gap-x-2 text-sm">
