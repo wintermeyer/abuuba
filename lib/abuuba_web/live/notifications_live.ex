@@ -32,10 +32,12 @@ defmodule AbuubaWeb.NotificationsLive do
   alias Abuuba.Accounts
   alias Abuuba.Accounts.Account
   alias Abuuba.Notifications
+  alias Abuuba.Snowflake
   alias Abuuba.Streaming
   alias Abuuba.Timelines
   alias AbuubaWeb.API.Entities
   alias AbuubaWeb.API.NestedParams
+  alias AbuubaWeb.PostActions
 
   @page_size 40
 
@@ -52,12 +54,29 @@ defmodule AbuubaWeb.NotificationsLive do
     # No `load/1` here: `handle_params/3` always runs right after mount and
     # loads the page, so loading here too would ask everything twice.
     {:ok,
-     assign(socket,
+     socket
+     |> assign(
        page_title: gettext("Notifications"),
-       account: account,
+       viewer: account,
        types: stored_types(socket.assigns.current_scope.user)
-     )}
+     )
+     |> PostActions.attach(put_back: &put_status_back/2)}
   end
+
+  # This screen draws the action bar like the other five, but its posts are not
+  # in a list: each one sits inside the group of notifications about it, so
+  # twelve boosts of a post are one row. So it hands `PostActions` its own way
+  # of putting a post back rather than naming an assign.
+  defp put_status_back(socket, rendered) do
+    update(socket, :groups, &Enum.map(&1, fn group -> swap_group(group, rendered) end))
+  end
+
+  # The same id in both patterns, so only the group showing this post is
+  # rewritten. A group with no post at all falls to the second clause.
+  defp swap_group(%{status: %{"id" => id}} = group, %{"id" => id} = rendered),
+    do: %{group | status: rendered}
+
+  defp swap_group(group, _rendered), do: group
 
   @impl Phoenix.LiveView
   def handle_params(_params, _uri, socket) do
@@ -183,7 +202,7 @@ defmodule AbuubaWeb.NotificationsLive do
             :if={group.status}
             id={"group-#{dom_id(group.key)}-status"}
             status={group.status}
-            viewer_id={to_string(@account.id)}
+            viewer_id={to_string(@viewer.id)}
           />
         </article>
       </div>
@@ -211,8 +230,8 @@ defmodule AbuubaWeb.NotificationsLive do
   end
 
   def handle_event("mark_read", _params, socket) do
-    case Notifications.list(socket.assigns.account, %{limit: 1}) do
-      [newest | _] -> Timelines.put_marker(socket.assigns.account, "notifications", newest.id)
+    case Notifications.list(socket.assigns.viewer, %{limit: 1}) do
+      [newest | _] -> Timelines.put_marker(socket.assigns.viewer, "notifications", newest.id)
       [] -> :ok
     end
 
@@ -220,7 +239,7 @@ defmodule AbuubaWeb.NotificationsLive do
   end
 
   def handle_event("dismiss", %{"group" => key}, socket) do
-    account = socket.assigns.account
+    account = socket.assigns.viewer
 
     Notifications.dismiss_group(account, key)
 
@@ -228,22 +247,22 @@ defmodule AbuubaWeb.NotificationsLive do
   end
 
   def handle_event("clear_all", _params, socket) do
-    Notifications.clear(socket.assigns.account)
+    Notifications.clear(socket.assigns.viewer)
 
     {:noreply, load(socket)}
   end
 
   def handle_event("accept_request", %{"account" => id}, socket) do
-    with {:ok, id} <- numeric(id) do
-      Notifications.accept_request(socket.assigns.account, id)
+    with {:ok, id} <- Snowflake.cast(id) do
+      Notifications.accept_request(socket.assigns.viewer, id)
     end
 
     {:noreply, load(socket)}
   end
 
   def handle_event("dismiss_request", %{"account" => id}, socket) do
-    with {:ok, id} <- numeric(id) do
-      Notifications.dismiss_request(socket.assigns.account, id)
+    with {:ok, id} <- Snowflake.cast(id) do
+      Notifications.dismiss_request(socket.assigns.viewer, id)
     end
 
     {:noreply, load(socket)}
@@ -261,7 +280,7 @@ defmodule AbuubaWeb.NotificationsLive do
   ## Plumbing
 
   defp load(socket) do
-    account = socket.assigns.account
+    account = socket.assigns.viewer
     page = %{limit: @page_size, types: wanted_types(socket)}
     groups = Notifications.grouped(account, page)
     requests = Notifications.requests(account)
@@ -332,11 +351,11 @@ defmodule AbuubaWeb.NotificationsLive do
   # wrongly in half the languages this is translated into, and the plural of
   # "one other person" is not a suffix.
   defp headline(%{count: 1, senders: [sender | _]} = group) do
-    verb(group.type, display_name(sender))
+    verb(group.type, Account.display_name(sender))
   end
 
   defp headline(%{senders: [sender | _]} = group) do
-    others(group.type, display_name(sender), group.count)
+    others(group.type, Account.display_name(sender), group.count)
   end
 
   defp headline(group), do: verb(group.type, gettext("Somebody"))
@@ -405,12 +424,9 @@ defmodule AbuubaWeb.NotificationsLive do
   defp sender_name(request, senders) do
     case senders[request.from_account_id] do
       nil -> gettext("Somebody")
-      account -> display_name(account)
+      account -> Account.display_name(account)
     end
   end
-
-  defp display_name(%Account{display_name: name}) when is_binary(name) and name != "", do: name
-  defp display_name(%Account{username: username}), do: username
 
   defp stored_types(%{settings: settings}) when is_map(settings) do
     settings |> Map.get("notification_types", []) |> Enum.filter(&(&1 in @offered_types))
@@ -456,15 +472,4 @@ defmodule AbuubaWeb.NotificationsLive do
   # A group key carries characters a DOM id may not, so it is hashed rather
   # than interpolated.
   defp dom_id(key), do: :erlang.phash2(key)
-
-  defp numeric(value) when is_integer(value), do: {:ok, value}
-
-  defp numeric(value) when is_binary(value) do
-    case Integer.parse(value) do
-      {number, ""} -> {:ok, number}
-      _ -> nil
-    end
-  end
-
-  defp numeric(_value), do: nil
 end

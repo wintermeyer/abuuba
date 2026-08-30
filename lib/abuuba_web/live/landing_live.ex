@@ -23,6 +23,7 @@ defmodule AbuubaWeb.LandingLive do
   alias Abuuba.Settings
   alias Abuuba.Statuses
   alias AbuubaWeb.API.Entities
+  alias AbuubaWeb.RegistrationWords
 
   @page_size 10
 
@@ -72,7 +73,7 @@ defmodule AbuubaWeb.LandingLive do
         </p>
 
         <p class="mt-3 text-sm text-base-content/70">
-          {registration_note(@registration_mode)}
+          {RegistrationWords.note(@registration_mode)}
         </p>
 
         <div class="mt-4 flex flex-wrap gap-2">
@@ -101,15 +102,4 @@ defmodule AbuubaWeb.LandingLive do
     </Layouts.app>
     """
   end
-
-  # Said plainly on the way in rather than discovered at the end of a form.
-  defp registration_note(:open), do: gettext("Registration is open: anybody may sign up.")
-
-  defp registration_note(:approved),
-    do: gettext("Registration needs approval: you sign up and an admin reads your request.")
-
-  defp registration_note(:closed),
-    do: gettext("Registration is closed here, but any other server on the network will do.")
-
-  defp registration_note(_mode), do: ""
 end

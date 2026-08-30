@@ -63,6 +63,7 @@ defmodule Abuuba.Moderation.Domains do
   alias Abuuba.Relationships.FollowRequest
   alias Abuuba.Repo
   alias Abuuba.Settings
+  alias Abuuba.Snowflake
 
   @csv_header "#domain,#severity,#reject_media,#reject_reports,#public_comment,#obfuscate"
 
@@ -148,11 +149,27 @@ defmodule Abuuba.Moderation.Domains do
   end
 
   @doc """
+  How many domains are blocked and how many are allowed.
+
+  Counted in the database rather than by measuring the lists. The screen that
+  asks wants two integers for a sentence, and reading the rows to length them
+  meant loading every column of up to ten thousand blocks and sorting them,
+  once per view of the page.
+  """
+  @spec counts() :: %{blocks: non_neg_integer(), allows: non_neg_integer()}
+  def counts do
+    %{
+      blocks: Repo.aggregate(DomainBlock, :count),
+      allows: Repo.aggregate(DomainAllow, :count)
+    }
+  end
+
+  @doc """
   One block by id, or `nil`.
   """
   @spec get_block(integer() | String.t()) :: DomainBlock.t() | nil
   def get_block(id) do
-    case numeric(id) do
+    case Snowflake.cast(id) do
       {:ok, id} -> Repo.get(DomainBlock, id)
       _ -> nil
     end
@@ -419,7 +436,7 @@ defmodule Abuuba.Moderation.Domains do
   """
   @spec get_allow(term()) :: DomainAllow.t() | nil
   def get_allow(id) do
-    case numeric(id) do
+    case Snowflake.cast(id) do
       {:ok, id} -> Repo.get(DomainAllow, id)
       :error -> nil
     end
@@ -810,15 +827,4 @@ defmodule Abuuba.Moderation.Domains do
   end
 
   defp truthy(value), do: String.downcase(to_string(value)) in ["true", "1", "yes"]
-
-  defp numeric(value) when is_integer(value), do: {:ok, value}
-
-  defp numeric(value) when is_binary(value) do
-    case Integer.parse(value) do
-      {number, ""} -> {:ok, number}
-      _ -> :error
-    end
-  end
-
-  defp numeric(_value), do: :error
 end

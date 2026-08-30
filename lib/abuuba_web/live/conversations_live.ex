@@ -31,6 +31,7 @@ defmodule AbuubaWeb.ConversationsLive do
   alias Abuuba.Accounts.Account
   alias Abuuba.Conversations
   alias Abuuba.Statuses
+  alias Abuuba.Statuses.Formatter
   alias Abuuba.Streaming
   alias AbuubaWeb.API.Entities
 
@@ -175,18 +176,24 @@ defmodule AbuubaWeb.ConversationsLive do
       |> Enum.map(& &1.last_status_id)
       |> Enum.reject(&is_nil/1)
       |> Statuses.get_visible_statuses(account)
-      |> Map.new(&{&1.id, &1})
 
-    assign(socket, rows: Enum.map(rows, &decorate(&1, account, people, last)))
+    # Rendered in one batch like the names and the messages above. Rendering
+    # each row's post on its own asked the fourteen-odd questions behind an
+    # entity once per row, for a page that keeps one line of the answer.
+    excerpts =
+      last
+      |> Entities.statuses(account)
+      |> Map.new(&{&1["id"], &1["content"]})
+
+    assign(socket, rows: Enum.map(rows, &decorate(&1, account, people, excerpts)))
   end
 
-  defp decorate(row, account, people, last) do
+  defp decorate(row, account, people, excerpts) do
     %{
       id: row.id,
       unread: row.unread,
-      last_status_id: row.last_status_id,
       people: people(row, account, people),
-      excerpt: excerpt(row, account, last)
+      excerpt: excerpt(row, excerpts)
     }
   end
 
@@ -210,16 +217,10 @@ defmodule AbuubaWeb.ConversationsLive do
   # it.
   @excerpt_length 140
 
-  defp excerpt(row, account, last) do
+  defp excerpt(row, excerpts) do
     with id when not is_nil(id) <- row.last_status_id,
-         %{} = status <- Map.get(last, id) do
-      status
-      |> Entities.status(account)
-      |> Map.get("content", "")
-      |> String.replace(~r/<[^>]*>/, " ")
-      |> String.replace(~r/\s+/u, " ")
-      |> String.trim()
-      |> String.slice(0, @excerpt_length)
+         content when is_binary(content) <- Map.get(excerpts, to_string(id)) do
+      Formatter.plain_text(content, limit: @excerpt_length)
     else
       _ -> gettext("The last message has been deleted.")
     end

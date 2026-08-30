@@ -28,7 +28,6 @@ defmodule AbuubaWeb.CollectionLive do
         raise AbuubaWeb.NotFound, "no such collection"
 
       collection ->
-        viewer = current_account(socket)
         owner = Accounts.get_account(collection.account_id)
 
         {:ok,
@@ -36,7 +35,7 @@ defmodule AbuubaWeb.CollectionLive do
          |> assign(
            collection: collection,
            owner: owner,
-           accounts: listed_accounts(collection, viewer),
+           accounts: listed_accounts(collection),
            page_title: collection.name,
            robots: Meta.noindex()
          )
@@ -72,13 +71,13 @@ defmodule AbuubaWeb.CollectionLive do
       </header>
 
       <ul class="divide-y divide-base-300">
-        <li :for={account <- @accounts} class="p-4">
-          <.link navigate={~p"/@#{account.username}"} class="font-medium link link-hover">
-            {display_name(account)}
+        <li :for={listed <- @accounts} class="p-4">
+          <.link navigate={~p"/@#{listed.account.username}"} class="font-medium link link-hover">
+            {Account.display_name(listed.account)}
           </.link>
-          <p class="text-sm text-base-content/60">@{Account.acct(account)}</p>
-          <p :if={account.note not in [nil, ""]} class="mt-1 break-words text-sm">
-            {raw(note_html(account))}
+          <p class="text-sm text-base-content/60">@{Account.acct(listed.account)}</p>
+          <p :if={listed.account.note not in [nil, ""]} class="mt-1 break-words text-sm">
+            {raw(listed.note_html)}
           </p>
         </li>
       </ul>
@@ -93,21 +92,21 @@ defmodule AbuubaWeb.CollectionLive do
   # Suspended accounts are left out rather than shown as a name and nothing
   # else: a list recommending somebody this server has taken down is the one
   # thing it must stop doing on its owner's behalf.
-  defp listed_accounts(collection, _viewer) do
+  defp listed_accounts(collection) do
     items = Collections.items(collection)
     accounts = items |> Enum.map(& &1.account_id) |> Accounts.get_accounts()
 
     # In the order the owner put them, which is the order the list means.
+    #
+    # The bio is rendered here rather than in the template. It is a sanitiser
+    # pass for a remote account and a lookup per `@mention` for a local one,
+    # and in the template that was paid once per row on every render for text
+    # that cannot change while the page is open.
     items
     |> Enum.map(&Map.get(accounts, &1.account_id))
     |> Enum.reject(&(&1 == nil or &1.suspended_at != nil))
+    |> Enum.map(&%{account: &1, note_html: Formatter.note_html(&1)})
   end
-
-  defp display_name(%Account{display_name: name}) when name not in [nil, ""], do: name
-  defp display_name(%Account{username: username}), do: username
-
-  defp note_html(%Account{domain: nil, note: note}), do: Formatter.to_html(note)
-  defp note_html(%Account{note: note}), do: Formatter.sanitize(note)
 
   defp put_meta(socket, collection, owner) do
     summary =
@@ -115,12 +114,14 @@ defmodule AbuubaWeb.CollectionLive do
         do: gettext("A collection by %{name}", name: Account.acct(owner)),
         else: collection.description
 
-    assign(socket, :page_meta, [
-      {"property", "og:type", "article"},
-      {"property", "og:title", collection.name},
-      {"property", "og:description", summary},
-      {"property", "og:url", Entities.collection(collection)["url"]},
-      {"name", "description", summary}
-    ])
+    assign(
+      socket,
+      :page_meta,
+      Meta.open_graph(
+        title: collection.name,
+        description: summary,
+        url: Entities.collection(collection)["url"]
+      )
+    )
   end
 end

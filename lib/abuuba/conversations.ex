@@ -31,6 +31,7 @@ defmodule Abuuba.Conversations do
   alias Abuuba.Accounts.Account
   alias Abuuba.Pagination
   alias Abuuba.Repo
+  alias Abuuba.Snowflake
   alias Abuuba.Statuses.Mention
   alias Abuuba.Statuses.Status
   alias Abuuba.Streaming
@@ -141,7 +142,7 @@ defmodule Abuuba.Conversations do
   def get(%Account{id: id}, row_id), do: get(id, row_id)
 
   def get(account_id, row_id) do
-    with {:ok, row_id} <- numeric(row_id) do
+    with {:ok, row_id} <- Snowflake.cast(row_id) do
       # The same shape `list/2` returns. A narrower one here would mean every
       # caller having to know which of the two it was holding.
       from(c in "account_conversations",
@@ -199,7 +200,7 @@ defmodule Abuuba.Conversations do
   def remove(%Account{id: id}, row_id), do: remove(id, row_id)
 
   def remove(account_id, row_id) do
-    with {:ok, row_id} <- numeric(row_id) do
+    with {:ok, row_id} <- Snowflake.cast(row_id) do
       from(c in "account_conversations",
         where: c.account_id == ^account_id and c.id == ^row_id
       )
@@ -312,7 +313,7 @@ defmodule Abuuba.Conversations do
   defp set(%Account{id: id}, row_id, changes), do: set(id, row_id, changes)
 
   defp set(account_id, row_id, changes) do
-    with {:ok, row_id} <- numeric(row_id),
+    with {:ok, row_id} <- Snowflake.cast(row_id),
          {1, _} <-
            from(c in "account_conversations",
              where: c.account_id == ^account_id and c.id == ^row_id
@@ -329,15 +330,4 @@ defmodule Abuuba.Conversations do
 
   defp after_cursor(query, nil), do: query
   defp after_cursor(query, id), do: where(query, [c], c.last_status_id > ^id)
-
-  defp numeric(value) when is_integer(value), do: {:ok, value}
-
-  defp numeric(value) when is_binary(value) do
-    case Integer.parse(value) do
-      {number, ""} -> {:ok, number}
-      _ -> nil
-    end
-  end
-
-  defp numeric(_value), do: nil
 end

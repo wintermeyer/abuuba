@@ -518,6 +518,18 @@ defmodule AbuubaWeb.StatusComponent do
 
   defp posted_at(value), do: value
 
+  @doc """
+  The `viewer_id` this component wants, from the reader or from nobody.
+
+  Here rather than in each screen because the attribute is this component's
+  idea: it compares against string ids inside already-rendered entities, so
+  every screen drawing a post had the same two-line conversion privately, five
+  times over, purely to satisfy it.
+  """
+  @spec viewer_id(map() | nil) :: String.t() | nil
+  def viewer_id(nil), do: nil
+  def viewer_id(viewer), do: to_string(viewer.id)
+
   defp display_name(account) do
     case account["display_name"] do
       name when is_binary(name) and name != "" -> name

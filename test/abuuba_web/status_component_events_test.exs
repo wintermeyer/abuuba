@@ -16,22 +16,21 @@ defmodule AbuubaWeb.StatusComponentEventsTest do
   thing, and the thing worth saying is a list-against-list comparison. It is
   the sweep from `CLAUDE.md` run on every commit instead of when somebody
   remembers.
+
+  ## The screen list is found, not written down
+
+  It used to be a literal list here, and the one screen missing from it was the
+  one with the bug: notifications drew the whole bar and answered none of it,
+  and this file said nothing because nobody had added it. So the screens are
+  now every LiveView that renders the component, and a new one is covered the
+  day it is written.
   """
   use ExUnit.Case, async: true
 
-  @component "lib/abuuba_web/components/status_component.ex"
+  alias AbuubaWeb.PostActions
 
-  # The screens that render the component. `landing_live` is deliberately not
-  # here: it draws posts with `interactive: false`, which is the other half of
-  # the same rule -- a control that cannot work on a screen is not drawn on it.
-  @screens ~w(
-    home_live
-    profile_live
-    tag_live
-    search_live
-    explore_live
-    status_live
-  )
+  @component "lib/abuuba_web/components/status_component.ex"
+  @live_dir "lib/abuuba_web/live"
 
   defp events_raised do
     @component
@@ -42,9 +41,43 @@ defmodule AbuubaWeb.StatusComponentEventsTest do
     |> Enum.sort()
   end
 
+  # Every LiveView that draws a post, whatever it is called.
+  defp screens do
+    @live_dir
+    |> File.ls!()
+    |> Enum.filter(&String.ends_with?(&1, ".ex"))
+    |> Enum.map(&Path.join(@live_dir, &1))
+    |> Enum.filter(&(&1 |> File.read!() |> String.contains?("<.status")))
+    |> Enum.sort()
+  end
+
+  # Three honest answers, and nothing else counts. Either the screen attaches
+  # the shared wiring — and only for the events that wiring actually answers,
+  # which `PostActions.answers/0` states and the test below holds it to — or it
+  # answers the event itself, or it does not draw the controls at all.
   defp answers?(source, event) do
-    String.contains?(source, ~s|handle_event("#{event}"|) or
+    (String.contains?(source, "PostActions.attach(") and event in PostActions.answers()) or
+      String.contains?(source, ~s|handle_event("#{event}"|) or
       (event in ~w(favourite boost bookmark) and String.contains?(source, "@post_actions"))
+  end
+
+  # Scoped to the render it sits on, not to the file. `interactive={false}`
+  # anywhere would otherwise excuse a whole screen from the sweep, which is the
+  # unscoped-exemption shape: the day a screen draws one inert post beside live
+  # ones, it would leave this check silently. A screen is exempt only when
+  # every post it draws is inert.
+  defp interactive?(source) do
+    ~r/<\.status\b[^>]*?\/>/s
+    |> Regex.scan(source)
+    |> Enum.map(fn [tag] -> tag end)
+    |> Enum.any?(&(not String.contains?(&1, "interactive={false}")))
+  end
+
+  test "the shared wiring answers exactly what the component raises" do
+    # The other half of `answers?/2` above. Attaching the hook is only a
+    # truthful answer for as long as the hook answers everything, so the two
+    # lists are compared rather than assumed to match.
+    assert PostActions.answers() == events_raised()
   end
 
   test "the component raises the events this expects" do
@@ -54,16 +87,28 @@ defmodule AbuubaWeb.StatusComponentEventsTest do
     assert events_raised() == ~w(bookmark boost edit favourite reply translate vote)
   end
 
-  for screen <- @screens do
-    test "#{screen} answers all of them" do
-      path = "lib/abuuba_web/live/#{unquote(screen)}.ex"
-      source = File.read!(path)
+  test "every screen that draws a post is one this checked" do
+    # The list is derived, so this is the canary on the derivation: if the
+    # component is ever rendered through a wrapper and `<.status` stops
+    # appearing in the screens, the sweep above would pass by finding nothing.
+    found = Enum.map(screens(), &Path.basename/1)
 
-      missing = Enum.reject(events_raised(), &answers?(source, &1))
+    assert "home_live.ex" in found
+    assert "notifications_live.ex" in found
+    assert length(found) >= 6
+  end
 
-      assert missing == [],
-             "#{path} draws the action bar but never answers #{inspect(missing)}. " <>
-               "Its catch-all handle_event swallows them, so the buttons look live and do nothing."
-    end
+  test "every screen answers every event, or draws none of them" do
+    failures =
+      for path <- screens(),
+          source = File.read!(path),
+          interactive?(source),
+          missing = Enum.reject(events_raised(), &answers?(source, &1)),
+          missing != [],
+          do: "#{path} never answers #{inspect(missing)}"
+
+    assert failures == [],
+           "These screens draw the action bar and swallow the clicks in a catch-all, so the " <>
+             "buttons look live and do nothing:\n" <> Enum.join(failures, "\n")
   end
 end

@@ -157,6 +157,49 @@ defmodule Abuuba.Statuses.Formatter do
     |> mark_links()
   end
 
+  @doc """
+  An account's bio, as markup that is safe to render.
+
+  Ours is plain text and is escaped on the way out; theirs is markup that was
+  cleaned on the way in. Both go through this, so neither is ever rendered as
+  the other — and it is one function rather than two copies, because it was
+  two, and only one of them carried the sentence above.
+
+  Matches on the shape rather than on `%Account{}` so that this module does not
+  have to know the schema: it is already what resolves mentions through
+  `Abuuba.Accounts`, and depending on the struct as well would close the loop.
+  """
+  @spec note_html(%{optional(:domain) => String.t() | nil, note: String.t() | nil}) :: String.t()
+  def note_html(%{domain: nil, note: note}), do: to_html(note)
+  def note_html(%{note: note}), do: sanitize(note)
+
+  @doc """
+  What a post says, with the markup taken off.
+
+  The other direction from `to_html/2`, and here beside it for that reason: a
+  summary line, a meta description, an RSS blurb and an admin listing all want
+  the words and none of them want the tags. It was written out separately in
+  eight places under four names, each with its own length baked in, which is
+  how a tag-stripping regex comes to be fixed in one of them.
+
+  `:limit` cuts the result to that many characters; without it the whole text
+  comes back.
+  """
+  @spec plain_text(String.t() | nil, keyword()) :: String.t()
+  def plain_text(html, opts \\ []) do
+    text =
+      html
+      |> to_string()
+      |> String.replace(~r/<[^>]*>/, " ")
+      |> String.replace(~r/\s+/u, " ")
+      |> String.trim()
+
+    case Keyword.get(opts, :limit) do
+      nil -> text
+      limit -> String.slice(text, 0, limit)
+    end
+  end
+
   # The sanitiser takes `rel` and `target` off along with everything else it
   # does not recognise, and puts nothing back. Upstream's adds both to every
   # anchor it keeps, and since local posts got them a link in the same timeline

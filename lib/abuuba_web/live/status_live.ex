@@ -29,6 +29,7 @@ defmodule AbuubaWeb.StatusLive do
   import AbuubaWeb.StatusComponent
 
   alias Abuuba.Accounts
+  alias Abuuba.Accounts.Account
   alias Abuuba.Federation.ResolveStatus
   alias Abuuba.Federation.Serializer
   alias Abuuba.Federation.URIs
@@ -176,7 +177,7 @@ defmodule AbuubaWeb.StatusLive do
   # inside the rendered post now rather than in an assign of this page's own,
   # which is what lets a list screen put a translated post back where it was.
   def handle_event("translate", %{"id" => id}, socket) do
-    case PostActions.translate(socket.assigns.viewer, id, locale(socket)) do
+    case PostActions.translate(socket.assigns.viewer, id, PostActions.locale(socket)) do
       {:ok, rendered} ->
         {:noreply, assign(socket, rendered: rendered)}
 
@@ -186,8 +187,6 @@ defmodule AbuubaWeb.StatusLive do
   end
 
   def handle_event(_event, _params, socket), do: {:noreply, socket}
-
-  defp locale(socket), do: socket.assigns[:locale] || Gettext.get_locale(AbuubaWeb.Gettext)
 
   @impl Phoenix.LiveView
   # The fetcher is injected rather than called directly, so a test can exercise
@@ -240,13 +239,11 @@ defmodule AbuubaWeb.StatusLive do
     |> assign(:robots, robots(author))
     |> assign(
       :page_meta,
-      [
-        {"property", "og:type", "article"},
-        {"property", "og:title", title(author, status)},
-        {"property", "og:description", summary},
-        {"property", "og:url", URIs.status_url(author, status.id)},
-        {"name", "description", summary}
-      ]
+      Meta.open_graph(
+        title: title(author, status),
+        description: summary,
+        url: URIs.status_url(author, status.id)
+      )
     )
     # What an editor fetches before it turns a pasted link into an embed.
     # Without the tag, nothing discovers the endpoint.
@@ -276,7 +273,7 @@ defmodule AbuubaWeb.StatusLive do
 
   defp title(author, status) do
     gettext("%{name} on %{server}",
-      name: display_name(author),
+      name: Account.display_name(author),
       server: Abuuba.Instance.software_name()
     ) <> ": " <> String.slice(summary(status), 0, 60)
   end
@@ -292,9 +289,6 @@ defmodule AbuubaWeb.StatusLive do
   defp one_line(text) do
     text |> to_string() |> String.replace(~r/\s+/u, " ") |> String.trim()
   end
-
-  defp display_name(%{display_name: name}) when is_binary(name) and name != "", do: name
-  defp display_name(%{username: username}), do: username
 
   # Under this author, and visible to whoever is asking. Both checks are the
   # query's rather than an afterthought: one that cannot return the wrong row
@@ -350,7 +344,4 @@ defmodule AbuubaWeb.StatusLive do
   # the one place where a direct link would otherwise walk around that.
   defp blocked?(_author, nil), do: false
   defp blocked?(author, viewer), do: Abuuba.Relationships.blocking?(author, viewer)
-
-  defp viewer_id(nil), do: nil
-  defp viewer_id(viewer), do: to_string(viewer.id)
 end

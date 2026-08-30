@@ -33,24 +33,24 @@ defmodule AbuubaWeb.ExploreLive do
   alias Abuuba.Relationships
   alias Abuuba.Settings
   alias Abuuba.Statuses
+  alias Abuuba.Statuses.Formatter
   alias Abuuba.Trends
   alias AbuubaWeb.API.Entities
   alias AbuubaWeb.Meta
   alias AbuubaWeb.PostActions
-
-  # Answered here because the action bar is drawn here.
-  @post_actions PostActions.toggles()
 
   @page_size 20
 
   @impl Phoenix.LiveView
   def mount(_params, _session, socket) do
     {:ok,
-     assign(socket,
+     socket
+     |> assign(
        page_title: gettext("Explore"),
        viewer: current_account(socket),
        robots: Meta.noindex()
-     )}
+     )
+     |> PostActions.attach(lists: [:posts])}
   end
 
   @impl Phoenix.LiveView
@@ -96,10 +96,10 @@ defmodule AbuubaWeb.ExploreLive do
       <ul :if={@tab == :people} class="divide-y divide-base-300">
         <li :for={person <- @people} class="flex items-center gap-3 p-4">
           <div class="min-w-0 flex-1">
-            <a href={"/@" <> person.username} class="font-semibold">{display_name(person)}</a>
+            <a href={"/@" <> person.username} class="font-semibold">{Account.display_name(person)}</a>
             <p class="text-sm text-base-content/60">@{Account.acct(person)}</p>
             <p :if={person.note not in [nil, ""]} class="mt-1 text-sm break-words">
-              {summary(person.note)}
+              {Formatter.plain_text(person.note, limit: 160)}
             </p>
           </div>
 
@@ -152,61 +152,6 @@ defmodule AbuubaWeb.ExploreLive do
       end
 
     {:noreply, load(socket)}
-  end
-
-  # The action bar is drawn on this screen, so the events it raises are
-  # answered here. See `AbuubaWeb.PostActions` for why the work behind them is
-  # one module rather than a copy per screen.
-  def handle_event(event, %{"id" => id}, socket) when event in @post_actions do
-    case PostActions.toggle(socket.assigns.viewer, event, id) do
-      {:ok, status} -> {:noreply, replace_post(socket, status)}
-      :error -> {:noreply, socket}
-    end
-  end
-
-  # The poll form is drawn by the same component as the action bar, so it is
-  # answered in the same place. See `AbuubaWeb.PostActions`.
-  def handle_event("vote", %{"poll_id" => poll_id} = params, socket) do
-    choices = params |> Map.get("choices", []) |> List.wrap()
-
-    case PostActions.vote(socket.assigns.viewer, poll_id, choices) do
-      {:ok, status} -> {:noreply, replace_post(socket, status)}
-      :error -> {:noreply, socket}
-    end
-  end
-
-  # There is no composer on this screen, so replying goes to the post, which
-  # has one. A box that appears on some screens and not others is worse than
-  # the same answer everywhere.
-  def handle_event("reply", %{"id" => id}, socket) do
-    case PostActions.page_of(socket.assigns.viewer, id) do
-      nil -> {:noreply, socket}
-      path -> {:noreply, push_navigate(socket, to: path)}
-    end
-  end
-
-  # The pencil is drawn by the same component as the rest of the bar, and the
-  # box to edit in is on the post's own page. Same answer as "reply" for the
-  # same reason: a composer that appears on some screens and not others is
-  # worse than the same answer everywhere.
-  def handle_event("edit", %{"id" => id}, socket) do
-    case PostActions.page_of(socket.assigns.viewer, id) do
-      nil -> {:noreply, socket}
-      path -> {:noreply, push_navigate(socket, to: path)}
-    end
-  end
-
-  # Drawn by the same component as the rest of the bar. A translation is not a
-  # change to the post, so it is put straight back into the list rather than
-  # re-read. See `AbuubaWeb.PostActions`.
-  def handle_event("translate", %{"id" => id}, socket) do
-    case PostActions.translate(socket.assigns.viewer, id, locale(socket)) do
-      {:ok, rendered} ->
-        {:noreply, update(socket, :posts, &PostActions.swap(&1, rendered))}
-
-      :error ->
-        {:noreply, put_flash(socket, :error, gettext("That could not be translated just now."))}
-    end
   end
 
   def handle_event(_event, _params, socket), do: {:noreply, socket}
@@ -315,21 +260,6 @@ defmodule AbuubaWeb.ExploreLive do
   # at different places.
   defp tag_path(tag), do: "/tags/#{tag.name}"
 
-  defp summary(note) do
-    note
-    |> to_string()
-    |> String.replace(~r/<[^>]*>/, " ")
-    |> String.replace(~r/\s+/u, " ")
-    |> String.trim()
-    |> String.slice(0, 160)
-  end
-
-  defp display_name(%Account{display_name: name}) when is_binary(name) and name != "", do: name
-  defp display_name(%Account{username: username}), do: username
-
-  defp viewer_id(nil), do: nil
-  defp viewer_id(viewer), do: to_string(viewer.id)
-
   defp numeric(value) when is_binary(value) do
     case Integer.parse(value) do
       {number, ""} -> {:ok, number}
@@ -339,13 +269,4 @@ defmodule AbuubaWeb.ExploreLive do
 
   defp numeric(value) when is_integer(value), do: {:ok, value}
   defp numeric(_value), do: nil
-
-  # Rendered the way this screen renders the rest of them, then swapped in.
-  defp replace_post(socket, status) do
-    rendered = Entities.status(status, socket.assigns.viewer)
-
-    update(socket, :posts, &PostActions.swap(&1, rendered))
-  end
-
-  defp locale(socket), do: socket.assigns[:locale] || Gettext.get_locale(AbuubaWeb.Gettext)
 end

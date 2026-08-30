@@ -25,6 +25,7 @@ defmodule Abuuba.WebPush do
   alias Abuuba.OAuth.AccessToken
   alias Abuuba.Relationships
   alias Abuuba.Repo
+  alias Abuuba.Statuses.Formatter
   alias Abuuba.WebPush.Subscription
 
   @body_limit 140
@@ -216,17 +217,17 @@ defmodule Abuuba.WebPush do
 
   defp body(%Notification{status_id: status_id}) do
     case Repo.get(Abuuba.Statuses.Status, status_id) do
-      nil -> ""
-      status -> status.text |> to_string() |> String.slice(0, @body_limit)
+      nil ->
+        ""
+
+      status ->
+        # The words rather than the markup. A post that arrived from another
+        # server keeps its HTML in `text`, so slicing the column put "<p>" and
+        # a half-closed tag on somebody's lock screen.
+        Formatter.plain_text(status.text, limit: @body_limit)
     end
   end
 
   defp display_name(nil), do: "Somebody"
-
-  defp display_name(%Account{} = account) do
-    case account.display_name do
-      name when is_binary(name) and name != "" -> name
-      _ -> account.username
-    end
-  end
+  defp display_name(%Account{} = account), do: Account.display_name(account)
 end

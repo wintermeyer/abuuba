@@ -61,7 +61,7 @@ defmodule AbuubaWeb.OEmbedController do
       "version" => "1.0",
       "provider_name" => Abuuba.Instance.software_name(),
       "provider_url" => URIs.base_url(),
-      "author_name" => display_name(author),
+      "author_name" => Account.display_name(author),
       "author_url" => URIs.profile_url(author),
       "width" => width,
       "height" => height,
@@ -86,8 +86,4 @@ defmodule AbuubaWeb.OEmbedController do
       _ -> fallback
     end
   end
-
-  defp display_name(%Account{display_name: name}) when is_binary(name) and name != "", do: name
-  defp display_name(%Account{username: username}), do: username
-  defp display_name(_account), do: ""
 end

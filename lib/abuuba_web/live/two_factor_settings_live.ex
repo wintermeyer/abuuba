@@ -9,7 +9,6 @@ defmodule AbuubaWeb.TwoFactorSettingsLive do
 
   use AbuubaWeb, :live_view
 
-  alias Abuuba.Accounts.RecoveryCode
   alias Abuuba.Accounts.TwoFactor
 
   @impl Phoenix.LiveView
@@ -158,7 +157,4 @@ defmodule AbuubaWeb.TwoFactorSettingsLive do
     </Layouts.app>
     """
   end
-
-  @doc false
-  def recovery_code_count, do: RecoveryCode.code_count()
 end

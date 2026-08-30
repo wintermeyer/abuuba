@@ -50,10 +50,13 @@ defmodule AbuubaWeb.SettingsLive do
   alias Abuuba.Moderation.Domains
   alias Abuuba.OAuth
   alias Abuuba.Relationships
+  alias Abuuba.Snowflake
   alias Abuuba.Statuses
   alias Abuuba.Statuses.Cleanup
+  alias Abuuba.Statuses.Formatter
   alias AbuubaWeb.CoreComponents
   alias AbuubaWeb.Formats
+  alias AbuubaWeb.Params
   alias AbuubaWeb.ScopeWords
 
   @impl Phoenix.LiveView
@@ -856,10 +859,10 @@ defmodule AbuubaWeb.SettingsLive do
             name="accounts[]"
             value={person.id}
             class="checkbox checkbox-sm"
-            aria-label={display_name(person)}
+            aria-label={Account.display_name(person)}
           />
           <span class="min-w-0 flex-1">
-            <a href={"/@" <> Account.acct(person)} class="font-medium">{display_name(person)}</a>
+            <a href={"/@" <> Account.acct(person)} class="font-medium">{Account.display_name(person)}</a>
             <span class="block text-sm text-base-content/60">@{Account.acct(person)}</span>
           </span>
         </li>
@@ -1330,11 +1333,11 @@ defmodule AbuubaWeb.SettingsLive do
   end
 
   def handle_event("remove_field", %{"index" => index}, socket) do
-    {:noreply, update(socket, :fields, &List.delete_at(&1, to_integer(index)))}
+    {:noreply, update(socket, :fields, &List.delete_at(&1, Params.to_integer(index)))}
   end
 
   def handle_event("move_field", %{"index" => index}, socket) do
-    index = to_integer(index)
+    index = Params.to_integer(index)
 
     {:noreply,
      update(socket, :fields, fn fields ->
@@ -1544,7 +1547,7 @@ defmodule AbuubaWeb.SettingsLive do
   end
 
   def handle_event("delete_filter", %{"filter" => id}, socket) do
-    with {:ok, id} <- numeric(id),
+    with {:ok, id} <- Snowflake.cast(id),
          filter when not is_nil(filter) <- Filters.get(socket.assigns.account, id) do
       Filters.delete(filter)
     end
@@ -1582,7 +1585,7 @@ defmodule AbuubaWeb.SettingsLive do
   end
 
   def handle_event("revoke_application", %{"application" => id}, socket) do
-    with {:ok, id} <- numeric(id) do
+    with {:ok, id} <- Snowflake.cast(id) do
       OAuth.revoke_application_for(socket.assigns.user, id)
     end
 
@@ -1646,8 +1649,14 @@ defmodule AbuubaWeb.SettingsLive do
 
   ## Plumbing
 
+  # The section that was saved, not always the profile: privacy and aliases save
+  # through here too, and reloading `:profile` for them redrew the page with
+  # another section's data. `save_user/2` below already asks the socket.
   defp save(socket, {:ok, account}) do
-    {:noreply, socket |> assign(account: account, saved?: true, error: nil) |> load(:profile)}
+    {:noreply,
+     socket
+     |> assign(account: account, saved?: true, error: nil)
+     |> load(socket.assigns.section)}
   end
 
   defp save(socket, {:error, _changeset}) do
@@ -1802,7 +1811,7 @@ defmodule AbuubaWeb.SettingsLive do
       fields when is_map(fields) ->
         ordered =
           fields
-          |> Enum.sort_by(fn {index, _field} -> to_integer(index) end)
+          |> Enum.sort_by(fn {index, _field} -> Params.to_integer(index) end)
           |> Enum.map(fn {_index, field} -> field end)
           |> Enum.reject(&(String.trim(&1["name"] || "") == ""))
 
@@ -2167,13 +2176,7 @@ defmodule AbuubaWeb.SettingsLive do
     end)
   end
 
-  defp plain_text(html) do
-    html
-    |> to_string()
-    |> String.replace(~r/<[^>]*>/, " ")
-    |> String.replace(~r/\s+/u, " ")
-    |> String.trim()
-  end
+  defp plain_text(html), do: Formatter.plain_text(html)
 
   # `consume_uploaded_entries` hands over a path that is deleted the moment the
   # function returns, which is exactly the shape `ProfileImages.store/3` wants:
@@ -2223,7 +2226,19 @@ defmodule AbuubaWeb.SettingsLive do
 
   defp picture_url(account, kind), do: ProfileImages.url(account, kind)
 
-  defp human_bytes(bytes), do: "#{div(bytes, 1024 * 1024)} MB"
+  # Megabytes, through the formatter and with the unit translated. Integer
+  # division would render a 4.7 MB limit as "4 MB", which is a smaller number
+  # than the one the upload actually refuses at, and a bare interpolation
+  # would show a German reader "4.7" where they read "4,7".
+  defp human_bytes(bytes) do
+    case Float.round(bytes / (1024 * 1024), 1) do
+      whole when whole == trunc(whole) ->
+        gettext("%{size} MB", size: Formats.number(trunc(whole)))
+
+      fraction ->
+        gettext("%{size} MB", size: Formats.number(fraction))
+    end
+  end
 
   defp export_label("follows"), do: gettext("Follows")
   defp export_label("blocks"), do: gettext("Blocks")
@@ -2317,35 +2332,10 @@ defmodule AbuubaWeb.SettingsLive do
   defp filter_action_label("hide"), do: gettext("Hide it completely")
   defp filter_action_label(action), do: action
 
-  defp display_name(%Account{display_name: name}) when is_binary(name) and name != "", do: name
-  defp display_name(%Account{username: username}), do: username
-
-  defp to_integer(value) when is_integer(value), do: value
-
-  defp to_integer(value) when is_binary(value) do
-    case Integer.parse(value) do
-      {number, _rest} -> number
-      :error -> 0
-    end
-  end
-
-  defp to_integer(_value), do: 0
-
   defp account_id(value) do
-    case numeric(value) do
+    case Snowflake.cast(value) do
       {:ok, id} -> id
       _ -> nil
     end
   end
-
-  defp numeric(value) when is_integer(value), do: {:ok, value}
-
-  defp numeric(value) when is_binary(value) do
-    case Integer.parse(value) do
-      {number, ""} -> {:ok, number}
-      _ -> nil
-    end
-  end
-
-  defp numeric(_value), do: nil
 end

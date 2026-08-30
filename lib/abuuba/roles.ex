@@ -30,6 +30,7 @@ defmodule Abuuba.Roles do
   alias Abuuba.Repo
   alias Abuuba.Roles.Role
   alias Abuuba.Settings
+  alias Abuuba.Snowflake
 
   # The reference implementation's flags and its bit positions. Its admin API
   # hands these numbers to clients, so they are part of the protocol rather
@@ -109,9 +110,23 @@ defmodule Abuuba.Roles do
   @spec can?(User.t() | nil, String.t() | atom()) :: boolean()
   def can?(nil, _permission), do: false
 
-  def can?(%User{} = user, permission) do
+  def can?(%User{} = user, permission), do: allows?(permissions_of(user), permission)
+
+  @doc """
+  Whether a mask of held permissions covers one thing.
+
+  The same question as `can?/2` with the reading already done, for a screen
+  that asks it many times over one render: the admin area's own navigation
+  asks it once per section and its permission form twice per permission, and
+  each of those went to the database for the same role row.
+
+  Use `can?/2` to decide anything. This answers from a mask somebody read
+  earlier, which is right for drawing a page and wrong for allowing an action:
+  a permission taken away should stop the next click, not the next page load.
+  """
+  @spec allows?(integer(), String.t() | atom()) :: boolean()
+  def allows?(held, permission) do
     wanted = bit(permission)
-    held = permissions_of(user)
 
     # An unknown permission is zero, and zero must never be "yes". Checked
     # before the administrator short circuit for exactly that reason.
@@ -186,7 +201,7 @@ defmodule Abuuba.Roles do
   """
   @spec get(integer() | String.t()) :: Role.t() | nil
   def get(id) do
-    case numeric(id) do
+    case Snowflake.cast(id) do
       {:ok, id} -> Repo.get(Role, id)
       _ -> nil
     end
@@ -313,15 +328,4 @@ defmodule Abuuba.Roles do
     administrator?(user) or
       Bitwise.band(role.permissions, Bitwise.bnot(permissions_of(user))) == 0
   end
-
-  defp numeric(value) when is_integer(value), do: {:ok, value}
-
-  defp numeric(value) when is_binary(value) do
-    case Integer.parse(value) do
-      {number, ""} -> {:ok, number}
-      _ -> nil
-    end
-  end
-
-  defp numeric(_value), do: nil
 end

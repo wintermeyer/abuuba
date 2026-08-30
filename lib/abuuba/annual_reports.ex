@@ -34,6 +34,7 @@ defmodule Abuuba.AnnualReports do
   alias Abuuba.Notifications
   alias Abuuba.Relationships.Follow
   alias Abuuba.Repo
+  alias Abuuba.Snowflake
   alias Abuuba.Statuses.Status
   alias Abuuba.Statuses.Tag
 
@@ -80,7 +81,7 @@ defmodule Abuuba.AnnualReports do
   def get(%Account{id: id}, report_id), do: get(id, report_id)
 
   def get(account_id, report_id) do
-    case numeric(report_id) do
+    case Snowflake.cast(report_id) do
       {:ok, id} -> Repo.get_by(Report, id: id, account_id: account_id)
       :error -> nil
     end
@@ -310,20 +311,9 @@ defmodule Abuuba.AnnualReports do
   @int4 -2_147_483_648..2_147_483_647
 
   defp year(value) do
-    case numeric(value) do
+    case Snowflake.cast(value) do
       {:ok, year} when year in @int4 -> {:ok, year}
       _outside -> :error
     end
   end
-
-  defp numeric(value) when is_integer(value), do: {:ok, value}
-
-  defp numeric(value) when is_binary(value) do
-    case Integer.parse(value) do
-      {number, ""} -> {:ok, number}
-      _ -> :error
-    end
-  end
-
-  defp numeric(_value), do: :error
 end

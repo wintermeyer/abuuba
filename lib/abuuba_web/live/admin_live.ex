@@ -42,6 +42,7 @@ defmodule AbuubaWeb.AdminLive do
   alias Abuuba.Roles.Role
   alias Abuuba.Settings
   alias Abuuba.Statuses
+  alias Abuuba.Statuses.Formatter
   alias Abuuba.Streaming
   alias Abuuba.Trends
   alias Abuuba.Webhooks
@@ -189,12 +190,19 @@ defmodule AbuubaWeb.AdminLive do
 
   @impl Phoenix.LiveView
   def handle_params(params, _uri, socket) do
-    section = section_of(socket.assigns.live_action)
+    section = socket.assigns.live_action
 
-    if Roles.can?(socket.assigns.user, permission_for(section)) do
+    # Read once here and then drawn from for the rest of the render. The
+    # navigation asks about every section and the permission form twice about
+    # every permission, and each of those was another read of the same role
+    # row. Still a fresh read at the moment the answer below is a decision.
+    permissions = Roles.permissions_of(socket.assigns.user)
+
+    if Roles.allows?(permissions, permission_for(section)) do
       {:noreply,
        socket
        |> assign(
+         permissions: permissions,
          new_secret: nil,
          editing_role: nil,
          subject_statuses: [],
@@ -219,7 +227,7 @@ defmodule AbuubaWeb.AdminLive do
     <Layouts.app flash={@flash} current_scope={@current_scope} page_title={@page_title}>
       <nav class="border-b border-base-300 p-2" aria-label={gettext("Administration")}>
         <ul class="flex flex-wrap gap-1">
-          <li :for={{action, label} <- allowed_sections(@user)}>
+          <li :for={{action, label} <- allowed_sections(@permissions)}>
             <.link
               navigate={section_path(action)}
               aria-current={@section == action && "page"}
@@ -235,12 +243,13 @@ defmodule AbuubaWeb.AdminLive do
         <h2 class="text-xl font-semibold">{section_label(@section)}</h2>
 
         <p :if={@saved?} class="mt-2 text-sm text-success" role="status">{gettext("Saved.")}</p>
+        <p :if={@imported} class="mt-2 text-sm text-success" role="status">{@imported}</p>
         <p :if={@error} class="mt-2 text-sm text-error" role="alert">{@error}</p>
 
         <.dashboard
           :if={@section == :dashboard}
           counts={@counts}
-          may_appeals?={Roles.can?(@user, "manage_appeals")}
+          may_appeals?={Roles.allows?(@permissions, "manage_appeals")}
           checks={@checks}
           measures={@measures}
           dimensions={@dimensions}
@@ -267,7 +276,7 @@ defmodule AbuubaWeb.AdminLive do
           filters={@filters}
           pending={@pending}
           batch={@batch}
-          batch_count={@batch_count}
+          batch_count={MapSet.size(@batch)}
         />
         <.account
           :if={@section == :account}
@@ -288,7 +297,13 @@ defmodule AbuubaWeb.AdminLive do
         <.domain_lists :if={@section == :domain_lists} counts={@domain_counts} />
         <.suggestions :if={@section == :suggestions} suggestions={@suggestions} />
         <.subscriptions :if={@section == :subscriptions} subscriptions={@subscriptions} />
-        <.roles :if={@section == :roles} roles={@roles} user={@user} editing={@editing_role} />
+        <.roles
+          :if={@section == :roles}
+          roles={@roles}
+          user={@user}
+          permissions={@permissions}
+          editing={@editing_role}
+        />
         <.webhooks
           :if={@section == :webhooks}
           webhooks={@webhooks}
@@ -1664,6 +1679,7 @@ defmodule AbuubaWeb.AdminLive do
 
   attr :roles, :list, required: true
   attr :user, :map, required: true
+  attr :permissions, :integer, required: true
   attr :editing, :any, required: true
 
   defp roles(assigns) do
@@ -1719,13 +1735,13 @@ defmodule AbuubaWeb.AdminLive do
             name={"permissions[#{permission}]"}
             value="true"
             checked={held?(@editing, permission)}
-            disabled={not Roles.can?(@user, permission)}
+            disabled={not Roles.allows?(@permissions, permission)}
             class="checkbox checkbox-sm mt-1"
           />
           <span>
             <span class="font-medium">{permission_label(permission)}</span>
             <span class="block text-sm text-base-content/60">{permission_hint(permission)}</span>
-            <span :if={not Roles.can?(@user, permission)} class="block text-sm text-warning">
+            <span :if={not Roles.allows?(@permissions, permission)} class="block text-sm text-warning">
               {gettext("You do not hold this yourself, so you cannot grant it.")}
             </span>
           </span>
@@ -2343,7 +2359,7 @@ defmodule AbuubaWeb.AdminLive do
       Instance.set_custom_emoji_offered(emoji, not emoji.visible_in_picker)
     end
 
-    {:noreply, socket |> assign(saved?: true) |> load(:emoji, %{})}
+    {:noreply, socket |> assign(saved?: true, error: nil) |> load(:emoji, %{})}
   end
 
   def handle_event("toggle_emoji", %{"id" => id}, socket) do
@@ -2351,7 +2367,7 @@ defmodule AbuubaWeb.AdminLive do
       Instance.set_custom_emoji_disabled(emoji, not emoji.disabled)
     end
 
-    {:noreply, socket |> assign(saved?: true) |> load(:emoji, %{})}
+    {:noreply, socket |> assign(saved?: true, error: nil) |> load(:emoji, %{})}
   end
 
   def handle_event("delete_emoji", %{"id" => id}, socket) do
@@ -2359,7 +2375,7 @@ defmodule AbuubaWeb.AdminLive do
       Instance.delete_custom_emoji(emoji)
     end
 
-    {:noreply, socket |> assign(saved?: true) |> load(:emoji, %{})}
+    {:noreply, socket |> assign(saved?: true, error: nil) |> load(:emoji, %{})}
   end
 
   def handle_event("filter_reports", %{"state" => state}, socket) do
@@ -2399,7 +2415,7 @@ defmodule AbuubaWeb.AdminLive do
 
       {:noreply,
        socket
-       |> assign(saved?: true)
+       |> assign(saved?: true, error: nil)
        |> assign(report_notes: Admin.notes_with_authors(:report, report.id))}
     end
   end
@@ -2408,7 +2424,7 @@ defmodule AbuubaWeb.AdminLive do
   def handle_event("pick_batch", params, socket) do
     batch = ticked(params)
 
-    {:noreply, assign(socket, batch: batch, batch_count: MapSet.size(batch))}
+    {:noreply, assign(socket, batch: batch)}
   end
 
   def handle_event("batch", params, socket) do
@@ -2417,7 +2433,7 @@ defmodule AbuubaWeb.AdminLive do
 
   def handle_event("save_preset", %{"preset" => %{"title" => title, "text" => text}}, socket) do
     case WarningPresets.put(socket.assigns.account, title, text) do
-      :ok -> {:noreply, socket |> assign(saved?: true) |> load(:settings, %{})}
+      :ok -> {:noreply, socket |> assign(saved?: true, error: nil) |> load(:settings, %{})}
       {:error, :blank} -> {:noreply, assign(socket, error: gettext("A preset needs both."))}
     end
   end
@@ -2425,7 +2441,7 @@ defmodule AbuubaWeb.AdminLive do
   def handle_event("delete_preset", %{"title" => title}, socket) do
     WarningPresets.delete(socket.assigns.account, title)
 
-    {:noreply, socket |> assign(saved?: true) |> load(:settings, %{})}
+    {:noreply, socket |> assign(saved?: true, error: nil) |> load(:settings, %{})}
   end
 
   # Filled in rather than replaced silently: the moderator sees the text and
@@ -2442,7 +2458,7 @@ defmodule AbuubaWeb.AdminLive do
       Actions.undo(socket.assigns.account, strike)
     end
 
-    {:noreply, socket |> assign(saved?: true) |> reload_subject()}
+    {:noreply, socket |> assign(saved?: true, error: nil) |> reload_subject()}
   end
 
   def handle_event("save_role", %{"role" => id}, socket) do
@@ -2460,14 +2476,14 @@ defmodule AbuubaWeb.AdminLive do
       true ->
         Admin.assign_role(socket.assigns.account, socket.assigns.subject_user, role)
 
-        {:noreply, socket |> assign(saved?: true) |> reload_subject()}
+        {:noreply, socket |> assign(saved?: true, error: nil) |> reload_subject()}
     end
   end
 
   def handle_event("save_email", %{"email" => email}, socket) do
     case Admin.change_email(socket.assigns.account, socket.assigns.subject_user, email) do
       {:ok, _user} ->
-        {:noreply, socket |> assign(saved?: true) |> reload_subject()}
+        {:noreply, socket |> assign(saved?: true, error: nil) |> reload_subject()}
 
       {:error, _changeset} ->
         {:noreply, assign(socket, error: gettext("That is not an address."))}
@@ -2483,13 +2499,13 @@ defmodule AbuubaWeb.AdminLive do
   def handle_event("approve_trend", %{"kind" => kind, "subject" => subject}, socket) do
     :ok = Trends.approve(socket.assigns.account, kind, subject)
 
-    {:noreply, socket |> assign(saved?: true) |> load(:trends, %{})}
+    {:noreply, socket |> assign(saved?: true, error: nil) |> load(:trends, %{})}
   end
 
   def handle_event("reject_trend", %{"kind" => kind, "subject" => subject}, socket) do
     :ok = Trends.reject(socket.assigns.account, kind, subject)
 
-    {:noreply, socket |> assign(saved?: true) |> load(:trends, %{})}
+    {:noreply, socket |> assign(saved?: true, error: nil) |> load(:trends, %{})}
   end
 
   def handle_event("create_announcement", %{"text" => text} = params, socket) do
@@ -2507,7 +2523,7 @@ defmodule AbuubaWeb.AdminLive do
       {:ok, announcement} ->
         if announcement.published, do: Streaming.publish_announcement(announcement)
 
-        {:noreply, socket |> assign(saved?: true) |> load(:announcements, %{})}
+        {:noreply, socket |> assign(saved?: true, error: nil) |> load(:announcements, %{})}
 
       {:error, _changeset} ->
         {:noreply, assign(socket, error: gettext("An announcement needs some text."))}
@@ -2523,7 +2539,7 @@ defmodule AbuubaWeb.AdminLive do
         {:ok, _} = Instance.delete_announcement(announcement)
         Streaming.publish_announcement_delete(announcement)
 
-        {:noreply, socket |> assign(saved?: true) |> load(:announcements, %{})}
+        {:noreply, socket |> assign(saved?: true, error: nil) |> load(:announcements, %{})}
     end
   end
 
@@ -2532,7 +2548,7 @@ defmodule AbuubaWeb.AdminLive do
 
     case Instance.publish_terms(socket.assigns.account, attrs) do
       {:ok, _terms} ->
-        {:noreply, socket |> assign(saved?: true) |> load(:settings, %{})}
+        {:noreply, socket |> assign(saved?: true, error: nil) |> load(:settings, %{})}
 
       {:error, _changeset} ->
         {:noreply,
@@ -2580,7 +2596,7 @@ defmodule AbuubaWeb.AdminLive do
   def handle_event("unblock", %{"kind" => kind, "id" => id}, socket) do
     lift(socket.assigns.account, kind, socket.assigns.lists, id)
 
-    {:noreply, socket |> assign(saved?: true) |> load(:signups, %{})}
+    {:noreply, socket |> assign(saved?: true, error: nil) |> load(:signups, %{})}
   end
 
   def handle_event("add_webhook", params, socket) do
@@ -2825,7 +2841,7 @@ defmodule AbuubaWeb.AdminLive do
   def handle_event("add_rule", %{"text" => text}, socket) do
     case Settings.create_rule(%{text: text, position: length(socket.assigns.rules)}) do
       {:ok, _rule} ->
-        {:noreply, socket |> assign(saved?: true) |> load(:settings, %{})}
+        {:noreply, socket |> assign(saved?: true, error: nil) |> load(:settings, %{})}
 
       {:error, _changeset} ->
         {:noreply, assign(socket, error: gettext("A rule needs some text."))}
@@ -2842,7 +2858,7 @@ defmodule AbuubaWeb.AdminLive do
       rule ->
         {:ok, _retired} = Settings.delete_rule(rule)
 
-        {:noreply, socket |> assign(saved?: true) |> load(:settings, %{})}
+        {:noreply, socket |> assign(saved?: true, error: nil) |> load(:settings, %{})}
     end
   end
 
@@ -2857,7 +2873,7 @@ defmodule AbuubaWeb.AdminLive do
   defp take_action(socket, action, text) do
     case Actions.take(socket.assigns.account, socket.assigns.subject, action, text: text) do
       {:ok, _strike} ->
-        {:noreply, socket |> assign(saved?: true) |> reload_subject()}
+        {:noreply, socket |> assign(saved?: true, error: nil) |> reload_subject()}
 
       {:error, :no_statuses} ->
         {:noreply,
@@ -2882,7 +2898,8 @@ defmodule AbuubaWeb.AdminLive do
   end
 
   defp after_user_change(socket, _result) do
-    {:noreply, socket |> assign(saved?: true) |> load(:accounts, socket.assigns.filters)}
+    {:noreply,
+     socket |> assign(saved?: true, error: nil) |> load(:accounts, socket.assigns.filters)}
   end
 
   defp reload_subject(socket) do
@@ -2927,8 +2944,7 @@ defmodule AbuubaWeb.AdminLive do
       filters: filters,
       accounts: accounts,
       pending: Admin.pending_user_ids(accounts),
-      batch: batch,
-      batch_count: MapSet.size(batch)
+      batch: batch
     )
   end
 
@@ -3012,12 +3028,7 @@ defmodule AbuubaWeb.AdminLive do
   end
 
   defp load(socket, :domain_lists, _params) do
-    assign(socket,
-      domain_counts: %{
-        blocks: length(Domains.blocks(%{limit: 10_000})),
-        allows: length(Domains.allows())
-      }
-    )
+    assign(socket, domain_counts: Domains.counts())
   end
 
   defp load(socket, :suggestions, _params) do
@@ -3245,7 +3256,7 @@ defmodule AbuubaWeb.AdminLive do
       |> Enum.frequencies()
 
     socket
-    |> assign(saved?: true, batch: MapSet.new(), batch_count: 0)
+    |> assign(saved?: true, batch: MapSet.new())
     |> assign(error: batch_message(outcomes))
     |> load(:accounts, socket.assigns.filters)
   end
@@ -3332,9 +3343,6 @@ defmodule AbuubaWeb.AdminLive do
   defp outranks_message,
     do: gettext("That account outranks yours, so there is nothing here you can do to it.")
 
-  defp section_of(:account), do: :account
-  defp section_of(action), do: action
-
   # The account page belongs to the accounts section, and needs its permission.
   defp permission_for(:account), do: "manage_users"
   defp permission_for(:report), do: "manage_reports"
@@ -3346,9 +3354,9 @@ defmodule AbuubaWeb.AdminLive do
     end
   end
 
-  defp allowed_sections(user) do
+  defp allowed_sections(permissions) do
     for {action, permission} <- @sections,
-        Roles.can?(user, permission),
+        Roles.allows?(permissions, permission),
         do: {action, section_label(action)}
   end
 
@@ -3434,14 +3442,7 @@ defmodule AbuubaWeb.AdminLive do
   # to anybody there, so it is recorded with the domain rather than only taken.
   defp subject_id(socket), do: to_string(socket.assigns.subject.id)
 
-  defp plain_text(html) do
-    html
-    |> to_string()
-    |> String.replace(~r/<[^>]*>/, " ")
-    |> String.replace(~r/\s+/u, " ")
-    |> String.trim()
-    |> String.slice(0, 200)
-  end
+  defp plain_text(html), do: Formatter.plain_text(html, limit: 200)
 
   defp with_instance(socket, domain, action, act) do
     act.(domain)
@@ -3517,10 +3518,7 @@ defmodule AbuubaWeb.AdminLive do
             "label" => saved.name
           })
 
-          {:noreply,
-           socket
-           |> assign(saved?: true, error: nil, editing_role: nil)
-           |> load(:roles, %{})}
+          {:noreply, socket |> assign(saved?: true, error: nil) |> load(:roles, %{})}
 
         {:error, _changeset} ->
           {:noreply, assign(socket, error: gettext("That role could not be saved."))}
@@ -3741,7 +3739,7 @@ defmodule AbuubaWeb.AdminLive do
   defp check_advice(_key), do: ""
 
   defp blocked(socket, {:ok, _block}) do
-    {:noreply, socket |> assign(saved?: true) |> load(:signups, %{})}
+    {:noreply, socket |> assign(saved?: true, error: nil) |> load(:signups, %{})}
   end
 
   defp blocked(socket, {:error, _changeset}) do
@@ -3787,7 +3785,7 @@ defmodule AbuubaWeb.AdminLive do
   end
 
   defp announce(socket, {:ok, _terms}) do
-    {:noreply, socket |> assign(saved?: true) |> load(:settings, %{})}
+    {:noreply, socket |> assign(saved?: true, error: nil) |> load(:settings, %{})}
   end
 
   defp announce(socket, {:error, :already_announced}) do

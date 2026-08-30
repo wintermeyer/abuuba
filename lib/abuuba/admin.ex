@@ -41,6 +41,7 @@ defmodule Abuuba.Admin do
   alias Abuuba.Roles
   alias Abuuba.Roles.Role
   alias Abuuba.Settings
+  alias Abuuba.Snowflake
   alias Abuuba.Statuses.Status
   alias Abuuba.Statuses.Tag
   alias AbuubaWeb.Endpoint
@@ -192,7 +193,7 @@ defmodule Abuuba.Admin do
   """
   @spec get_user(integer() | String.t()) :: User.t() | nil
   def get_user(id) do
-    case numeric(id) do
+    case Snowflake.cast(id) do
       {:ok, id} -> Repo.get(User, id)
       _ -> nil
     end
@@ -313,7 +314,7 @@ defmodule Abuuba.Admin do
   """
   @spec get_tag(term()) :: Tag.t() | nil
   def get_tag(id) do
-    case numeric(id) do
+    case Snowflake.cast(id) do
       {:ok, id} -> Repo.get(Tag, id)
       :error -> nil
     end
@@ -560,14 +561,14 @@ defmodule Abuuba.Admin do
   end
 
   defp write_setting("remote_post_retention_days", value) do
-    case numeric(value) do
+    case day_count(value) do
       {:ok, days} when days >= 0 -> Settings.put("remote_post_retention_days", days)
       _ -> :error
     end
   end
 
   defp write_setting("content_retention_days", value) do
-    case numeric(value) do
+    case day_count(value) do
       {:ok, days} when days >= 0 -> Settings.put("content_retention_days", days)
       _ -> :error
     end
@@ -762,14 +763,16 @@ defmodule Abuuba.Admin do
 
   defp escape_like(text), do: String.replace(text, ~r/([%_\\])/, "\\\\\\1")
 
-  defp numeric(value) when is_integer(value), do: {:ok, value}
+  # A day count from the settings form, and deliberately not an id: the whole
+  # string has to be the number, so "30 days" is a refusal rather than thirty.
+  defp day_count(value) when is_integer(value), do: {:ok, value}
 
-  defp numeric(value) when is_binary(value) do
+  defp day_count(value) when is_binary(value) do
     case Integer.parse(value) do
       {number, ""} -> {:ok, number}
       _ -> :error
     end
   end
 
-  defp numeric(_value), do: :error
+  defp day_count(_value), do: :error
 end

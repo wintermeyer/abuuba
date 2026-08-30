@@ -23,4 +23,29 @@ defmodule AbuubaWeb.Meta do
   """
   @spec noindex() :: String.t()
   def noindex, do: "noindex, noarchive"
+
+  @doc """
+  What a page tells a link preview: the Open Graph tags plus the plain
+  description that goes with them.
+
+  The vocabulary was open-coded on each page that wanted it, which is the same
+  shape as the bug above and went the same way: `og:description` and the plain
+  `description` are one sentence written twice, and the annual report shipped
+  without `og:url` because nothing said the list had one.
+
+  `:url` is required for that reason. A preview with no canonical address is
+  the one thing a crawler cannot work out for itself.
+  """
+  @spec open_graph(keyword()) :: [{String.t(), String.t(), String.t()}]
+  def open_graph(opts) do
+    description = Keyword.get(opts, :description, "")
+
+    [
+      {"property", "og:type", Keyword.get(opts, :type, "article")},
+      {"property", "og:title", Keyword.fetch!(opts, :title)},
+      {"property", "og:description", description},
+      {"property", "og:url", Keyword.fetch!(opts, :url)},
+      {"name", "description", description}
+    ]
+  end
 end

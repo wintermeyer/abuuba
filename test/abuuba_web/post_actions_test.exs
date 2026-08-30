@@ -16,6 +16,7 @@ defmodule AbuubaWeb.PostActionsTest do
   import Abuuba.StatusesFixtures
 
   alias Abuuba.Accounts.Auth
+  alias Abuuba.Notifications
   alias Abuuba.Statuses
 
   setup do
@@ -58,6 +59,17 @@ defmodule AbuubaWeb.PostActionsTest do
     ]
   end
 
+  # Notifications is the sixth screen and was the one nobody had listed: it
+  # drew the whole bar and answered none of it, because the source sweep next
+  # door had a hand-written list of screens and this was not on it. It takes a
+  # notification rather than just a post, so it does not fit `screens/1`.
+  defp notification_path(reader, author) do
+    status = status_fixture(%{account_id: author.id, text: "boosted at you"})
+    {:ok, _notification} = Notifications.notify(reader, author, "reblog", status_id: status.id)
+
+    {status, "/notifications"}
+  end
+
   describe "favouriting a post" do
     test "works on every screen that draws the button", %{
       conn: conn,
@@ -93,6 +105,44 @@ defmodule AbuubaWeb.PostActionsTest do
       |> render_click()
 
       refute Statuses.favourited?(viewer.id, status.id)
+    end
+  end
+
+  describe "the notifications screen" do
+    test "answers the bar it draws", %{conn: conn, user: user, viewer: viewer, author: author} do
+      {status, path} = notification_path(viewer, author)
+
+      {:ok, live, _html} = live(sign_in(conn, user), path)
+
+      live
+      |> element("button[phx-click='favourite'][phx-value-id='#{status.id}']")
+      |> render_click()
+
+      assert Statuses.favourited?(viewer.id, status.id),
+             "favouriting did nothing on the notifications screen"
+    end
+
+    test "and puts the post back where it keeps it", %{
+      conn: conn,
+      user: user,
+      viewer: viewer,
+      author: author
+    } do
+      {status, path} = notification_path(viewer, author)
+
+      {:ok, live, _html} = live(sign_in(conn, user), path)
+
+      html =
+        live
+        |> element("button[phx-click='boost'][phx-value-id='#{status.id}']")
+        |> render_click()
+
+      assert Statuses.boosted?(viewer.id, status.id)
+
+      # The post lives inside its notification group here rather than in a
+      # list, so this is the half that a shared put-back would have got wrong
+      # without saying so: the row has to redraw, not vanish.
+      assert html =~ "boosted at you"
     end
   end
 

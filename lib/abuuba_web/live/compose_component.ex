@@ -55,11 +55,14 @@ defmodule AbuubaWeb.ComposeComponent do
   alias Abuuba.Media.Blurhash
   alias Abuuba.Media.Upload
   alias Abuuba.Search
+  alias Abuuba.Snowflake
   alias Abuuba.Statuses
   alias Abuuba.Statuses.Formatter
+  alias Abuuba.Statuses.Poll
   alias Abuuba.Statuses.ScheduledStatus
   alias Abuuba.Statuses.Status
   alias AbuubaWeb.Formats
+  alias AbuubaWeb.Params
 
   # Endonyms, so somebody looking for their own language reads it in their own
   # language. Not a full ISO-639 list: a picker of nine thousand entries is one
@@ -82,20 +85,6 @@ defmodule AbuubaWeb.ComposeComponent do
     {"한국어", "ko"},
     {"العربية", "ar"}
   ]
-
-  # Mastodon's ladder, which is what other servers and clients expect to see.
-  @poll_durations [
-    {300, "5 minutes"},
-    {1800, "30 minutes"},
-    {3600, "1 hour"},
-    {21_600, "6 hours"},
-    {86_400, "1 day"},
-    {259_200, "3 days"},
-    {604_800, "7 days"}
-  ]
-
-  @max_poll_options 4
-  @max_option_characters 50
 
   # Long enough that a sentence is one write rather than twenty, short enough
   # that a closed tab loses a few words rather than a paragraph.
@@ -325,7 +314,7 @@ defmodule AbuubaWeb.ComposeComponent do
   # one, and an id in an event payload is written by whoever is at the other
   # end of the socket.
   defp own_attachment(socket, id) do
-    with {:ok, id} <- numeric(id) do
+    with {:ok, id} <- Snowflake.cast(id) do
       if id in socket.assigns.attachment_ids do
         Media.get_own_unattached(socket.assigns.account, id)
       end
@@ -333,7 +322,7 @@ defmodule AbuubaWeb.ComposeComponent do
   end
 
   defp without(socket, id) do
-    case numeric(id) do
+    case Snowflake.cast(id) do
       {:ok, id} -> socket.assigns.attachment_ids -- [id]
       _ -> socket.assigns.attachment_ids
     end
@@ -345,7 +334,7 @@ defmodule AbuubaWeb.ComposeComponent do
   defp move_earlier(socket, id) do
     ids = socket.assigns.attachment_ids
 
-    with {:ok, id} <- numeric(id),
+    with {:ok, id} <- Snowflake.cast(id),
          index when is_integer(index) and index > 0 <- Enum.find_index(ids, &(&1 == id)) do
       ids |> List.delete_at(index) |> List.insert_at(index - 1, id)
     else
@@ -370,23 +359,12 @@ defmodule AbuubaWeb.ComposeComponent do
   # socket, not by the button this server drew. A `Repo.get` on "../etc/passwd"
   # raises rather than returning nothing.
   defp find_draft(socket, id) do
-    with {:ok, id} <- numeric(id), do: Statuses.get_draft(socket.assigns.account, id)
+    with {:ok, id} <- Snowflake.cast(id), do: Statuses.get_draft(socket.assigns.account, id)
   end
 
   defp find_scheduled(socket, id) do
-    with {:ok, id} <- numeric(id), do: Statuses.get_scheduled(socket.assigns.account, id)
+    with {:ok, id} <- Snowflake.cast(id), do: Statuses.get_scheduled(socket.assigns.account, id)
   end
-
-  defp numeric(value) when is_integer(value), do: {:ok, value}
-
-  defp numeric(value) when is_binary(value) do
-    case Integer.parse(value) do
-      {number, ""} when number >= 0 and number < 9_223_372_036_854_775_807 -> {:ok, number}
-      _ -> nil
-    end
-  end
-
-  defp numeric(_value), do: nil
 
   defp current_draft(%{assigns: %{draft_id: nil}}), do: nil
 
@@ -623,7 +601,7 @@ defmodule AbuubaWeb.ComposeComponent do
               type="text"
               name="draft[poll_options][]"
               value={option}
-              maxlength={@max_option_characters}
+              maxlength={Poll.max_option_characters()}
               placeholder={gettext("Choice %{number}", number: index + 1)}
               class="input input-sm w-full"
             />
@@ -642,7 +620,7 @@ defmodule AbuubaWeb.ComposeComponent do
 
           <div class="flex flex-wrap items-center gap-3">
             <button
-              :if={length(@draft["poll_options"]) < @max_poll_options}
+              :if={length(@draft["poll_options"]) < Poll.max_options()}
               type="button"
               phx-click="poll_option_add"
               phx-target={@myself}
@@ -948,8 +926,6 @@ defmodule AbuubaWeb.ComposeComponent do
     end
   end
 
-  def handle_event("upload_validate", _params, socket), do: {:noreply, socket}
-
   def handle_event("upload_cancel", %{"ref" => ref}, socket) do
     {:noreply, cancel_upload(socket, :media, ref)}
   end
@@ -1057,7 +1033,7 @@ defmodule AbuubaWeb.ComposeComponent do
   def handle_event("poll_option_add", _params, socket) do
     options = socket.assigns.draft["poll_options"]
 
-    if length(options) < @max_poll_options do
+    if length(options) < Poll.max_options() do
       {:noreply, put(socket, "poll_options", options ++ [""])}
     else
       {:noreply, socket}
@@ -1068,7 +1044,7 @@ defmodule AbuubaWeb.ComposeComponent do
     options = socket.assigns.draft["poll_options"]
 
     if length(options) > 2 do
-      {:noreply, put(socket, "poll_options", List.delete_at(options, to_integer(index)))}
+      {:noreply, put(socket, "poll_options", List.delete_at(options, Params.to_integer(index)))}
     else
       {:noreply, socket}
     end
@@ -1158,7 +1134,7 @@ defmodule AbuubaWeb.ComposeComponent do
       Enum.any?(options, &too_long?/1) ->
         {:error,
          gettext("A poll choice is too long. Keep each under %{count} characters.",
-           count: @max_option_characters
+           count: Poll.max_option_characters()
          )}
 
       length(Enum.uniq(options)) != length(options) ->
@@ -1262,7 +1238,8 @@ defmodule AbuubaWeb.ComposeComponent do
       options: options,
       tallies: List.duplicate(0, length(options)),
       multiple: draft["poll_multiple"] == true,
-      expires_at: DateTime.add(DateTime.utc_now(), to_integer(draft["poll_expires_in"]), :second)
+      expires_at:
+        DateTime.add(DateTime.utc_now(), Params.to_integer(draft["poll_expires_in"]), :second)
     }
 
     case Statuses.create_poll(status, attrs) do
@@ -1321,7 +1298,7 @@ defmodule AbuubaWeb.ComposeComponent do
     Map.put(params, "poll", %{
       "options" => usable_options(draft),
       "multiple" => draft["poll_multiple"] == true,
-      "expires_in" => to_integer(draft["poll_expires_in"])
+      "expires_in" => Params.to_integer(draft["poll_expires_in"])
     })
   end
 
@@ -1470,9 +1447,7 @@ defmodule AbuubaWeb.ComposeComponent do
       remaining: Instance.max_characters() - length_of(draft),
       mentions: reply_chips(socket.assigns),
       token: token,
-      suggestions: suggestions,
-      max_poll_options: @max_poll_options,
-      max_option_characters: @max_option_characters
+      suggestions: suggestions
     )
   end
 
@@ -1491,7 +1466,7 @@ defmodule AbuubaWeb.ComposeComponent do
   defp warning(%{"warn" => true} = draft), do: String.trim(draft["spoiler_text"])
   defp warning(_draft), do: ""
 
-  defp too_long?(option), do: String.length(option) > @max_option_characters
+  defp too_long?(option), do: String.length(option) > Poll.max_option_characters()
 
   defp usable_options(draft) do
     draft["poll_options"] |> Enum.map(&String.trim/1) |> Enum.reject(&(&1 == ""))
@@ -1564,7 +1539,7 @@ defmodule AbuubaWeb.ComposeComponent do
     |> Enum.map(fn account ->
       %{
         value: "@" <> Account.acct(account),
-        label: display_name(account),
+        label: Account.display_name(account),
         hint: "@" <> Account.acct(account),
         image: nil
       }
@@ -1626,7 +1601,7 @@ defmodule AbuubaWeb.ComposeComponent do
   defp caret(draft) do
     length = String.length(draft["text"])
 
-    case to_integer(draft["caret"]) do
+    case Params.to_integer(draft["caret"]) do
       caret when caret >= 0 and caret <= length -> caret
       _ -> length
     end
@@ -1650,12 +1625,9 @@ defmodule AbuubaWeb.ComposeComponent do
   defp reply_name(%Status{account_id: account_id}) do
     case Accounts.get_account(account_id) do
       nil -> gettext("somebody")
-      account -> display_name(account)
+      account -> Account.display_name(account)
     end
   end
-
-  defp display_name(%Account{display_name: name}) when is_binary(name) and name != "", do: name
-  defp display_name(%Account{username: username}), do: username
 
   # What the person chose in their settings, rather than what this module would
   # have guessed. A default audience is the setting people most regret not
@@ -1673,16 +1645,20 @@ defmodule AbuubaWeb.ComposeComponent do
 
   defp languages, do: @languages
 
+  # Mastodon's ladder, which is what other servers and clients expect to see.
+  # Written once, translated where it is written: the list used to be an
+  # attribute of English labels that this threw away and replaced clause by
+  # clause, so an eighth rung added above raised inside `render/1`.
   defp poll_durations do
-    Enum.map(@poll_durations, fn
-      {300, _} -> {300, gettext("5 minutes")}
-      {1800, _} -> {1800, gettext("30 minutes")}
-      {3600, _} -> {3600, gettext("1 hour")}
-      {21_600, _} -> {21_600, gettext("6 hours")}
-      {86_400, _} -> {86_400, gettext("1 day")}
-      {259_200, _} -> {259_200, gettext("3 days")}
-      {604_800, _} -> {604_800, gettext("7 days")}
-    end)
+    [
+      {300, gettext("5 minutes")},
+      {1800, gettext("30 minutes")},
+      {3600, gettext("1 hour")},
+      {21_600, gettext("6 hours")},
+      {86_400, gettext("1 day")},
+      {259_200, gettext("3 days")},
+      {604_800, gettext("7 days")}
+    ]
   end
 
   defp visibilities do
@@ -1708,15 +1684,4 @@ defmodule AbuubaWeb.ComposeComponent do
       nil -> gettext("Public")
     end
   end
-
-  defp to_integer(value) when is_integer(value), do: value
-
-  defp to_integer(value) when is_binary(value) do
-    case Integer.parse(value) do
-      {number, _rest} -> number
-      :error -> 0
-    end
-  end
-
-  defp to_integer(_value), do: 0
 end

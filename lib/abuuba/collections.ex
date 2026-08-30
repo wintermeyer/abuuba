@@ -29,6 +29,7 @@ defmodule Abuuba.Collections do
   alias Abuuba.Collections.Item
   alias Abuuba.Notifications
   alias Abuuba.Repo
+  alias Abuuba.Snowflake
   alias Abuuba.Statuses.Tag
 
   @doc """
@@ -74,7 +75,7 @@ defmodule Abuuba.Collections do
   """
   @spec get(term()) :: Collection.t() | nil
   def get(id) do
-    case numeric(id) do
+    case Snowflake.cast(id) do
       {:ok, id} -> Collection |> where([c], c.id == ^id) |> preload(:tag) |> Repo.one()
       :error -> nil
     end
@@ -100,7 +101,7 @@ defmodule Abuuba.Collections do
   def get_item(%Collection{id: id}, item_id), do: get_item(id, item_id)
 
   def get_item(collection_id, item_id) do
-    case numeric(item_id) do
+    case Snowflake.cast(item_id) do
       {:ok, id} -> Repo.get_by(Item, id: id, collection_id: collection_id)
       :error -> nil
     end
@@ -292,15 +293,4 @@ defmodule Abuuba.Collections do
 
   defp reload({:ok, %Collection{id: id}}), do: {:ok, get(id)}
   defp reload(other), do: other
-
-  defp numeric(value) when is_integer(value), do: {:ok, value}
-
-  defp numeric(value) when is_binary(value) do
-    case Integer.parse(value) do
-      {number, ""} -> {:ok, number}
-      _ -> :error
-    end
-  end
-
-  defp numeric(_value), do: :error
 end
