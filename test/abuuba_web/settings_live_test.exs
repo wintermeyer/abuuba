@@ -730,67 +730,6 @@ defmodule AbuubaWeb.SettingsLiveTest do
     end
   end
 
-  # Locking your account is a switch on the privacy page, and everything it
-  # produces was unanswerable: the request arrived as a notification with a
-  # "hide" button, and the only control anywhere was an accept-all buried in
-  # the account-migration section, worded for a move. `POST
-  # /api/v1/follow_requests/:id/authorize` has always answered; no page asked
-  # it.
-  describe "follow requests" do
-    setup %{account: account} do
-      {:ok, _} = Abuuba.Accounts.update_profile(account, %{locked: true})
-
-      asker = account_fixture(%{username: "asker", display_name: "Anna Asker"})
-      {:ok, _request} = Relationships.follow_or_request(asker, account)
-
-      %{asker: asker}
-    end
-
-    test "are listed where the follows are", %{conn: conn, asker: asker} do
-      {:ok, _live, html} = live(conn, ~p"/settings/follows")
-
-      assert html =~ "Anna Asker"
-      assert html =~ "@#{asker.username}"
-    end
-
-    test "can be let in, one at a time", %{conn: conn, account: account, asker: asker} do
-      {:ok, live, _html} = live(conn, ~p"/settings/follows")
-
-      live
-      |> element("button[phx-click='accept_request'][phx-value-id='#{asker.id}']")
-      |> render_click()
-
-      assert Relationships.following?(asker.id, account.id)
-      refute Relationships.get_follow_request(asker, account)
-    end
-
-    test "and turned away, which leaves no follow behind", %{
-      conn: conn,
-      account: account,
-      asker: asker
-    } do
-      {:ok, live, _html} = live(conn, ~p"/settings/follows")
-
-      live
-      |> element("button[phx-click='reject_request'][phx-value-id='#{asker.id}']")
-      |> render_click()
-
-      refute Relationships.following?(asker.id, account.id)
-      refute Relationships.get_follow_request(asker, account)
-    end
-
-    test "and one that was answered is off the list", %{conn: conn, asker: asker} do
-      {:ok, live, _html} = live(conn, ~p"/settings/follows")
-
-      html =
-        live
-        |> element("button[phx-click='reject_request'][phx-value-id='#{asker.id}']")
-        |> render_click()
-
-      refute html =~ "Anna Asker"
-    end
-  end
-
   describe "security" do
     test "changes the password when the old one is right", %{conn: conn, user: user} do
       {:ok, live, _html} = live(conn, ~p"/settings/security")

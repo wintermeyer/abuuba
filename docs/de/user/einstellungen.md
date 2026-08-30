@@ -165,12 +165,12 @@ die Mastodon-API sprechen, können es.
 
 ## Folge ich
 
-Wenn dein Konto Follower erst bestätigt, steht oben auf dieser Seite, wer
-wartet: **Folgen lassen** oder **Ablehnen**, einzeln. Wer abgelehnt wird,
-erfährt nichts davon und kann erneut anfragen.
+Alle, denen du folgst, mit je einem Kästchen. Mehrere ankreuzen und in einem
+Zug entfolgen, statt einzeln nacheinander.
 
-Darunter alle, denen du folgst, mit je einem Kästchen. Mehrere ankreuzen und
-in einem Zug entfolgen, statt einzeln nacheinander.
+Wer auf *dich* wartet, steht nicht hier, sondern auf einer eigenen Seite, die
+die Navigation mit einer Zahl anzeigt, solange jemand wartet. Siehe
+[Folgeanfragen](sicherheit.md#folgeanfragen).
 
 ## Sicherheit
 

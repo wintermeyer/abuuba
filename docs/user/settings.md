@@ -150,12 +150,12 @@ web interface has no button for that yet; apps that speak the Mastodon API do.
 
 ## Follows
 
-If your account approves its followers, whoever is waiting is at the top of
-this page: **Let them follow** or **Turn them away**, one at a time. Somebody
-you turn away is not told, and can ask again.
+Everybody you follow, with a checkbox each. Tick several and unfollow them in
+one press rather than one at a time.
 
-Below that, everybody you follow, with a checkbox each. Tick several and
-unfollow them in one press rather than one at a time.
+People waiting for *you* are not here: they are on their own page, which the
+navigation shows with a count while anybody is waiting. See
+[follow requests](safety.md#follow-requests).
 
 ## Security
 

@@ -93,21 +93,40 @@ derselben Seite, wo du sie weiterhin lesen und durchwinken kannst.
 
 Ausführlicher steht das unter [Benachrichtigungen](benachrichtigungen.md).
 
+## Folgeanfragen
+
+Wenn du unter Privatsphäre **Follower erst bestätigen** eingeschaltet hast,
+folgt dir niemand ohne dein Ja. Wer wartet, steht auf einer eigenen Seite, und
+die Navigation zeigt einen Eintrag **Folgeanfragen** mit einer Zahl, solange
+jemand wartet — wenn niemand wartet, ist er nicht da, und das ist bei den
+meisten Konten immer.
+
+**Folgen lassen** oder **Ablehnen**, einzeln. Wer abgelehnt wird, erfährt
+nichts davon und es bleibt keine Spur zurück, die Person kann also erneut
+anfragen; jemanden dauerhaft fernzuhalten geht nur über Blockieren.
+
 ## Jemanden melden
 
 Meldungen gehen an die Moderation dieses Servers und, wenn du willst,
 zusätzlich an die Moderation des Servers, von dem die Person kommt.
 
-**Einen Melde-Knopf gibt es in der Weboberfläche noch nicht.** Melden geht über
-die Programmierschnittstelle, eine Mastodon-kompatible App kann also eine
-Meldung abgeben. Wenn dir keine App zur Verfügung steht, schreib an die Adresse
-auf der [Info-Seite](oeffentliche-seiten.md) des Servers; eine Beschreibung per
-Mail ist langsamer als eine Meldung, aber nicht schlechter.
+**Melden** steht auf einem Profil neben Stummschalten und Blockieren und unter
+dem **…** an jedem Beitrag. Es stellt vier kurze Fragen: um welche Art Problem
+es geht, gegen welche Regeln es verstößt, falls du das ausgewählt hast, welche
+Beiträge die Moderation lesen sollte und was du selbst dazu sagen willst.
+Abgeschickt wird erst mit dem letzten Klick.
 
-Eine Meldung kann mehrere Beiträge benennen, einen Satz dazuschreiben, was daran
-falsch ist, und auf Wunsch eine Kopie an den anderen Server weitergeben. Bei
+Die erste Möglichkeit ist **Ich mag es nicht**, und die schickt gar keine
+Meldung. Sie führt direkt zu Stummschalten und Blockieren, denn genau das ist
+es: etwas, das du nicht sehen willst, und nichts, worüber eine Moderation
+entscheiden kann. Beides wird auch nach einer echten Meldung angeboten — die
+muss jemand lesen, und bis dahin musst du die Person nicht weiter sehen.
+
+Die Frage nach den Regeln erscheint nur, wenn dieser Server welche
+aufgeschrieben hat. Liegt ein Konto auf einem anderen Server, wirst du außerdem
+gefragt, ob eine Kopie der Meldung ohne deinen Namen dorthin gehen soll. Bei
 Spam lohnt das Weitergeben; bei einem persönlichen Streit sollte man es sich
-überlegen, denn es sagt der Gegenseite, wer sich beschwert hat.
+überlegen, denn es sagt der Gegenseite, dass sich hier jemand beschwert hat.
 
 ## Passwort vergessen
 

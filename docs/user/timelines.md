@@ -83,6 +83,17 @@ It is on the menu of a post that is part of a thread — a post nobody has
 replied to and that replies to nothing has no conversation to mute. You will
 find it on your home timeline and on the post's own page.
 
+## What you put aside
+
+The bookmark under a post files it under **Bookmarks**, and the star files it
+under **Favourites**. Both are in the sidebar, below the navigation, and both
+are linked from the settings overview for a phone, which has no sidebar.
+
+They are not the same thing. A bookmark is yours alone and tells nobody; a
+favourite is a small public applause and its author is told about it. Taking
+one back while you are looking at the list takes the post off the list, which
+is what you meant by pressing it.
+
 ## What else there is to read
 
 Home is not the only view. [Finding things](finding-things.md) covers explore

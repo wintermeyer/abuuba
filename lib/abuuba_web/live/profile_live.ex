@@ -195,6 +195,12 @@ defmodule AbuubaWeb.ProfileLive do
           >
             {if @relationship.blocking, do: gettext("Unblock"), else: gettext("Block")}
           </button>
+
+          <%!-- Beside mute and block because it is the third answer to the same
+          question, and the one that involves somebody else. --%>
+          <.link navigate={~p"/report/@#{Account.acct(@subject)}"} class="btn btn-ghost btn-sm">
+            {gettext("Report")}
+          </.link>
         </div>
 
         <div

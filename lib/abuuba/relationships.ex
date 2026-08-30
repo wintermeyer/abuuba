@@ -990,6 +990,23 @@ defmodule Abuuba.Relationships do
   end
 
   @doc """
+  How many people are waiting on this account to answer.
+
+  Counted rather than listed because the navigation draws the entry only while
+  the number is above zero, and it asks on every render of every page: a list
+  of a hundred accounts to find out whether there is one is a hundred rows
+  loaded to render a badge.
+  """
+  @spec pending_follower_count(Account.t() | integer()) :: non_neg_integer()
+  def pending_follower_count(%Account{id: id}), do: pending_follower_count(id)
+
+  def pending_follower_count(account_id) do
+    FollowRequest
+    |> where([r], r.target_account_id == ^account_id)
+    |> Repo.aggregate(:count)
+  end
+
+  @doc """
   Accepts every follow request waiting on this account.
 
   For the morning after a move. Every follower's server acts on the `Move` at

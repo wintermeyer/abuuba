@@ -91,6 +91,19 @@ auf den niemand geantwortet hat und der selbst keine Antwort ist, hat keine
 Unterhaltung zum Stummschalten. Du findest es in deiner Startseite und auf der
 Seite des Beitrags.
 
+## Was du dir zur Seite legst
+
+Das Lesezeichen unter einem Beitrag legt ihn unter **Lesezeichen** ab, der
+Stern unter **Favoriten**. Beides steht in der Seitenleiste unter der
+Navigation, und beides ist von der Übersicht der Einstellungen aus verlinkt —
+für das Handy, das keine Seitenleiste hat.
+
+Es sind zwei verschiedene Dinge. Ein Lesezeichen gehört nur dir und niemand
+erfährt davon; ein Favorit ist ein kleiner öffentlicher Applaus, und die
+verfassende Person wird darüber informiert. Nimmst du eines zurück, während du
+die Liste ansiehst, verschwindet der Beitrag daraus — genau das wolltest du ja
+mit dem Klick.
+
 ## Was es sonst zu lesen gibt
 
 Die Startseite ist nicht die einzige Ansicht. [Sachen finden](finden.md) erklärt

@@ -343,6 +343,14 @@ defmodule AbuubaWeb.StatusComponent do
     """
   end
 
+  # Somebody else's post, and somebody signed in to say so. Reporting your own
+  # is a report a moderator can do nothing with.
+  defp reportable?(status, viewer_id), do: not is_nil(viewer_id) and not own?(status, viewer_id)
+
+  defp report_path(status) do
+    "/report/@#{status["account"]["acct"]}?status=#{status["id"]}"
+  end
+
   # Which controls are the author's own. Once, rather than on each button that
   # asks: two spellings of "is this mine" in one template is two to keep in
   # step. What it decides is what is drawn; whether the event is allowed is
@@ -469,7 +477,16 @@ defmodule AbuubaWeb.StatusComponent do
         <span class="sr-only">{gettext("Translate")}</span>
       </button>
 
-      <.overflow :if={@menu and in_a_thread?(@status)} status={@status} />
+      <%!-- Drawn whenever it would hold something. `@menu` is a screen saying
+      it answers the events in here, which only the two with a composer do;
+      reporting is a link and needs no answering, so it appears on every
+      screen that draws a post. --%>
+      <.overflow
+        :if={(@menu and in_a_thread?(@status)) or reportable?(@status, @viewer_id)}
+        status={@status}
+        menu={@menu}
+        viewer_id={@viewer_id}
+      />
     </div>
     """
   end
@@ -479,6 +496,9 @@ defmodule AbuubaWeb.StatusComponent do
   # `details` rather than a scripted popover: it opens, closes on a second
   # press and reaches by keyboard with nothing of ours running, which is three
   # behaviours not to write or to break.
+  attr :viewer_id, :any, default: nil
+  attr :menu, :boolean, default: false
+
   defp overflow(assigns) do
     ~H"""
     <details class="dropdown dropdown-end ml-auto">
@@ -489,6 +509,7 @@ defmodule AbuubaWeb.StatusComponent do
 
       <div class="dropdown-content z-10 w-56 rounded-box bg-base-200 p-2 shadow">
         <button
+          :if={@menu and in_a_thread?(@status)}
           type="button"
           phx-click={if @status["muted"], do: "unmute_thread", else: "mute_thread"}
           phx-value-id={@status["id"]}
@@ -502,9 +523,20 @@ defmodule AbuubaWeb.StatusComponent do
         <%!-- Said here rather than in a tooltip, because "mute" next to
         somebody's post reads as muting the person, and that is a much bigger
         thing to do by accident. --%>
-        <p class="px-2 pt-1 text-xs text-base-content/60">
+        <p :if={@menu and in_a_thread?(@status)} class="px-2 pt-1 text-xs text-base-content/60">
           {gettext("Stops its notifications and takes it out of your timeline. Nobody is told.")}
         </p>
+
+        <%!-- A link rather than an event: the questions a report asks do not
+        fit in a dropdown, and every screen that draws a post would otherwise
+        have to answer them. --%>
+        <.link
+          :if={reportable?(@status, @viewer_id)}
+          navigate={report_path(@status)}
+          class="btn btn-ghost btn-sm btn-block justify-start"
+        >
+          {gettext("Report this post")}
+        </.link>
       </div>
     </details>
     """
