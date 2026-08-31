@@ -353,7 +353,7 @@ defmodule AbuubaWeb.API.StatusController do
         {:ok, nil}
 
       id ->
-        id |> Statuses.get_status(account) |> quotable(account)
+        id |> Statuses.readable(account) |> quotable(account)
     end
   end
 
@@ -371,7 +371,7 @@ defmodule AbuubaWeb.API.StatusController do
   author's own post would publish the assertion for them.
   """
   def quotes(conn, %{"id" => id}) do
-    with_status(conn, id, fn status, viewer ->
+    with_readable_status(conn, id, fn status, viewer ->
       json(conn, Entities.statuses(Quotes.quoting(status), viewer))
     end)
   end
@@ -425,7 +425,7 @@ defmodule AbuubaWeb.API.StatusController do
   One post.
   """
   def show(conn, %{"id" => id}) do
-    with_status(conn, id, fn status, viewer -> render_status(conn, status, viewer) end)
+    with_readable_status(conn, id, fn status, viewer -> render_status(conn, status, viewer) end)
   end
 
   @doc """
@@ -437,7 +437,7 @@ defmodule AbuubaWeb.API.StatusController do
 
     ids = params |> API.id_list("id") |> Enum.take(40)
 
-    statuses = Enum.flat_map(ids, fn id -> List.wrap(Statuses.get_status(id, viewer)) end)
+    statuses = Statuses.readable_many(ids, viewer)
 
     json(conn, Entities.statuses(statuses, viewer, filter_context: "thread"))
   end
@@ -484,7 +484,7 @@ defmodule AbuubaWeb.API.StatusController do
   The conversation a post sits in.
   """
   def context(conn, %{"id" => id}) do
-    with_status(conn, id, fn status, viewer ->
+    with_readable_status(conn, id, fn status, viewer ->
       json(conn, status |> Statuses.context(viewer) |> Entities.context(viewer))
     end)
   end
@@ -502,7 +502,7 @@ defmodule AbuubaWeb.API.StatusController do
   Every earlier version of a post.
   """
   def history(conn, %{"id" => id}) do
-    with_status(conn, id, fn status, _viewer ->
+    with_readable_status(conn, id, fn status, _viewer ->
       # The current version closes the list. Each stored row is the state
       # *before* one edit, so a post edited twice has two rows and neither says
       # what it reads now -- and the newest edit is the one somebody opened the
@@ -527,7 +527,7 @@ defmodule AbuubaWeb.API.StatusController do
   issue; the endpoint is here so a client can ask and be told.
   """
   def translate(conn, %{"id" => id} = params) do
-    with_status(conn, id, fn status, viewer ->
+    with_readable_status(conn, id, fn status, viewer ->
       target = params["lang"] || reader_language(viewer, conn)
 
       case Translation.translate(status, target) do
@@ -573,7 +573,7 @@ defmodule AbuubaWeb.API.StatusController do
   ## Interactions
 
   def reblog(conn, %{"id" => id}) do
-    with_status(conn, id, fn status, account ->
+    with_readable_status(conn, id, fn status, account ->
       if Statuses.boostable?(account, status) do
         act(conn, id, &Statuses.boost/2)
       else
@@ -582,16 +582,16 @@ defmodule AbuubaWeb.API.StatusController do
     end)
   end
 
-  def unreblog(conn, %{"id" => id}), do: act(conn, id, &Statuses.unboost/2)
+  def unreblog(conn, %{"id" => id}), do: undo(conn, id, &Statuses.unboost/2)
   def favourite(conn, %{"id" => id}), do: act(conn, id, &Statuses.favourite/2)
-  def unfavourite(conn, %{"id" => id}), do: act(conn, id, &Statuses.unfavourite/2)
+  def unfavourite(conn, %{"id" => id}), do: undo(conn, id, &Statuses.unfavourite/2)
   def bookmark(conn, %{"id" => id}), do: act(conn, id, &Statuses.bookmark/2)
-  def unbookmark(conn, %{"id" => id}), do: act(conn, id, &Statuses.unbookmark/2)
+  def unbookmark(conn, %{"id" => id}), do: undo(conn, id, &Statuses.unbookmark/2)
   def mute(conn, %{"id" => id}), do: act(conn, id, &Statuses.mute_thread/2)
-  def unmute(conn, %{"id" => id}), do: act(conn, id, &Statuses.unmute_thread/2)
+  def unmute(conn, %{"id" => id}), do: undo(conn, id, &Statuses.unmute_thread/2)
 
   def pin(conn, %{"id" => id}) do
-    with_status(conn, id, fn status, account ->
+    with_readable_status(conn, id, fn status, account ->
       case Statuses.pin(account, status) do
         {:ok, _pin} ->
           render_status(conn, reload(status), account)
@@ -612,12 +612,12 @@ defmodule AbuubaWeb.API.StatusController do
     end)
   end
 
-  def unpin(conn, %{"id" => id}), do: act(conn, id, &Statuses.unpin/2)
+  def unpin(conn, %{"id" => id}), do: undo(conn, id, &Statuses.unpin/2)
 
   ## Who did what
 
   def reblogged_by(conn, %{"id" => id} = params) do
-    with_status(conn, id, fn status, viewer ->
+    with_readable_status(conn, id, fn status, viewer ->
       accounts = Statuses.boosted_by(status, Pagination.params(params, default: 40))
 
       conn
@@ -627,7 +627,7 @@ defmodule AbuubaWeb.API.StatusController do
   end
 
   def favourited_by(conn, %{"id" => id} = params) do
-    with_status(conn, id, fn status, viewer ->
+    with_readable_status(conn, id, fn status, viewer ->
       accounts = Statuses.favourited_by(status, Pagination.params(params, default: 40))
 
       conn
@@ -640,8 +640,15 @@ defmodule AbuubaWeb.API.StatusController do
 
   # Every interaction is the same three steps, and the state a client wants
   # back is always the post as it now reads.
-  defp act(conn, id, fun) do
-    with_status(conn, id, fn status, account ->
+  #
+  # Putting a mark on is being shown the post, so it comes through the reading
+  # door; taking one back off is `undo/3` below.
+  defp act(conn, id, fun), do: interact(conn, id, fun, &with_readable_status/3)
+
+  defp undo(conn, id, fun), do: interact(conn, id, fun, &with_actionable_status/3)
+
+  defp interact(conn, id, fun, door) do
+    door.(conn, id, fn status, account ->
       case fun.(account, status) do
         {:error, :no_conversation} ->
           API.error(conn, 422, "Validation failed")
@@ -655,10 +662,32 @@ defmodule AbuubaWeb.API.StatusController do
     end)
   end
 
+  # For the endpoints that hand a post back to be read: `Statuses.readable/2`
+  # answers the reader's blocks and mutes as well as the audience, so a post
+  # from somebody they will not deal with is a 404 here rather than a body.
+  defp with_readable_status(conn, id, fun) do
+    fetch(conn, id, &Statuses.readable/2, fun)
+  end
+
+  # For taking a mark back off: readable, or already marked by this reader.
+  # `/bookmarks` and `/favourites` list what somebody saved whatever they have
+  # done about the author since, so the button drawn over a row those lists
+  # still return has to reach it.
+  defp with_actionable_status(conn, id, fun) do
+    fetch(conn, id, &Statuses.actionable/2, fun)
+  end
+
+  # Audience only, for a caller that has its own reason to reach past the
+  # reader's blocks and mutes. `with_own_status/3` is the one left: a post is
+  # never hidden from the person who wrote it, and ownership is the check.
   defp with_status(conn, id, fun) do
+    fetch(conn, id, &Statuses.get_status/2, fun)
+  end
+
+  defp fetch(conn, id, read, fun) do
     viewer = current_account(conn)
 
-    case Statuses.get_status(API.id_param(%{"id" => id}, "id"), viewer) do
+    case read.(API.id_param(%{"id" => id}, "id"), viewer) do
       nil -> API.error(conn, 404, "Record not found")
       status -> fun.(status, viewer)
     end

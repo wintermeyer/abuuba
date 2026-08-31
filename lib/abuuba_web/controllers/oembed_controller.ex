@@ -43,7 +43,7 @@ defmodule AbuubaWeb.OEmbedController do
          true <- host == URIs.local_host(),
          [_, "@" <> _username, id] <- String.split(path, "/"),
          {number, ""} <- Integer.parse(id) do
-      Statuses.get_status(number, nil)
+      Statuses.readable(number, nil)
     else
       _ -> nil
     end

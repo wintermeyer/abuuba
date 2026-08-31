@@ -26,7 +26,7 @@ defmodule AbuubaWeb.EmbedController do
 
   def show(conn, %{"id" => id}) do
     with {number, ""} <- Integer.parse(to_string(id)),
-         status when not is_nil(status) <- Statuses.get_status(number, nil) do
+         status when not is_nil(status) <- Statuses.readable(number, nil) do
       conn
       |> put_root_layout(false)
       |> put_layout(false)

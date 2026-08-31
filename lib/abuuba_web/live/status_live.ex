@@ -46,7 +46,6 @@ defmodule AbuubaWeb.StatusLive do
     viewer = current_account(socket)
 
     with %{} = author <- Accounts.lookup(username),
-         false <- blocked?(author, viewer),
          %{} = status <- own_status(author, id, viewer) do
       {:ok, socket |> assign(author: author, status: status, viewer: viewer) |> load_thread()}
     else
@@ -331,13 +330,14 @@ defmodule AbuubaWeb.StatusLive do
     text |> to_string() |> String.replace(~r/\s+/u, " ") |> String.trim()
   end
 
-  # Under this author, and visible to whoever is asking. Both checks are the
+  # Under this author, and readable by whoever is asking. Both checks are the
   # query's rather than an afterthought: one that cannot return the wrong row
-  # cannot leak one.
+  # cannot leak one. That covers the author having blocked this reader too,
+  # which the page used to ask separately.
   defp own_status(author, id, viewer) do
     with {number, ""} <- Integer.parse(to_string(id)),
          %{account_id: account_id} = status when account_id == author.id <-
-           Statuses.get_status(number, viewer) do
+           Statuses.readable(number, viewer) do
       status
     else
       _ -> nil
@@ -368,9 +368,11 @@ defmodule AbuubaWeb.StatusLive do
     {:noreply, load_thread(socket)}
   end
 
+  # The same door the page itself came through: every id here names a post
+  # already drawn in this thread.
   defp find(socket, id) do
     case Integer.parse(to_string(id)) do
-      {number, ""} -> Statuses.get_status(number, socket.assigns.viewer)
+      {number, ""} -> Statuses.readable(number, socket.assigns.viewer)
       _ -> nil
     end
   end
@@ -380,9 +382,4 @@ defmodule AbuubaWeb.StatusLive do
 
     socket
   end
-
-  # Somebody who blocked you is not showing you their posts, and the page is
-  # the one place where a direct link would otherwise walk around that.
-  defp blocked?(_author, nil), do: false
-  defp blocked?(author, viewer), do: Abuuba.Relationships.blocking?(author, viewer)
 end

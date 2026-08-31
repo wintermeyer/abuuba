@@ -30,7 +30,6 @@ defmodule Abuuba.Timelines do
   alias Abuuba.Relationships.Follow
   alias Abuuba.Repo
   alias Abuuba.Statuses
-  alias Abuuba.Statuses.ConversationMute
   alias Abuuba.Statuses.Status
   alias Abuuba.Statuses.Tag
   alias Abuuba.Timelines.Feed
@@ -148,16 +147,7 @@ defmodule Abuuba.Timelines do
     # word should hide.
     query
     |> Statuses.excluding_hidden(account_id)
-    |> where(
-      [s],
-      is_nil(s.conversation_id) or
-        not exists(
-          from c in ConversationMute,
-            where:
-              c.account_id == ^account_id and
-                c.conversation_id == parent_as(:status).conversation_id
-        )
-    )
+    |> Statuses.excluding_muted_threads(account_id)
   end
 
   # The same authors the public timeline keeps out, for the reason written next

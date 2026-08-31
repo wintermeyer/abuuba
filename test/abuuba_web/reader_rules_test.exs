@@ -109,6 +109,42 @@ defmodule AbuubaWeb.ReaderRulesTest do
     end
   end
 
+  describe "a link straight to the post, which is not a surface" do
+    # Deliberately not in `surfaces/0`. A timeline is what reaches a reader and
+    # a permalink is what they went and opened, so the two answer differently
+    # -- `Statuses.readable/2` asks the author's side of a block and
+    # `readable?/2` asks the reader's as well. Kept here because the asymmetry
+    # is the thing somebody will otherwise "fix" into a leak or a dead link.
+    defp permalink(stranger, status), do: "/@#{stranger.username}/#{status.id}"
+
+    test "opens for a reader who blocked or muted the author", %{
+      conn: conn,
+      reader: reader,
+      stranger: stranger,
+      status: status
+    } do
+      # The profile still lists these posts, and the user guide promises it.
+      # A row whose link answers nothing would break that promise.
+      {:ok, _} = Relationships.block(reader, stranger)
+      {:ok, _} = Relationships.mute(reader, stranger)
+
+      {:ok, _live, html} = live(conn, permalink(stranger, status))
+
+      assert html =~ "loud opinion"
+    end
+
+    test "and answers nothing to a reader the author blocked", %{
+      conn: conn,
+      reader: reader,
+      stranger: stranger,
+      status: status
+    } do
+      {:ok, _} = Relationships.block(stranger, reader)
+
+      assert_raise AbuubaWeb.NotFound, fn -> live(conn, permalink(stranger, status)) end
+    end
+  end
+
   describe "a stranger reading the same pages" do
     test "still sees it, blocks being nobody else's business", %{conn: conn} do
       stranger_conn = Phoenix.ConnTest.build_conn()

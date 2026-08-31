@@ -27,7 +27,7 @@ defmodule AbuubaWeb.MediaController do
   def show(conn, %{"id" => id}) do
     with %Attachment{status_id: status_id} when not is_nil(status_id) <- attachment(id),
          %{account: %{username: username}} = status <-
-           Statuses.get_status(status_id, nil) |> Abuuba.Repo.preload(:account) do
+           Statuses.readable(status_id, nil) |> Abuuba.Repo.preload(:account) do
       redirect(conn, to: ~p"/@#{username}/#{status.id}")
     else
       # A file with no post is a file nobody can see in context, and there is
