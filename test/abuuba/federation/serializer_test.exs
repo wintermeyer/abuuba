@@ -222,6 +222,24 @@ defmodule Abuuba.Federation.SerializerTest do
       assert href == "#{URIs.base_url()}/tags/caturday"
     end
 
+    test "and escapes one a peer could not otherwise follow", %{author: author} do
+      # A tag may be any word in any script. The Note built its own tag map
+      # without the escaping the featured-tags collection does, so the same
+      # tag went out encoded on one document and raw on the other -- and a raw
+      # one is not a URL.
+      status = status_fixture(%{account_id: author.id})
+      tag = tag_fixture("Grüße")
+      :ok = Statuses.tag_status(status, tag)
+
+      note = Serializer.note(Abuuba.Repo.reload(status))
+
+      assert %{"name" => "#Grüße", "href" => href} =
+               Enum.find(note["tag"], &(&1["type"] == "Hashtag"))
+
+      refute href =~ "ü", "the link went out unescaped"
+      assert href == Serializer.hashtag(tag)["href"], "and disagreed with the collection"
+    end
+
     test "puts a content warning in summary and marks it sensitive", %{author: author} do
       status =
         status_fixture(%{account_id: author.id, spoiler_text: "spoilers", sensitive: true})
