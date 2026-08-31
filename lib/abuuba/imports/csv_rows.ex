@@ -36,7 +36,9 @@ defmodule Abuuba.Imports.CSVRows do
   @spec clear(atom(), map()) :: :ok
   def clear(:following, account) do
     account
-    |> Relationships.following(%{limit: 100_000})
+    # `nil`: an export is somebody's own data, and quietly dropping the people
+    # they muted would make the file disagree with the account it came from.
+    |> Relationships.following(nil, %{limit: 100_000})
     |> Enum.each(&Relationships.unfollow(account, &1))
   end
 

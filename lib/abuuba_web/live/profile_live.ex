@@ -657,13 +657,15 @@ defmodule AbuubaWeb.ProfileLive do
 
   defp load_people(socket) do
     subject = socket.assigns.subject
+    viewer = socket.assigns.viewer
     hidden? = collections_hidden?(socket, subject)
+    page = %{limit: @page_size}
 
     people =
       cond do
         hidden? -> []
-        socket.assigns.tab == :followers -> Relationships.followers(subject, %{limit: @page_size})
-        socket.assigns.tab == :following -> Relationships.following(subject, %{limit: @page_size})
+        socket.assigns.tab == :followers -> Relationships.followers(subject, viewer, page)
+        socket.assigns.tab == :following -> Relationships.following(subject, viewer, page)
         true -> []
       end
 

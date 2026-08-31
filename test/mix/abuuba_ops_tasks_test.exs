@@ -665,7 +665,7 @@ defmodule Mix.Tasks.AbuubaOpsTest do
       output = run(AccountsTask, ["unfollow", "spam@spam.example"])
 
       assert output =~ "2 follows was affected" or output =~ "2 follows"
-      assert Relationships.followers(spammer) == []
+      assert Relationships.followers(spammer, nil) == []
     end
 
     test "refuses a command it does not know" do

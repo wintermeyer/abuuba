@@ -385,11 +385,11 @@ defmodule AbuubaWeb.API.AccountController do
   defp presence(_value), do: nil
 
   def followers(conn, %{"id" => id} = params) do
-    with_collection(conn, id, params, &Relationships.followers/2)
+    with_collection(conn, id, params, &Relationships.followers/3)
   end
 
   def following(conn, %{"id" => id} = params) do
-    with_collection(conn, id, params, &Relationships.following/2)
+    with_collection(conn, id, params, &Relationships.following/3)
   end
 
   # The web profile has honoured `hide_collections` since it was written and
@@ -402,9 +402,7 @@ defmodule AbuubaWeb.API.AccountController do
       if collection_hidden?(account, viewer) do
         json(conn, [])
       else
-        page = params |> Pagination.params() |> Map.put(:viewer_id, viewer && viewer.id)
-
-        collection(conn, viewer, list.(account, page))
+        collection(conn, viewer, list.(account, viewer, Pagination.params(params)))
       end
     end)
   end
