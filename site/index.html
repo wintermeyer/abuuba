@@ -307,15 +307,17 @@
   <section class="band">
     <div class="wrap reveal">
       <h2>Not for the <em>faint of heart</em>.</h2>
-      <p>abuuba is a fresh project. The documentation is not as good as the one of Mastodon.</p>
+      <p>This is a 1.0. It has bugs, and nobody knows yet where they are. Mastodon has had nearly ten years of strangers finding its bugs for it; abuuba has had me. The documentation is not as good as Mastodon's either.</p>
+      <p><strong>Do not put abuuba into production right now.</strong> Not under a community you would be sorry to lose, not under accounts somebody depends on. Run it in a lab, break it, and tell me what broke.</p>
       <p><strong>If you are new to running a fediverse server, run Mastodon.</strong> It is good software, it is documented by thousands of people, and when it breaks at two in the morning somebody has already written down what to do.</p>
-      <p>Run abuuba if you need the speed and an Elixir stack trace is something you can work with. Currently it is for seasoned admins only.</p>
+      <p>Try abuuba if you need the speed and an Elixir stack trace is something you can work with. Even then it is a toy for now, on a machine where losing everything costs you nothing.</p>
     </div>
   </section>
 
   <section class="band">
     <div class="wrap reveal">
       <h2>Already running Mastodon? <em>Take the server over.</em></h2>
+      <p><strong>Don't use abuuba right now. It is not as mature as Mastodon. Only use it in your lab and to play around with it.</strong></p>
       <p>Nothing has to be rebuilt. A Mastodon instance becomes an abuuba instance in place, keeping the domain it already has. That domain is the one thing a takeover cannot change: every post URL and every signature the old server published names it. <strong>Everything else moves.</strong> Accounts keep their passwords, posts keep their permalinks, followers stay followers, and the app on somebody's phone stays signed in, because the token it holds comes across too. Media, lists, filters, blocks and the whole moderation history follow.</p>
       <p>The importer is a dry run by default. It reads the old database, checks everything that has to be true, counts what would move, and writes nothing. A run that gets interrupted continues where it stopped, and afterwards a verify pass asks the old server, while it is still up, whether every post arrived and every key still signs.</p>
       <h3>Step by step, with the Docker image</h3>
@@ -353,6 +355,7 @@ docker compose up -d</pre>
       <p>I am the founder of <a href="https://vutuv.de">vutuv</a>, a business network: an open source LinkedIn alternative that talks to the fediverse as well. It is fast on purpose, and testing it means driving federation through a real ActivityPub peer every day. A peer that cannot keep up drags the whole loop down to its own speed, and for a long time that peer was Mastodon. Seeding it with a thousand followers and two hundred posts took fifteen minutes. abuuba does the same in thirty-nine seconds.</p>
       <p>That is not a complaint about Mastodon, and not one about <a href="https://rubyonrails.org">Ruby on Rails</a>. I love Rails. It is a pleasure to write and it has earned every bit of its reputation, and I wrote books about it. But Phoenix and Elixir are faster, and not by a little. The <a href="https://www.erlang.org/">BEAM</a> was built to run one system across several machines: nodes find each other and pass messages as ordinary work, with no Redis in the middle and no separate job runner to keep in step. Rails reaches the same place by adding those pieces and then keeping them alive.</p>
       <p>So I wrote abuuba. The wheel was perfectly good. It was just too heavy for the cart I was building.</p>
+      <p class="sig"><a href="https://vutuv.de/wintermeyer">Stefan Wintermeyer</a></p>
     </div>
   </section>
 

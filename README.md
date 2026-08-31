@@ -111,9 +111,15 @@ instead, and went with abuuba.
 
 ## Not for the faint of heart
 
-abuuba is version 1.1.0 and has never served real members on the open internet.
-Every number above is measured and reproducible. None of it has been tested by
-anyone but me.
+This is a 1.0. It has bugs, and nobody knows yet where they are. abuuba is
+version 1.1.0, it has never served real members on the open internet, and
+nobody but me has tested any of it. Mastodon's bugs have had a decade and
+thousands of admins to surface them; abuuba's have had me. Every number above
+is measured and reproducible, and that is all it says.
+
+**Do not put abuuba into production right now.** Not under a community you
+would be sorry to lose, not under accounts somebody depends on. Run it in a
+lab, break it, and tell me what broke.
 
 The documentation is in this repository: a deployment guide, twenty-two pages
 for administrators, ten for users and ten more in German. What does not exist
@@ -127,8 +133,9 @@ than a feature list.
 software, it is documented by thousands of people, and when it breaks at two in
 the morning somebody has already written down what to do.
 
-Run abuuba if you need the speed and an Elixir stack trace is something you can
-work with. That is the whole entry requirement, and it is a real one.
+Try abuuba if you need the speed and an Elixir stack trace is something you can
+work with. Even then it is a toy for now, on a machine where losing everything
+costs you nothing.
 
 ## Getting started for Developers
 
