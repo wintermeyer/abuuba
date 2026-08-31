@@ -29,10 +29,9 @@ defmodule AbuubaWeb.StreamingSocket do
   alias Abuuba.Accounts
   alias Abuuba.OAuth
   alias Abuuba.OAuth.Scopes
-  alias Abuuba.Settings
   alias Abuuba.Streaming
   alias AbuubaWeb.Streaming.Filter
-  alias AbuubaWeb.Streaming.Payload
+  alias AbuubaWeb.Streaming.Subscription
 
   @doc """
   Builds the socket's state from the request that is about to be upgraded.
@@ -117,91 +116,29 @@ defmodule AbuubaWeb.StreamingSocket do
   ## Subscription
 
   defp subscribe(state, stream, params) do
-    with :ok <- check_scope(state, stream),
-         true <- timelines_readable?(state, stream),
-         {:ok, topic} <- topic_for(stream, params, state) do
+    with true <- Subscription.allowed?(state, stream),
+         {:ok, name, topic} <- Subscription.topic_for(stream, params, state) do
       Streaming.subscribe(topic)
 
-      %{state | topics: MapSet.put(state.topics, {stream, topic})}
+      # The name `Subscription` answers with, not the one the client typed:
+      # `AbuubaWeb.Streaming.Filter` is keyed on it.
+      %{state | topics: MapSet.put(state.topics, {name, topic})}
     else
       _ -> state
     end
   end
 
   defp unsubscribe(state, stream, params) do
-    case topic_for(stream, params, state) do
-      {:ok, topic} ->
+    case Subscription.topic_for(stream, params, state) do
+      {:ok, name, topic} ->
         Streaming.unsubscribe(topic)
 
-        %{state | topics: MapSet.delete(state.topics, {stream, topic})}
+        %{state | topics: MapSet.delete(state.topics, {name, topic})}
 
       _ ->
         state
     end
   end
-
-  # A public stream needs nothing; anything naming a person needs a token that
-  # was granted the right to read that thing. Checked per subscription rather
-  # than at connect, because one socket carries several streams.
-  # An admin who closes the timelines has said strangers do not read this
-  # server. The API refuses them and the front page refuses them; this is the
-  # third door, and it was answering. Matched on the name rather than on a
-  # list, so a public stream added later is covered without anybody
-  # remembering to add it here.
-  defp timelines_readable?(state, stream) do
-    if String.starts_with?(stream, "public") or String.starts_with?(stream, "hashtag") do
-      Settings.public_timelines_readable?(state.account)
-    else
-      true
-    end
-  end
-
-  defp check_scope(state, stream) do
-    required = Payload.required_scope(stream)
-
-    cond do
-      is_nil(required) -> :ok
-      is_nil(state.account) -> :error
-      Scopes.covers_all?(state.scopes, [required]) -> :ok
-      true -> :error
-    end
-  end
-
-  defp topic_for("user", _params, %{account: nil}), do: :error
-  defp topic_for("user", _params, state), do: {:ok, Streaming.account_topic(state.account)}
-
-  defp topic_for("user:notification", _params, %{account: nil}), do: :error
-
-  defp topic_for("user:notification", _params, state),
-    do: {:ok, Streaming.account_topic(state.account)}
-
-  defp topic_for("direct", _params, %{account: nil}), do: :error
-  defp topic_for("direct", _params, state), do: {:ok, Streaming.account_topic(state.account)}
-
-  defp topic_for("public", _params, _state), do: {:ok, Streaming.public_topic()}
-  defp topic_for("public:local", _params, _state), do: {:ok, Streaming.public_topic(local: true)}
-
-  defp topic_for("public:remote", _params, _state),
-    do: {:ok, Streaming.public_topic(remote: true)}
-
-  defp topic_for("public:media", _params, _state), do: {:ok, Streaming.public_topic()}
-
-  defp topic_for("public:local:media", _params, _state),
-    do: {:ok, Streaming.public_topic(local: true)}
-
-  defp topic_for("public:remote:media", _params, _state),
-    do: {:ok, Streaming.public_topic(remote: true)}
-
-  defp topic_for(hashtag, params, _state) when hashtag in ["hashtag", "hashtag:local"] do
-    case Map.get(params, "tag") do
-      tag when is_binary(tag) and tag != "" -> {:ok, Streaming.hashtag_topic(tag)}
-      _ -> :error
-    end
-  end
-
-  defp topic_for("list", _params, %{account: nil}), do: :error
-  defp topic_for("list", _params, state), do: {:ok, Streaming.account_topic(state.account)}
-  defp topic_for(_stream, _params, _state), do: :error
 
   ## Token
 

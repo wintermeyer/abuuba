@@ -166,13 +166,24 @@ defmodule AbuubaWeb.Streaming.Filter do
 
   defp belongs_on?(stream, status)
        when stream in ["public:media", "public:local:media", "public:remote:media"] do
-    status.ordered_media_attachment_ids != []
+    status.ordered_media_attachment_ids != [] and local_side?(stream, status)
   end
 
   defp belongs_on?("public:local", status), do: status.local
   defp belongs_on?("public:remote", status), do: not status.local
   defp belongs_on?("hashtag:local", status), do: status.local
-  defp belongs_on?(_stream, _status), do: true
+  defp belongs_on?(stream, _status) when stream in ["public", "hashtag", "list"], do: true
+
+  # A name nobody wrote a rule for carries nothing. This used to answer `true`,
+  # which is the shape that let the SSE side's own spelling of `public:local`
+  # through unfiltered: `Subscription` is what makes the names agree, and this
+  # is what makes a disagreement show up as an empty stream rather than as
+  # every post.
+  defp belongs_on?(_stream, _status), do: false
+
+  defp local_side?("public:local:media", status), do: status.local
+  defp local_side?("public:remote:media", status), do: not status.local
+  defp local_side?(_stream, _status), do: true
 
   # The same rules a timeline applies, asked one post at a time. An anonymous
   # socket sees public posts and nothing else.

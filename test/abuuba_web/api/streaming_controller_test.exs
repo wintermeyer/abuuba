@@ -2,9 +2,12 @@ defmodule AbuubaWeb.API.StreamingControllerTest do
   use AbuubaWeb.ConnCase, async: false
 
   import Abuuba.AccountsFixtures
+  import Abuuba.StatusesFixtures
 
   alias Abuuba.OAuth
   alias Abuuba.Settings
+  alias AbuubaWeb.Streaming.Filter
+  alias AbuubaWeb.Streaming.Subscription
 
   setup %{conn: conn} do
     account = account_fixture()
@@ -216,6 +219,70 @@ defmodule AbuubaWeb.API.StreamingControllerTest do
       Abuuba.Streaming.publish_announcement(announcement)
 
       assert_receive {:streaming, "announcement", _payload}, 2_000
+    end
+  end
+
+  describe "one table of streams, for both transports" do
+    # The two transports each carried their own copy: the socket knew the
+    # media streams and `list`, the SSE side knew neither and spelled two of
+    # its own with a slash. `AbuubaWeb.Streaming.Filter` matches on the name,
+    # and ended in a catch-all `true` -- so a name it did not recognise let
+    # every post through. These hold the three against each other.
+    setup %{account: account} do
+      %{state: %{account: account, scopes: [:read], topics: MapSet.new(), token_id: nil}}
+    end
+
+    test "every stream it advertises resolves to a topic", %{state: state} do
+      for stream <- Subscription.streams() do
+        assert {:ok, ^stream, _topic} =
+                 Subscription.topic_for(stream, %{"tag" => "cats"}, state),
+               "#{stream} is in the table and cannot be subscribed to"
+      end
+    end
+
+    test "and Filter answers each of them deliberately", %{account: account} do
+      # The table, written out. One local public post with no media, offered
+      # to every stream in turn: what matters is that nothing answers by
+      # accident, which is what the catch-all `true` used to arrange.
+      status = status_fixture(%{account_id: account.id, visibility: :public})
+
+      carries = ~w(user public public:local hashtag hashtag:local list)
+      ignores = ~w(user:notification direct public:remote)
+      no_media = ~w(public:media public:local:media public:remote:media)
+
+      assert Enum.sort(carries ++ ignores ++ no_media) == Enum.sort(Subscription.streams()),
+             "a stream was added without saying what it does with a post"
+
+      for stream <- carries do
+        assert {:ok, _frame} = offer(status, account, stream), "#{stream} dropped a post"
+      end
+
+      for stream <- ignores ++ no_media do
+        assert offer(status, account, stream) == :skip, "#{stream} carried a post it should not"
+      end
+    end
+
+    defp offer(status, account, stream) do
+      Filter.for_viewer("update", status, %{
+        account: account,
+        scopes: [:read],
+        topics: MapSet.new([{stream, "t"}]),
+        token_id: nil
+      })
+    end
+
+    test "a stream nobody wrote a rule for carries nothing", %{account: account} do
+      status = status_fixture(%{account_id: account.id, visibility: :public})
+
+      assert offer(status, account, "public/local") == :skip,
+             "the catch-all used to answer `true` here, which is every post"
+    end
+
+    test "the slash spelling reaches the stream it meant", %{state: state} do
+      # Kept working, and normalised: a client that used it was reaching a
+      # real stream, and what it stores is what Filter is keyed on.
+      assert {:ok, "public:local", topic} = Subscription.topic_for("public/local", %{}, state)
+      assert {:ok, "public:local", ^topic} = Subscription.topic_for("public:local", %{}, state)
     end
   end
 
