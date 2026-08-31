@@ -125,7 +125,7 @@ defmodule AbuubaWeb.AccountDeletionTest do
       # of them goes until that row does.
       assert is_nil(Repo.reload(account))
       assert is_nil(Repo.get(Abuuba.Statuses.Status, status.id))
-      assert Relationships.following(other, %{limit: 10}) == []
+      assert Relationships.following(other, nil, %{limit: 10}) == []
       assert Filters.all(account.id) == []
     end
 

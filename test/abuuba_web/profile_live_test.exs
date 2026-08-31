@@ -255,6 +255,27 @@ defmodule AbuubaWeb.ProfileLiveTest do
       refute html =~ "carol"
     end
 
+    test "and it leaves out somebody the reader blocked, as the API does", %{
+      signed_in: signed_in,
+      subject: subject,
+      reader: reader
+    } do
+      # The other direction, and the one the page got wrong: the viewer was an
+      # optional key inside a pagination map, the REST endpoint filled it in
+      # and this page did not. Blocking somebody hid them from an app and left
+      # them here.
+      blocked = account_fixture(%{username: "erin"})
+      kept = account_fixture(%{username: "frank"})
+      {:ok, _} = Relationships.follow(blocked, subject)
+      {:ok, _} = Relationships.follow(kept, subject)
+      {:ok, _} = Relationships.block(reader, blocked)
+
+      html = signed_in |> get("/@bob/followers") |> html_response(200)
+
+      refute html =~ "erin"
+      assert html =~ "frank"
+    end
+
     test "and open to everybody else", %{signed_in: signed_in, subject: subject} do
       # The control: hiding the list from everyone would satisfy the test
       # above without the block having anything to do with it.

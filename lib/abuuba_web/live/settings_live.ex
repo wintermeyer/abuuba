@@ -1745,8 +1745,14 @@ defmodule AbuubaWeb.SettingsLive do
     offered? = section == :privacy and EmailSubscriptions.enabled?()
 
     [
+      # `nil`, not `account`: this is the screen you come to in order to
+      # unfollow somebody, and filtering it by your own mutes would hide the
+      # row with the button on it.
       following:
-        if(section == :follows, do: Relationships.following(account, %{limit: 200}), else: []),
+        if(section == :follows,
+          do: Relationships.following(account, nil, %{limit: 200}),
+          else: []
+        ),
       applications:
         if(section == :applications, do: OAuth.authorized_applications(user), else: []),
       severances: if(section == :strikes, do: Domains.severance_summary(account), else: []),

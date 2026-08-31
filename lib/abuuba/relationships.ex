@@ -384,7 +384,7 @@ defmodule Abuuba.Relationships do
     |> join(:inner, [e], a in Account, on: a.id == e.target_account_id)
     |> where([e], e.account_id == ^account_id)
     |> where([_e, a], is_nil(a.suspended_at))
-    |> paginate_by_account(page, :target_account_id)
+    |> paginate_by_account(nil, page, :target_account_id)
   end
 
   @doc """
@@ -913,7 +913,7 @@ defmodule Abuuba.Relationships do
   Who this account has blocked, newest first.
   """
   @spec blocked_accounts(Account.t() | integer(), map()) :: [Account.t()]
-  def blocked_accounts(account, page \\ %{}), do: edge_targets(Block, account, page)
+  def blocked_accounts(account, page \\ %{}), do: edge_targets_query(Block, account, page)
 
   @doc """
   Who this account has muted, newest first. Expired mutes are not mutes.
@@ -986,7 +986,7 @@ defmodule Abuuba.Relationships do
     FollowRequest
     |> join(:inner, [r], a in Account, on: a.id == r.account_id)
     |> where([r], r.target_account_id == ^account_id)
-    |> paginate_by_account(page, :account_id)
+    |> paginate_by_account(nil, page, :account_id)
   end
 
   @doc """
@@ -1027,24 +1027,37 @@ defmodule Abuuba.Relationships do
   end
 
   @doc """
-  This account's followers, newest first.
-  """
-  @spec followers(Account.t() | integer(), map()) :: [Account.t()]
-  def followers(account, page \\ %{})
-  def followers(%Account{id: id}, page), do: followers(id, page)
+  This account's followers, newest first, as `viewer` may see them.
 
-  def followers(account_id, page) do
+  `viewer` is positional and required, the shape `Abuuba.Statuses` uses for
+  every read that answers to somebody. It was an optional key inside the
+  pagination map, which meant the filter was a no-op unless a caller
+  remembered to fill it in: the REST endpoint did, and the profile page
+  showing the same list did not, so blocking somebody hid them from an app
+  and left them in the browser.
+
+  `nil` for a list nobody is reading on their own behalf -- an export, or the
+  federation side, which wants the edges themselves.
+  """
+  @spec followers(Account.t() | integer(), Account.t() | integer() | nil, map()) :: [Account.t()]
+  def followers(account, viewer, page \\ %{})
+  def followers(%Account{id: id}, viewer, page), do: followers(id, viewer, page)
+
+  def followers(account_id, viewer, page) do
     Follow
     |> join(:inner, [f], a in Account, on: a.id == f.account_id)
     |> where([f], f.target_account_id == ^account_id)
-    |> paginate_by_account(page, :account_id)
+    |> paginate_by_account(viewer, page, :account_id)
   end
 
   @doc """
-  Who this account follows, newest first.
+  Who this account follows, newest first, as `viewer` may see them.
+
+  Same shape and the same rule as `followers/3`.
   """
-  @spec following(Account.t() | integer(), map()) :: [Account.t()]
-  def following(account, page \\ %{}), do: edge_targets(Follow, account, page)
+  @spec following(Account.t() | integer(), Account.t() | integer() | nil, map()) :: [Account.t()]
+  def following(account, viewer, page \\ %{}),
+    do: edge_targets(Follow, account, viewer, page)
 
   @doc """
   Removes somebody from this account's followers without blocking them.
@@ -1101,16 +1114,20 @@ defmodule Abuuba.Relationships do
     end)
   end
 
-  defp edge_targets(schema, account, page), do: edge_targets_query(schema, account, page)
+  defp edge_targets(schema, account, viewer, page),
+    do: edge_targets_query(schema, account, viewer, page)
 
-  defp edge_targets_query(schema, %Account{id: id}, page),
-    do: edge_targets_query(schema, id, page)
+  defp edge_targets_query(schema, account, page),
+    do: edge_targets_query(schema, account, nil, page)
 
-  defp edge_targets_query(schema, account_id, page) do
+  defp edge_targets_query(schema, %Account{id: id}, viewer, page),
+    do: edge_targets_query(schema, id, viewer, page)
+
+  defp edge_targets_query(schema, account_id, viewer, page) do
     schema
     |> join(:inner, [e], a in Account, on: a.id == e.target_account_id)
     |> where([e], e.account_id == ^account_id)
-    |> paginate_by_account(page, :target_account_id)
+    |> paginate_by_account(viewer, page, :target_account_id)
   end
 
   # Paged on the account id, because that is the id a client gets back and
@@ -1118,9 +1135,9 @@ defmodule Abuuba.Relationships do
   # table's copy of it — equal to `a.id` by the join, but only the edge
   # column is in the index that serves the scan, and Postgres never pushes an
   # inequality through a join.
-  defp paginate_by_account(query, page, cursor_field) do
+  defp paginate_by_account(query, viewer, page, cursor_field) do
     query
-    |> exclude_hidden_from(Map.get(page, :viewer_id))
+    |> exclude_hidden_from(viewer)
     |> maybe_older_than(Map.get(page, :max_id), cursor_field)
     |> maybe_newer_than(Map.get(page, :min_id) || Map.get(page, :since_id), cursor_field)
     |> order_by([e, _a], [{^Pagination.direction(page), field(e, ^cursor_field)}])
@@ -1131,15 +1148,26 @@ defmodule Abuuba.Relationships do
   end
 
   # A list of people is still a list of people the reader has opinions about,
-  # and somebody they blocked or muted does not belong on it. Optional because
-  # most callers of these lists are not rendering them for anybody -- the
-  # federation side wants the edges themselves.
+  # and somebody they blocked, muted, or shut a whole server out over does not
+  # belong on it. `nil` for a list nobody is reading on their own behalf.
+  #
+  # The domain was missing while the other two were here, which is the shape
+  # this file keeps producing: a rule written down where somebody was looking
+  # and nowhere else.
   defp exclude_hidden_from(query, nil), do: query
+
+  defp exclude_hidden_from(query, %Account{id: viewer_id}),
+    do: exclude_hidden_from(query, viewer_id)
 
   defp exclude_hidden_from(query, viewer_id) do
     query
     |> where([_e, a], a.id not in subquery(edge_targets_of(Block, viewer_id)))
     |> where([_e, a], a.id not in subquery(edge_targets_of(Mute, viewer_id)))
+    |> where([_e, a], is_nil(a.domain) or a.domain not in subquery(blocked_domains_of(viewer_id)))
+  end
+
+  defp blocked_domains_of(account_id) do
+    from(d in DomainBlock, where: d.account_id == ^account_id, select: d.domain)
   end
 
   defp edge_targets_of(schema, account_id) do

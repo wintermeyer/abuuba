@@ -195,8 +195,8 @@ defmodule Abuuba.AccountsAPITest do
     test "your followers and who you follow", %{account: account, other: other} do
       {:ok, _} = Relationships.follow(other, account)
 
-      assert Enum.map(Relationships.followers(account), & &1.id) == [other.id]
-      assert Enum.map(Relationships.following(other), & &1.id) == [account.id]
+      assert Enum.map(Relationships.followers(account, nil), & &1.id) == [other.id]
+      assert Enum.map(Relationships.following(other, nil), & &1.id) == [account.id]
     end
   end
 

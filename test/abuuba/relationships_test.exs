@@ -34,9 +34,44 @@ defmodule Abuuba.RelationshipsTest do
       [oldest, middle, _newest] = Enum.sort_by(followers, & &1.id)
 
       assert Enum.map(
-               Relationships.followers(alice, %{min_id: oldest.id, limit: 1}),
+               Relationships.followers(alice, nil, %{min_id: oldest.id, limit: 1}),
                & &1.id
              ) == [middle.id]
+    end
+
+    test "a follower list answers to the reader, on every surface", %{alice: alice, bob: bob} do
+      # The viewer used to be an optional key inside the pagination map, so
+      # the filter was a no-op unless a caller remembered to fill it in: the
+      # REST endpoint did and the profile page did not, and blocking somebody
+      # hid them from an app while leaving them in the browser.
+      {:ok, _} = Relationships.follow(bob, alice)
+
+      elsewhere = remote_account_fixture(%{domain: "loud.example"})
+      {:ok, _} = Relationships.follow(elsewhere, alice)
+
+      reader = account_fixture()
+
+      assert length(Relationships.followers(alice, reader)) == 2
+
+      {:ok, _} = Relationships.block(reader, bob)
+      {:ok, _} = Relationships.block_domain(reader, "loud.example")
+
+      assert Relationships.followers(alice, reader) == [],
+             "a block and a blocked server both count, which the domain half did not"
+
+      assert length(Relationships.followers(alice, nil)) == 2,
+             "and a list nobody is reading on their own behalf is untouched"
+    end
+
+    test "so does the list of who somebody follows", %{alice: alice, bob: bob} do
+      {:ok, _} = Relationships.follow(alice, bob)
+      reader = account_fixture()
+
+      assert Enum.map(Relationships.following(alice, reader), & &1.id) == [bob.id]
+
+      {:ok, _} = Relationships.mute(reader, bob)
+
+      assert Relationships.following(alice, reader) == []
     end
 
     test "familiar followers cap at five per target, newest first", %{alice: alice, bob: bob} do
@@ -98,7 +133,7 @@ defmodule Abuuba.RelationshipsTest do
       {:ok, _} = Relationships.follow(alice, bob)
 
       assert Abuuba.Accounts.get_account(bob.id) |> then(& &1.id) == bob.id
-      assert length(Relationships.followers(bob, %{})) == 1
+      assert length(Relationships.followers(bob, nil, %{})) == 1
     end
 
     test "cannot point at yourself", %{alice: alice} do
