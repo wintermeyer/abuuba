@@ -25,6 +25,7 @@ defmodule Abuuba.WebPush do
   alias Abuuba.OAuth.AccessToken
   alias Abuuba.Relationships
   alias Abuuba.Repo
+  alias Abuuba.Statuses
   alias Abuuba.Statuses.Formatter
   alias Abuuba.WebPush.Subscription
 
@@ -215,8 +216,13 @@ defmodule Abuuba.WebPush do
   # post. Whoever taps it gets the whole thing from the API.
   defp body(%Notification{status_id: nil}), do: ""
 
-  defp body(%Notification{status_id: status_id}) do
-    case Repo.get(Abuuba.Statuses.Status, status_id) do
+  defp body(%Notification{status_id: status_id, account_id: account_id}) do
+    # Through `Statuses` and with the reader named, which a bare `Repo.get`
+    # was neither: a push is the one copy of a post that arrives somewhere the
+    # reader cannot be shown a filtered list, so a post they may no longer read
+    # -- deleted, or from somebody they have since blocked -- must not be the
+    # thing on their lock screen.
+    case Statuses.readable(status_id, account_id) do
       nil ->
         ""
 

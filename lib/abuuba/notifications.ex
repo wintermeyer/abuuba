@@ -10,6 +10,19 @@ defmodule Abuuba.Notifications do
   relationships change: somebody would accept a request, then see the same
   mention reappear as a request a week later because a follow lapsed.
 
+  ## Who it is from, decided on the way out
+
+  *Which* list is a write-time question; whether the reader wants to hear from
+  this person at all is not. `decide/4` runs once, against the relationships as
+  they stood that second, so blocking somebody afterwards left every favourite
+  they had ever made sitting in the tab with the badge counting them --
+  nothing here ever asked again.
+
+  So `excluding_unwanted/2` is composed by every read: the list, the grouped
+  list, one group, one notification, and all three counts. A badge that
+  disagrees with the list under it is the same bug wearing a different number,
+  and the counts are the half nobody remembers.
+
   ## Grouping
 
   Twenty people boosting one post is one thing that happened and a client shows
@@ -31,6 +44,9 @@ defmodule Abuuba.Notifications do
   alias Abuuba.Notifications.Request
   alias Abuuba.Pagination
   alias Abuuba.Relationships
+  alias Abuuba.Relationships.Block
+  alias Abuuba.Relationships.DomainBlock
+  alias Abuuba.Relationships.Mute
   alias Abuuba.Repo
   alias Abuuba.Statuses.Status
   alias Abuuba.Streaming
@@ -363,29 +379,129 @@ defmodule Abuuba.Notifications do
   def list(account_id, page) do
     from(n in Notification, as: :notification)
     |> where([n], n.account_id == ^account_id)
-    |> exclude_deleted_posts()
+    |> excluding_unwanted(account_id)
     |> filter_state(page)
     |> filter_sender(page)
     |> filter_types(page)
     |> paginate(page)
   end
 
-  # A notification whose post has gone points at nothing a reader can open.
-  # The removals on the undo paths take most of these away as they happen;
-  # this is the backstop, because a post can also be deleted by a moderator,
-  # by its own server, or by a path nobody has written yet, and a list that
-  # filters is what catches whatever they miss.
-  defp exclude_deleted_posts(query) do
-    where(
-      query,
+  # Two shapes, because the four rules are not alike.
+  #
+  # Blocks and mutes are the reader's own rows, so "everybody I will not hear
+  # from" is a set bounded by how many people *they* have shut out -- a handful
+  # for almost everyone. Postgres hashes it once per query and probes it per
+  # row, which beats three correlated lookups per row on a query that runs on
+  # every signed-in page render.
+  #
+  # `NOT IN` is safe here only because both columns are `NOT NULL`: a single
+  # NULL in the set would make the whole predicate answer NULL and hide every
+  # notification. That is checked by the schema, not by luck.
+  defp silenced_ids(account_id) do
+    now = DateTime.utc_now()
+
+    blocked = from(b in Block, where: b.account_id == ^account_id, select: b.target_account_id)
+
+    blocking = from(b in Block, where: b.target_account_id == ^account_id, select: b.account_id)
+
+    # `hide_notifications` is why this is not the timeline's mute rule. A mute
+    # that left notifications on is somebody saying "off my timeline, still
+    # tell me", and the write side honours that -- so read time has to as
+    # well, or the flag means nothing the moment anybody reloads.
+    muted =
+      from(m in Mute,
+        where:
+          m.account_id == ^account_id and m.hide_notifications and
+            (is_nil(m.expires_at) or m.expires_at > ^now),
+        select: m.target_account_id
+      )
+
+    blocked |> union_all(^blocking) |> union_all(^muted)
+  end
+
+  # The domain rule is the exception, and stays correlated. Written as a set it
+  # would be every account on the blocked server: one domain block against a
+  # large instance turned this into a sequential scan of `accounts` per
+  # notification on the benchmark database -- 145 million buffer hits for a
+  # badge. Asked per row it is one primary-key probe.
+  defmacrop on_a_blocked_server(account_id, subject) do
+    quote do
+      from(a in Account,
+        join: d in DomainBlock,
+        on: d.domain == a.domain and d.account_id == ^unquote(account_id),
+        where: a.id == unquote(subject),
+        select: 1
+      )
+    end
+  end
+
+  @doc """
+  Drops what this reader has since said they do not want.
+
+  One rule asked of everybody a notification implicates: the sender, the
+  author of the post it points at, and the author of whatever that post is
+  carrying if it is a boost. That last one is the half the write side never
+  had -- it asked about the sender and stopped, so a mention inside somebody
+  else's boost of a blocked account arrived with the blocked account's words
+  in it.
+
+  The rule is `Relationships.notifications_silenced?/2`'s, not its call: that
+  one answers about a pair in three round trips and cannot compose into a
+  query. Same four questions, `hide_notifications` included, plus a block in
+  either direction rather than only the reader's own.
+
+  A deleted post is dropped on the way past, because a notification pointing
+  at one points at nothing a reader can open. The undo paths take most of
+  those away as they happen; this is the backstop for a moderator's removal or
+  a path nobody has written yet.
+
+  Correlated `EXISTS` rather than `NOT IN` over a set of ids: one domain block
+  against a large server makes that set every account on it, and this runs on
+  every page a signed-in reader loads. Needs the `:notification` binding.
+  """
+  @spec excluding_unwanted(Ecto.Query.t(), Account.t() | integer() | nil) :: Ecto.Query.t()
+  def excluding_unwanted(query, nil), do: query
+
+  def excluding_unwanted(query, %Account{id: id}), do: excluding_unwanted(query, id)
+
+  def excluding_unwanted(query, account_id) do
+    silenced = silenced_ids(account_id)
+
+    query
+    |> where([n], n.from_account_id not in subquery(silenced))
+    |> where(
       [n],
-      is_nil(n.status_id) or
-        exists(
-          from(s in Status,
-            where: s.id == parent_as(:notification).status_id and is_nil(s.deleted_at),
-            select: 1
-          )
-        )
+      not exists(on_a_blocked_server(account_id, parent_as(:notification).from_account_id))
+    )
+    |> where([n], is_nil(n.status_id) or exists(wanted_post(account_id, silenced)))
+  end
+
+  # The post's author, and the author of what it repeats if it is a boost. On
+  # every type this server writes the author is the sender or the reader, so
+  # the sender clauses have answered already -- but a notification is a row
+  # anything can write, and an invariant nothing enforces is not a check.
+  #
+  # A block is about the person whose words these are, not about who passed
+  # them along, which is why the carried author is asked separately.
+  defp wanted_post(account_id, silenced) do
+    from(s in Status,
+      as: :post,
+      where: s.id == parent_as(:notification).status_id and is_nil(s.deleted_at),
+      where: s.account_id not in subquery(silenced),
+      where: not exists(on_a_blocked_server(account_id, parent_as(:post).account_id)),
+      where: is_nil(s.reblog_of_id) or not exists(silenced_carried_author(account_id, silenced)),
+      select: 1
+    )
+  end
+
+  defp silenced_carried_author(account_id, silenced) do
+    from(carried in Status,
+      as: :carried,
+      where: carried.id == parent_as(:post).reblog_of_id,
+      where:
+        carried.account_id in subquery(silenced) or
+          exists(on_a_blocked_server(account_id, parent_as(:carried).account_id)),
+      select: 1
     )
   end
 
@@ -438,22 +554,26 @@ defmodule Abuuba.Notifications do
   def group(%Account{id: id}, key, opts), do: group(id, key, opts)
 
   def group(account_id, key, opts) do
-    Notification
+    from(n in Notification, as: :notification)
     |> where([n], n.account_id == ^account_id and n.group_key == ^key)
+    |> excluding_unwanted(account_id)
     |> order_by([n], desc: n.id)
     |> limit(^Keyword.get(opts, :limit, @group_cap))
     |> Repo.all()
   end
 
   @doc """
-  One notification, if it is this account's.
+  One notification, if it is this account's and they still want it.
   """
   @spec get(Account.t() | integer(), integer() | nil) :: Notification.t() | nil
   def get(%Account{id: id}, notification_id), do: get(id, notification_id)
   def get(_account_id, nil), do: nil
 
   def get(account_id, notification_id) do
-    Repo.get_by(Notification, id: notification_id, account_id: account_id)
+    from(n in Notification, as: :notification)
+    |> where([n], n.id == ^notification_id and n.account_id == ^account_id)
+    |> excluding_unwanted(account_id)
+    |> Repo.one()
   end
 
   @doc """
@@ -518,7 +638,9 @@ defmodule Abuuba.Notifications do
   end
 
   defp unread_scope(account_id) do
-    where(Notification, [n], n.account_id == ^account_id and not n.filtered)
+    from(n in Notification, as: :notification)
+    |> where([n], n.account_id == ^account_id and not n.filtered)
+    |> excluding_unwanted(account_id)
   end
 
   # The cap lives in the query, so counting stops at a thousand rather than

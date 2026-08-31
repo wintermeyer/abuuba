@@ -85,6 +85,130 @@ defmodule Abuuba.NotificationsTest do
     end
   end
 
+  describe "who the reader stopped wanting to hear from afterwards" do
+    # The write-time check above runs once, against the relationships as they
+    # stood that second. Everything below is decided later, and the list never
+    # asked again -- so blocking somebody left every favourite they had ever
+    # made sitting in the notifications tab, with the badge counting them.
+    setup %{reader: reader, sender: sender} do
+      {:ok, notification} = Notifications.notify(reader, sender, "favourite")
+
+      %{notification: notification}
+    end
+
+    defp visible(reader) do
+      {Enum.map(Notifications.list(reader), & &1.id), Notifications.unread_badge(reader.id),
+       Notifications.unread_count(reader), Notifications.unread_group_count(reader),
+       length(Notifications.grouped(reader))}
+    end
+
+    test "a block made afterwards takes it off the list and out of the counts", %{
+      reader: reader,
+      sender: sender,
+      notification: notification
+    } do
+      assert {[id], 1, 1, 1, 1} = visible(reader)
+      assert id == notification.id
+
+      {:ok, _} = Relationships.block(reader, sender)
+
+      assert visible(reader) == {[], 0, 0, 0, 0},
+             "the list and every count that feeds a badge answer together"
+    end
+
+    test "and unblocking brings it back, nothing having been deleted", %{
+      reader: reader,
+      sender: sender
+    } do
+      {:ok, _} = Relationships.block(reader, sender)
+      :ok = Relationships.unblock(reader, sender)
+
+      assert {[_id], 1, 1, 1, 1} = visible(reader)
+    end
+
+    test "a block the sender made counts too", %{reader: reader, sender: sender} do
+      # The half the reader cannot make themselves, and the one the write-time
+      # check never asked about at all.
+      {:ok, _} = Relationships.block(sender, reader)
+
+      assert visible(reader) == {[], 0, 0, 0, 0}
+    end
+
+    test "so does shutting out their whole server", %{reader: reader} do
+      elsewhere = remote_account_fixture(%{domain: "loud.example"})
+      {:ok, _} = Notifications.notify(reader, elsewhere, "follow")
+      {:ok, _} = Relationships.block_domain(reader, "loud.example")
+
+      refute Enum.any?(Notifications.list(reader), &(&1.from_account_id == elsewhere.id))
+    end
+
+    test "a mute hides it only if it was asked to", %{reader: reader, sender: sender} do
+      # `hide_notifications` is why the two questions are not the same one. A
+      # mute that left notifications on is somebody saying "off my timeline,
+      # still tell me", and read time has to honour that as write time does.
+      {:ok, _} = Relationships.mute(reader, sender, %{hide_notifications: false})
+
+      assert {[_id], 1, 1, 1, 1} = visible(reader)
+
+      :ok = Relationships.unmute(reader, sender)
+      {:ok, _} = Relationships.mute(reader, sender, %{hide_notifications: true})
+
+      assert visible(reader) == {[], 0, 0, 0, 0}
+    end
+
+    test "and that holds for one carrying a post, not only a bare favourite", %{
+      reader: reader,
+      sender: sender,
+      notification: notification
+    } do
+      # The half that made the rule easy to get wrong: the sender is asked
+      # about on every notification, the post only on the ones that have one.
+      # Filtering the post with the timeline's rule instead of this one hid a
+      # mention while leaving the favourite beside it, from the same person.
+      status = status_fixture(%{account_id: sender.id})
+      {:ok, mention} = Notifications.notify(reader, sender, "mention", status_id: status.id)
+
+      {:ok, _} = Relationships.mute(reader, sender, %{hide_notifications: false})
+
+      assert Enum.sort(elem(visible(reader), 0)) == Enum.sort([notification.id, mention.id])
+    end
+
+    test "a post the reader may no longer read takes its notification with it", %{
+      reader: reader,
+      sender: sender
+    } do
+      author = account_fixture()
+      status = status_fixture(%{account_id: author.id})
+      {:ok, mention} = Notifications.notify(reader, sender, "mention", status_id: status.id)
+
+      assert mention.id in elem(visible(reader), 0)
+
+      {:ok, _} = Relationships.block(author, reader)
+
+      refute mention.id in elem(visible(reader), 0)
+    end
+
+    test "including one carried inside somebody else's boost", %{
+      reader: reader,
+      sender: sender
+    } do
+      # The third gap: the check asked about the sender and never about whose
+      # words the post actually holds. A boost is somebody passing them along.
+      author = account_fixture()
+      original = status_fixture(%{account_id: author.id})
+      {:ok, boost} = Abuuba.Statuses.boost(sender, original)
+
+      {:ok, mention} = Notifications.notify(reader, sender, "mention", status_id: boost.id)
+
+      assert mention.id in elem(visible(reader), 0)
+
+      {:ok, _} = Relationships.block(reader, author)
+
+      refute mention.id in elem(visible(reader), 0),
+             "a third party passing the words along does not undo the block"
+    end
+  end
+
   describe "grouping" do
     test "puts everybody boosting one post on one line", %{reader: reader} do
       status = status_fixture(%{account_id: reader.id})
