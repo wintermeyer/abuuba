@@ -30,6 +30,7 @@ defmodule AbuubaWeb.ActivityPubController do
   alias Abuuba.Federation.Quotes
   alias Abuuba.Federation.Serializer
   alias Abuuba.Federation.URIs
+  alias Abuuba.Relationships
   alias Abuuba.Relationships.Follow
   alias Abuuba.Repo
   alias Abuuba.Stats
@@ -523,24 +524,30 @@ defmodule AbuubaWeb.ActivityPubController do
   # both shapes arrive here.
   defp collection(conn, params, which) do
     case author(params) do
-      nil ->
-        not_found(conn)
+      nil -> not_found(conn)
+      account -> serve_collection(conn, params, which, account)
+    end
+  end
 
-      %Account{hide_collections: true} = account ->
-        # Empty, not forbidden. A 403 would tell a stranger there is something
-        # here worth hiding, and the point of hiding is that nobody learns
-        # anything at all.
-        conn
-        |> put_resp_content_type(@content_type)
-        |> json(Actor.hidden_collection("#{Actor.id(account)}/#{which}"))
+  # `nil` for the viewer: a peer fetching a document is nobody in particular,
+  # so this asks the setting and stops there, which is the answer this
+  # endpoint has always given.
+  defp serve_collection(conn, params, which, account) do
+    collection_id = "#{Actor.id(account)}/#{which}"
 
-      account ->
-        collection_id = "#{Actor.id(account)}/#{which}"
-        total = follow_count(account, which)
+    if Relationships.collections_visible?(account, nil) do
+      total = follow_count(account, which)
 
-        respond_collection(conn, collection_id, total, params, fn page ->
-          account |> follow_page(which, page) |> Enum.map(&actor_uri_for/1)
-        end)
+      respond_collection(conn, collection_id, total, params, fn page ->
+        account |> follow_page(which, page) |> Enum.map(&actor_uri_for/1)
+      end)
+    else
+      # Empty, not forbidden. A 403 would tell a stranger there is something
+      # here worth hiding, and the point of hiding is that nobody learns
+      # anything at all.
+      conn
+      |> put_resp_content_type(@content_type)
+      |> json(Actor.hidden_collection(collection_id))
     end
   end
 

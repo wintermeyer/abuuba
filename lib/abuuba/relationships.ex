@@ -569,6 +569,33 @@ defmodule Abuuba.Relationships do
   @spec blocking?(Account.t() | integer(), Account.t() | integer()) :: boolean()
   def blocking?(blocker, target), do: get_edge(Block, blocker, target) != nil
 
+  @doc """
+  Whether `viewer` may see who `subject` follows and who follows them.
+
+  Three questions in one order. Your own lists are always yours to see, and
+  the setting outranks everything after it -- `hide_collections` is somebody
+  saying "do not show who I know", and a reader they have not blocked is no
+  more entitled than one they have. Then a block: a profile that shows the
+  person it blocked who its followers are has not blocked them, and the list
+  is the part they came for.
+
+  Here rather than at each surface because it was written four times in four
+  shapes: a function head in the REST controller, a `cond` with two private
+  helpers in the profile page, a single pattern match in the ActivityPub
+  controller, and a fourth spelling guarding the featured strip. The tell that
+  nobody could reuse it is that two of the comments each said the *other*
+  surfaces already honoured the setting.
+
+  `nil` for a reader with no account, and for the federation side, whose
+  documented answer to a hidden collection is an empty one rather than a
+  refusal.
+  """
+  @spec collections_visible?(Account.t(), Account.t() | nil) :: boolean()
+  def collections_visible?(%Account{id: id}, %Account{id: id}), do: true
+  def collections_visible?(%Account{hide_collections: true}, _viewer), do: false
+  def collections_visible?(_subject, nil), do: true
+  def collections_visible?(subject, viewer), do: not blocking?(subject, viewer)
+
   ## Muting
 
   @doc """
