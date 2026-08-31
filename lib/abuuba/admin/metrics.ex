@@ -77,7 +77,7 @@ defmodule Abuuba.Admin.Metrics do
     with :ok <- known(keys, @measures) do
       days = days_between(from, to)
 
-      {:ok, Enum.map(keys, &%{key: &1, total: total(&1, days), data: series(&1, days)})}
+      {:ok, Enum.map(keys, &measured(&1, days))}
     end
   end
 
@@ -107,6 +107,10 @@ defmodule Abuuba.Admin.Metrics do
 
     Enum.map(starts, fn start ->
       cohort_ids = joined_in(start, cohort_end(start, frequency))
+      # One query for the whole row rather than one per cell. A cohort's
+      # people either posted in a later period or they did not, and asking
+      # that period by period made the chart cost the square of its own width.
+      posted = periods_posted_in(cohort_ids, starts, frequency)
 
       %{
         period: start,
@@ -115,7 +119,7 @@ defmodule Abuuba.Admin.Metrics do
           Enum.map(Enum.with_index(starts), fn {later, index} ->
             %{
               date: later,
-              rate: rate(cohort_ids, later, cohort_end(later, frequency)),
+              rate: rate(cohort_ids, Map.get(posted, later, 0)),
               value: index
             }
           end)
@@ -138,62 +142,93 @@ defmodule Abuuba.Admin.Metrics do
     if from == [], do: [], else: from
   end
 
-  defp series(key, days), do: Enum.map(days, &%{date: &1, value: to_string(count(key, &1))})
+  # One grouped query per key rather than one per key per day. Six keys over a
+  # month came to 434 queries -- `total/2` and `series/2` each asked the same
+  # thirty-one questions, and `"interactions"` asked two of its own -- with
+  # every one of them a sequential scan, because a date predicate written as
+  # `?::date == day` cannot use an index on the column.
+  #
+  # The total is the sum of the series rather than a second pass: it was
+  # always going to be, and asking twice is how it stopped being obvious.
+  defp measured(key, []), do: %{key: key, total: "0", data: []}
 
-  defp total(key, days), do: days |> Enum.map(&count(key, &1)) |> Enum.sum() |> to_string()
+  defp measured(key, days) do
+    counts = per_day(key, List.first(days), List.last(days))
+    data = Enum.map(days, &%{date: &1, value: to_string(Map.get(counts, &1, 0))})
+    total = counts |> Map.values() |> Enum.sum()
+
+    %{key: key, total: to_string(total), data: data}
+  end
 
   # Somebody who posted that day. The reference implementation counts logins;
   # this server does not record one per day, and "wrote something" is a
   # stricter and more honest reading of "active".
-  defp count("active_users", day) do
+  defp per_day("active_users", from, to) do
     Status
     |> where([s], s.local and is_nil(s.deleted_at))
-    |> on_day(day)
-    |> distinct(true)
-    |> select([s], s.account_id)
-    |> subquery()
-    |> Repo.aggregate(:count)
+    |> within_days(from, to)
+    |> group_by([s], fragment("?::date", s.inserted_at))
+    |> select([s], {fragment("?::date", s.inserted_at), count(s.account_id, :distinct)})
+    |> Repo.all()
+    |> Map.new()
   end
 
-  defp count("new_users", day), do: User |> on_day(day) |> Repo.aggregate(:count)
+  defp per_day("new_users", from, to), do: counted_by_day(User, from, to)
 
-  defp count(key, day) when key in ["new_statuses", "instance_statuses"] do
+  defp per_day(key, from, to) when key in ["new_statuses", "instance_statuses"] do
     Status
     |> where([s], s.local and is_nil(s.deleted_at))
-    |> on_day(day)
-    |> Repo.aggregate(:count)
+    |> counted_by_day(from, to)
   end
 
   # Favourites and boosts together: what a reader did with somebody else's
   # post, which is what the chart is about.
-  defp count("interactions", day) do
+  defp per_day("interactions", from, to) do
     boosts =
       Status
       |> where([s], not is_nil(s.reblog_of_id))
-      |> on_day(day)
-      |> Repo.aggregate(:count)
+      |> counted_by_day(from, to)
 
-    favourites = from(f in "favourites") |> on_day(day) |> Repo.aggregate(:count)
+    favourites = counted_by_day(from(f in "favourites"), from, to)
 
-    boosts + favourites
+    Map.merge(boosts, favourites, fn _day, a, b -> a + b end)
   end
 
-  defp count("opened_reports", day), do: Report |> on_day(day) |> Repo.aggregate(:count)
+  defp per_day("opened_reports", from, to), do: counted_by_day(Report, from, to)
 
-  defp count("resolved_reports", day) do
+  defp per_day("resolved_reports", from, to) do
     Report
     |> where([r], not is_nil(r.action_taken_at))
-    |> where([r], fragment("?::date", r.action_taken_at) == ^day)
-    |> Repo.aggregate(:count)
+    |> where([r], r.action_taken_at >= ^start_of(from) and r.action_taken_at < ^after_end(to))
+    |> group_by([r], fragment("?::date", r.action_taken_at))
+    |> select([r], {fragment("?::date", r.action_taken_at), count()})
+    |> Repo.all()
+    |> Map.new()
   end
 
-  defp count("instance_accounts", day), do: Account |> on_day(day) |> Repo.aggregate(:count)
+  defp per_day("instance_accounts", from, to), do: counted_by_day(Account, from, to)
 
   # Named in the moduledoc: nothing here records a peer's version, so the
   # honest answer is none rather than a number nobody can act on.
-  defp count(_key, _day), do: 0
+  defp per_day(_key, _from, _to), do: %{}
 
-  defp on_day(query, day), do: where(query, [r], fragment("?::date", r.inserted_at) == ^day)
+  defp counted_by_day(query, from, to) do
+    query
+    |> within_days(from, to)
+    |> group_by([r], fragment("?::date", r.inserted_at))
+    |> select([r], {fragment("?::date", r.inserted_at), count()})
+    |> Repo.all()
+    |> Map.new()
+  end
+
+  # Half-open and on the bare column, so an index on `inserted_at` applies.
+  # `?::date == day` is a function of the column and cannot use one.
+  defp within_days(query, from, to) do
+    where(query, [r], r.inserted_at >= ^start_of(from) and r.inserted_at < ^after_end(to))
+  end
+
+  defp start_of(date), do: DateTime.new!(date, ~T[00:00:00], "Etc/UTC")
+  defp after_end(date), do: date |> Date.add(1) |> start_of()
 
   ## Dimensions
 
@@ -258,34 +293,68 @@ defmodule Abuuba.Admin.Metrics do
     |> Enum.take(24)
   end
 
+  # A week is what the dashboard asks for and there was no clause for it, so it
+  # fell through to here and got eighty-five one-day cohorts labelled as weeks
+  # -- wrong on the chart before it was slow underneath it.
+  defp cohort_starts(from, to, "week") do
+    from
+    |> Date.beginning_of_week()
+    |> Stream.iterate(&Date.add(&1, 7))
+    |> Enum.take_while(&(Date.compare(&1, to) != :gt))
+    |> Enum.take(52)
+  end
+
   defp cohort_starts(from, to, _frequency) do
     Date.range(from, to) |> Enum.take(@max_days)
   end
 
   defp cohort_end(start, "month"), do: Date.end_of_month(start)
+  defp cohort_end(start, "week"), do: Date.add(start, 6)
   defp cohort_end(start, _frequency), do: start
 
   defp joined_in(from, to) do
     User
-    |> where([u], fragment("?::date", u.inserted_at) >= ^from)
-    |> where([u], fragment("?::date", u.inserted_at) <= ^to)
+    |> within_days(from, to)
     |> select([u], u.account_id)
     |> Repo.all()
   end
 
-  defp rate([], _from, _to), do: "0.0"
+  # How many of this cohort posted in each of the periods, in one query. The
+  # bucket is worked out in SQL from the first period's start, so a row is
+  # counted against the period it falls in without asking about each in turn.
+  defp periods_posted_in([], _starts, _frequency), do: %{}
+  defp periods_posted_in(_ids, [], _frequency), do: %{}
 
-  defp rate(account_ids, from, to) do
-    still_here =
-      Status
-      |> where([s], s.account_id in ^account_ids and is_nil(s.deleted_at))
-      |> where([s], fragment("?::date", s.inserted_at) >= ^from)
-      |> where([s], fragment("?::date", s.inserted_at) <= ^to)
-      |> distinct(true)
-      |> select([s], s.account_id)
-      |> subquery()
-      |> Repo.aggregate(:count)
+  defp periods_posted_in(account_ids, starts, frequency) do
+    last_end = starts |> List.last() |> cohort_end(frequency)
 
+    # Who posted on which day, once each. Bucketing in Elixir rather than in
+    # SQL because "still here" is people and not posts: somebody who wrote
+    # three times in a week is one person, and a per-day count cannot be added
+    # up into a per-week one without turning them into three.
+    Status
+    |> where([s], s.account_id in ^account_ids and is_nil(s.deleted_at))
+    |> within_days(List.first(starts), last_end)
+    |> distinct(true)
+    |> select([s], {s.account_id, fragment("?::date", s.inserted_at)})
+    |> Repo.all()
+    |> Enum.group_by(fn {_id, day} -> period_of(day, starts, frequency) end, &elem(&1, 0))
+    |> Enum.flat_map(fn
+      {nil, _ids} -> []
+      {start, ids} -> [{start, ids |> Enum.uniq() |> length()}]
+    end)
+    |> Map.new()
+  end
+
+  defp period_of(day, starts, frequency) do
+    Enum.find(starts, fn start ->
+      Date.compare(day, start) != :lt and Date.compare(day, cohort_end(start, frequency)) != :gt
+    end)
+  end
+
+  defp rate([], _still_here), do: "0.0"
+
+  defp rate(account_ids, still_here) do
     Float.to_string(Float.round(still_here / length(account_ids), 4))
   end
 end
