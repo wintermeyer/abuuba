@@ -41,7 +41,6 @@ defmodule Abuuba.Trends do
   import Ecto.Query
 
   alias Abuuba.Accounts.Account
-  alias Abuuba.Accounts.User
   alias Abuuba.Federation.InstanceActor
   alias Abuuba.Moderation.AuditLog
   alias Abuuba.Notifications
@@ -872,18 +871,17 @@ defmodule Abuuba.Trends do
   # been asked about.
   defp mark_requested("status", _id, _now), do: false
 
+  # The join already carries the permissions, so `Roles.allows?/2` answers from
+  # the mask rather than reading each user row back to ask the same thing.
   defp reviewers do
     from(u in "users",
       join: r in "user_roles",
       on: r.id == u.role_id,
-      select: u.account_id
+      select: {u.account_id, r.permissions}
     )
     |> Repo.all()
-    |> Enum.filter(fn account_id ->
-      case Repo.get_by(User, account_id: account_id) do
-        nil -> false
-        user -> Roles.can?(user, "manage_taxonomies")
-      end
+    |> Enum.flat_map(fn {account_id, held} ->
+      if Roles.allows?(held, "manage_taxonomies"), do: [account_id], else: []
     end)
   end
 

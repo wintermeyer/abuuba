@@ -600,10 +600,23 @@ defmodule Abuuba.Moderation.Domains do
   # other block still covers. Asked per account rather than per domain, because
   # an account on `ok.bad.example` may be covered by a wider block on
   # `bad.example` that has not moved.
+  # Two queries for the whole set rather than two per account. Lifting a block
+  # on a busy server walks every account under it, and each one was asking what
+  # else covers its domain and what a moderator had decided about it on its
+  # own -- the same two questions, thousands of times, with only a handful of
+  # distinct answers between them.
   defp lift_beyond(domain, severity) do
-    for account <- domain |> accounts_under() |> Repo.all(),
-        effective = severity_for_account(account, domain, severity),
-        changes = lifted_fields(effective, standing_action(account)),
+    accounts = domain |> accounts_under() |> Repo.all()
+    covering = strongest_other_block(accounts, domain)
+    standing = standing_actions(Enum.map(accounts, & &1.id))
+
+    for account <- accounts,
+        effective =
+          Enum.max_by(
+            [severity, Map.get(covering, account.domain, "noop")],
+            &DomainBlock.rank/1
+          ),
+        changes = lifted_fields(effective, Map.get(standing, account.id, "noop")),
         changes != [] do
       Accounts.update_moderation(account, Map.new(changes))
     end
@@ -611,34 +624,54 @@ defmodule Abuuba.Moderation.Domains do
     :ok
   end
 
-  # What a moderator decided about this one account, apart from any domain
-  # block. Lifting the wider decision must not quietly undo the narrower one
-  # nobody revisited.
-  defp standing_action(%Account{id: id}) do
-    Strike
-    |> where([s], s.target_account_id == ^id and is_nil(s.overruled_at))
-    |> where([s], s.action in ["silence", "suspend"])
-    |> select([s], s.action)
-    |> Repo.all()
-    |> Enum.max_by(&DomainBlock.rank/1, fn -> "noop" end)
+  # What still covers each domain in the set, apart from the one being changed.
+  # Keyed by the account's domain, of which there are usually one or two under
+  # a block however many accounts there are.
+  defp strongest_other_block(accounts, changed_domain) do
+    domains = accounts |> Enum.map(& &1.domain) |> Enum.uniq()
+
+    stored =
+      domains
+      |> Enum.flat_map(&candidates/1)
+      |> Enum.uniq()
+      |> Enum.reject(&(&1 == changed_domain))
+      |> stored_severities()
+
+    Map.new(domains, fn domain ->
+      strongest =
+        domain
+        |> candidates()
+        |> Enum.reject(&(&1 == changed_domain))
+        |> Enum.flat_map(&List.wrap(Map.get(stored, &1)))
+        |> Enum.max_by(&DomainBlock.rank/1, fn -> "noop" end)
+
+      {domain, strongest}
+    end)
   end
 
-  # The severity that still applies to one account once the block being changed
-  # carries `severity`: the strongest of it and anything else covering them.
-  defp severity_for_account(%Account{domain: account_domain}, changed_domain, severity) do
-    others =
-      account_domain
-      |> candidates()
-      |> Enum.reject(&(&1 == changed_domain))
+  defp stored_severities([]), do: %{}
 
-    strongest =
-      DomainBlock
-      |> where([b], b.domain in ^others)
-      |> select([b], b.severity)
-      |> Repo.all()
-      |> Enum.max_by(&DomainBlock.rank/1, fn -> "noop" end)
+  defp stored_severities(domains) do
+    DomainBlock
+    |> where([b], b.domain in ^domains)
+    |> select([b], {b.domain, b.severity})
+    |> Repo.all()
+    |> Map.new()
+  end
 
-    Enum.max_by([severity, strongest], &DomainBlock.rank/1)
+  # What a moderator decided about each account, apart from any domain block.
+  # Lifting the wider decision must not quietly undo the narrower one nobody
+  # revisited.
+  defp standing_actions([]), do: %{}
+
+  defp standing_actions(account_ids) do
+    Strike
+    |> where([s], s.target_account_id in ^account_ids and is_nil(s.overruled_at))
+    |> where([s], s.action in ["silence", "suspend"])
+    |> select([s], {s.target_account_id, s.action})
+    |> Repo.all()
+    |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+    |> Map.new(fn {id, actions} -> {id, Enum.max_by(actions, &DomainBlock.rank/1)} end)
   end
 
   # The strongest of what the domain still says and what was decided about this

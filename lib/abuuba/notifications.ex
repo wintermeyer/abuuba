@@ -749,13 +749,36 @@ defmodule Abuuba.Notifications do
   def get_request(_account_id, nil), do: nil
 
   def get_request(account_id, request_id) do
-    # Not one that has been put away. The list stops showing a dismissed
-    # request, and an id that still answers would be the same request coming
-    # back for a client that kept it.
-    Request
-    |> where([r], r.id == ^request_id and r.account_id == ^account_id)
-    |> where([r], is_nil(r.dismissed_at))
-    |> Repo.one()
+    account_id |> get_requests([request_id]) |> List.first()
+  end
+
+  @doc """
+  Several of them at once, in the order the ids were given.
+
+  The bulk accept and dismiss endpoints take a list, and asked one id at a
+  time. Same scope as `get_request/2`, which is now one call into this.
+  """
+  @spec get_requests(Account.t() | integer(), [integer() | nil]) :: [Request.t()]
+  def get_requests(%Account{id: id}, request_ids), do: get_requests(id, request_ids)
+
+  def get_requests(account_id, request_ids) do
+    case Enum.reject(request_ids, &is_nil/1) do
+      [] ->
+        []
+
+      ids ->
+        # Not one that has been put away. The list stops showing a dismissed
+        # request, and an id that still answers would be the same request
+        # coming back for a client that kept it.
+        found =
+          Request
+          |> where([r], r.id in ^ids and r.account_id == ^account_id)
+          |> where([r], is_nil(r.dismissed_at))
+          |> Repo.all()
+          |> Map.new(&{&1.id, &1})
+
+        Enum.flat_map(ids, &List.wrap(Map.get(found, &1)))
+    end
   end
 
   @doc """

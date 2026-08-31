@@ -17,6 +17,7 @@ defmodule AbuubaWeb.API.NotificationController do
 
   use AbuubaWeb, :controller
 
+  alias Abuuba.Accounts
   alias Abuuba.Notifications
   alias Abuuba.Notifications.Notification
   alias Abuuba.Notifications.Policy
@@ -162,13 +163,17 @@ defmodule AbuubaWeb.API.NotificationController do
   def group_accounts(conn, %{"group_key" => key}) do
     account = current_account(conn)
 
-    accounts =
+    ids =
       account
       |> Notifications.group(key)
       |> Enum.map(& &1.from_account_id)
       |> Enum.uniq()
-      |> Enum.map(&Abuuba.Accounts.get_account/1)
-      |> Enum.reject(&is_nil/1)
+
+    # One query rather than one per sender. A group is up to a hundred people,
+    # and `Accounts.get_accounts/1` is the batch that answers them all --
+    # keyed by id, so the group's own order is what survives.
+    found = Accounts.get_accounts(ids)
+    accounts = Enum.flat_map(ids, &List.wrap(Map.get(found, &1)))
 
     json(conn, Entities.accounts(accounts, account))
   end
@@ -261,10 +266,8 @@ defmodule AbuubaWeb.API.NotificationController do
   defp answer_many(conn, params, action) do
     account = current_account(conn)
 
-    params
-    |> API.id_list("id")
-    |> Enum.map(&Notifications.get_request(account, &1))
-    |> Enum.reject(&is_nil/1)
+    account
+    |> Notifications.get_requests(API.id_list(params, "id"))
     |> Enum.map(& &1.from_account_id)
     |> Enum.reject(&is_nil/1)
     |> Enum.each(fn from_id ->

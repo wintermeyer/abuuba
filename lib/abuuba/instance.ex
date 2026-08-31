@@ -629,10 +629,17 @@ defmodule Abuuba.Instance do
   """
   @spec put_remote_emoji([map()] | nil, String.t() | nil) :: [String.t()]
   def put_remote_emoji(tags, domain) when is_list(tags) and is_binary(domain) and domain != "" do
-    tags
-    |> Enum.flat_map(&remote_emoji_attrs(&1, domain))
-    |> Enum.map(&upsert_remote_emoji/1)
-    |> Enum.reject(&is_nil/1)
+    stored =
+      tags
+      |> Enum.flat_map(&remote_emoji_attrs(&1, domain))
+      |> Enum.map(&upsert_remote_emoji/1)
+      |> Enum.reject(&is_nil/1)
+
+    # Only when something was written. `remote_emoji/1` is cached, and the post
+    # that brought a new shortcode is the one about to be rendered with it.
+    if stored != [], do: Cache.invalidate({:remote_emoji, domain})
+
+    stored
   end
 
   def put_remote_emoji(_tags, _domain), do: []
@@ -645,10 +652,18 @@ defmodule Abuuba.Instance do
   """
   @spec remote_emoji(String.t() | nil) :: %{String.t() => CustomEmoji.t()}
   def remote_emoji(domain) when is_binary(domain) and domain != "" do
-    CustomEmoji
-    |> where([e], e.domain == ^domain and not e.disabled)
-    |> Repo.all()
-    |> Map.new(&{&1.shortcode, &1})
+    # Read through the cache like `custom_emojis/0` beside it, and for the same
+    # reason: a page of posts from one server asks this once per render and the
+    # answer changes only when that server sends a shortcode nobody here had
+    # seen. `put_remote_emoji/2` is what forgets it when one does, so a new
+    # emoji shows up on the render that brought it rather than five minutes
+    # later.
+    Cache.fetch({:remote_emoji, domain}, :timer.minutes(5), fn ->
+      CustomEmoji
+      |> where([e], e.domain == ^domain and not e.disabled)
+      |> Repo.all()
+      |> Map.new(&{&1.shortcode, &1})
+    end)
   end
 
   def remote_emoji(_domain), do: %{}

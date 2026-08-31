@@ -82,6 +82,32 @@ defmodule Abuuba.RemoteEmojiTest do
     end
   end
 
+  describe "the lookup a render does" do
+    test "answers with what has just been stored for that server" do
+      # `remote_emoji/1` is cached in production like `custom_emojis/0` beside
+      # it, and `put_remote_emoji/2` forgets the entry when it writes -- the
+      # post that brings a shortcode nobody here had seen is the one about to
+      # be drawn with it.
+      #
+      # The cache is off in test by config, deliberately, so this pins the
+      # read and the write agreeing and *not* the invalidation. Nothing here
+      # can see that, which is the cache's stated contract.
+      domain = "emo#{System.unique_integer([:positive])}.example"
+
+      assert Instance.remote_emoji(domain) == %{}
+
+      assert ["party"] =
+               Instance.put_remote_emoji([tag(":party:", "https://#{domain}/p.png")], domain)
+
+      assert %{"party" => %CustomEmoji{}} = Instance.remote_emoji(domain)
+    end
+
+    test "and a domain nobody sent anything for is answered without a query" do
+      assert Instance.remote_emoji(nil) == %{}
+      assert Instance.remote_emoji("") == %{}
+    end
+  end
+
   describe "rendering" do
     setup do
       remote =

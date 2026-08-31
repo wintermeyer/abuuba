@@ -88,7 +88,19 @@ defmodule AbuubaWeb.FeedController do
   end
 
   defp xml(opts) do
-    items = opts |> Keyword.fetch!(:statuses) |> Enum.filter(&public?/1) |> Enum.map(&item/1)
+    statuses = opts |> Keyword.fetch!(:statuses) |> Enum.filter(&public?/1)
+
+    # One query for the authors rather than one per item. `status_uri/1` looks
+    # the author up to build the address, and a feed is twenty of them -- so
+    # a profile feed re-read the same account twenty times, and a hashtag feed
+    # read twenty different ones.
+    authors =
+      statuses
+      |> Enum.map(& &1.account_id)
+      |> Enum.uniq()
+      |> Accounts.get_accounts()
+
+    items = Enum.map(statuses, &item(&1, Map.get(authors, &1.account_id)))
 
     """
     <?xml version="1.0" encoding="UTF-8"?>
@@ -105,8 +117,8 @@ defmodule AbuubaWeb.FeedController do
     """
   end
 
-  defp item(status) do
-    uri = Serializer.status_uri(status)
+  defp item(status, author) do
+    uri = Serializer.status_uri(status, author)
 
     """
     <item>
