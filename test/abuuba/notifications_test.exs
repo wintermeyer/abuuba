@@ -116,6 +116,23 @@ defmodule Abuuba.NotificationsTest do
              "the list and every count that feeds a badge answer together"
     end
 
+    test "the requests inbox empties with the list, not separately", %{
+      reader: reader,
+      sender: sender
+    } do
+      # A request is a notification the policy set aside rather than a
+      # different kind of thing, and it kept the sender's name and its count
+      # after a block that emptied everything else.
+      {:ok, _} = Notifications.put_policy(reader, %{"for_not_following" => "filter"})
+      {:ok, _} = Notifications.notify(reader, sender, "mention")
+
+      assert [_request] = Notifications.requests(reader)
+
+      {:ok, _} = Relationships.block(reader, sender)
+
+      assert Notifications.requests(reader) == []
+    end
+
     test "and unblocking brings it back, nothing having been deleted", %{
       reader: reader,
       sender: sender
