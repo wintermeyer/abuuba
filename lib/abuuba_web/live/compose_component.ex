@@ -1176,10 +1176,19 @@ defmodule AbuubaWeb.ComposeComponent do
   defp write(socket) do
     account = socket.assigns.account
 
+    # One write, with the pictures and the poll in it. Three writes meant
+    # `create_status/2` announced the post on commit and the other two ran
+    # afterwards, so the streaming API, the live timeline and the outbox were
+    # each handed a photo post with no photographs -- and a poll the changeset
+    # refused left a published post behind that its author had been told was
+    # refused. `Abuuba.Statuses.create_status/2` grew these two options for
+    # exactly this, and the API has been calling it that way.
     with :ok <- ActionLimits.take(account, :statuses),
-         {:ok, status} <- Statuses.create_status(post_attrs(socket.assigns)),
-         :ok <- attach_poll(socket.assigns, status),
-         :ok <- attach_media(socket.assigns, status) do
+         {:ok, status} <-
+           Statuses.create_status(post_attrs(socket.assigns),
+             media_ids: socket.assigns.attachment_ids,
+             poll: poll_attrs(socket.assigns)
+           ) do
       send(self(), {:composed, status})
 
       socket |> forget_draft() |> reset() |> refresh_lists()
@@ -1220,32 +1229,18 @@ defmodule AbuubaWeb.ComposeComponent do
     }
   end
 
-  defp attach_media(%{attachment_ids: []}, _status), do: :ok
+  defp poll_attrs(%{poll?: false}), do: nil
 
-  defp attach_media(%{attachment_ids: ids}, status) do
-    case Media.attach(status, ids) do
-      {:ok, _status} -> :ok
-      {:error, reason} -> {:error, reason}
-    end
-  end
-
-  defp attach_poll(%{poll?: false}, _status), do: :ok
-
-  defp attach_poll(%{poll?: true, draft: draft}, status) do
+  defp poll_attrs(%{poll?: true, draft: draft}) do
     options = usable_options(draft)
 
-    attrs = %{
+    %{
       options: options,
       tallies: List.duplicate(0, length(options)),
       multiple: draft["poll_multiple"] == true,
       expires_at:
         DateTime.add(DateTime.utc_now(), Params.to_integer(draft["poll_expires_in"]), :second)
     }
-
-    case Statuses.create_poll(status, attrs) do
-      {:ok, _poll} -> :ok
-      {:error, changeset} -> {:error, changeset}
-    end
   end
 
   defp reset(socket) do
