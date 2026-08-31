@@ -17,7 +17,6 @@ defmodule Abuuba.Accounts.Registration do
   import Ecto.Changeset
 
   alias Abuuba.Accounts.Account
-  alias Abuuba.Accounts.User
   alias Abuuba.I18n
   alias Abuuba.Settings
 
@@ -206,14 +205,4 @@ defmodule Abuuba.Accounts.Registration do
   The password from a validated form.
   """
   def password(%Ecto.Changeset{} = changeset), do: get_field(changeset, :password)
-
-  @doc """
-  A changeset suitable for rendering the form, with the given errors applied.
-  """
-  def to_form_changeset(%Ecto.Changeset{} = changeset, action \\ :validate) do
-    Map.put(changeset, :action, action)
-  end
-
-  @doc false
-  def user_module, do: User
 end

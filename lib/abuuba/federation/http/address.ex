@@ -273,9 +273,4 @@ defmodule Abuuba.Federation.HTTP.Address do
   defp pack_v4({a, b, c, d}) do
     Bitwise.bsl(a, 24) + Bitwise.bsl(b, 16) + Bitwise.bsl(c, 8) + d
   end
-
-  @doc """
-  The ports a federation request may reach.
-  """
-  def allowed_ports, do: @allowed_ports
 end

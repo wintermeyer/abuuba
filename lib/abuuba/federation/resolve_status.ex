@@ -668,9 +668,4 @@ defmodule Abuuba.Federation.ResolveStatus do
   How deep a reply chain may be followed.
   """
   def max_thread_depth, do: @max_thread_depth
-
-  @doc """
-  How many new objects one request may cause us to fetch.
-  """
-  def max_discoveries_per_request, do: @max_discoveries_per_request
 end

@@ -108,11 +108,6 @@ defmodule Abuuba.Federation.Inbox do
   end
 
   @doc """
-  How long a delete is remembered.
-  """
-  def tombstone_ttl_seconds, do: @tombstone_ttl_seconds
-
-  @doc """
   Whether an activity concerns an actor or object we have never heard of and
   never will.
 

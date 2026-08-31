@@ -156,14 +156,4 @@ defmodule Abuuba.Media.Attachment do
   The types an attachment may have.
   """
   def types, do: Keyword.keys(@types)
-
-  @doc """
-  The states processing moves through.
-  """
-  def processing_states, do: Keyword.keys(@processing_states)
-
-  @doc """
-  The longest alt text that will be stored.
-  """
-  def description_max, do: @description_max
 end

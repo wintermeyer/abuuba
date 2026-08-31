@@ -514,9 +514,4 @@ defmodule Abuuba.Federation.ResolveActor do
 
     key
   end
-
-  @doc """
-  How old a stored actor may be before it is fetched again.
-  """
-  def refresh_after_seconds, do: @refresh_after_seconds
 end

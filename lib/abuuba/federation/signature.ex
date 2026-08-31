@@ -179,11 +179,6 @@ defmodule Abuuba.Federation.Signature do
   @spec actor_uri_from_key_id(String.t()) :: String.t()
   def actor_uri_from_key_id(key_id), do: key_id |> String.split("#") |> List.first()
 
-  @doc """
-  How old a signed request may be before it is refused.
-  """
-  def max_age_seconds, do: @max_age_seconds
-
   ## Signing string
 
   defp build_signing_string(names, request_target, headers) do

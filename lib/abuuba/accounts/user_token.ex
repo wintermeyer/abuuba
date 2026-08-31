@@ -168,16 +168,6 @@ defmodule Abuuba.Accounts.UserToken do
   end
 
   @doc """
-  How long a session lasts, in days.
-  """
-  def session_validity_days, do: @session_validity_days
-
-  @doc """
-  How long a confirmation link lasts, in days.
-  """
-  def confirm_validity_days, do: @confirm_validity_days
-
-  @doc """
   How long a password reset link lasts, in hours.
   """
   def reset_validity_hours, do: @reset_validity_hours
