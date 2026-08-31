@@ -181,17 +181,52 @@ defmodule Abuuba.Moderation.Domains do
   @spec block_for(String.t() | nil) :: DomainBlock.t() | nil
   def block_for(nil), do: nil
 
-  def block_for(domain) do
-    case candidates(domain) do
-      [] ->
-        nil
+  def block_for(domain), do: [domain] |> blocks_for() |> Map.get(domain)
 
-      candidates ->
-        DomainBlock
-        |> where([b], b.domain in ^candidates)
-        |> Repo.all()
-        |> Enum.max_by(&String.length(&1.domain), fn -> nil end)
-    end
+  @doc """
+  The block that applies to each of these domains, in one query.
+
+  A domain is covered by a block on any of its parents, so `mail.bad.example`
+  is blocked by a block on `bad.example` and the most specific of the two
+  wins. Anything reading `domain_blocks` has to expand a domain the same way
+  or it answers about a different question: the admin instances screen matched
+  the column exactly, and reported a subdomain as not blocked while
+  `suspended?/1` reported it suspended, from the same rows.
+
+  Batched because that screen holds a page of domains and one query beats
+  forty.
+  """
+  @spec blocks_for([String.t() | nil]) :: %{String.t() => DomainBlock.t()}
+  def blocks_for([]), do: %{}
+
+  def blocks_for(domains) do
+    stored = stored_blocks(Enum.flat_map(domains, &candidates/1))
+
+    domains
+    |> Enum.flat_map(fn domain ->
+      case most_specific(stored, candidates(domain)) do
+        nil -> []
+        block -> [{domain, block}]
+      end
+    end)
+    |> Map.new()
+  end
+
+  defp stored_blocks([]), do: %{}
+
+  defp stored_blocks(candidates) do
+    DomainBlock
+    |> where([b], b.domain in ^Enum.uniq(candidates))
+    |> Repo.all()
+    |> Map.new(&{&1.domain, &1})
+  end
+
+  # `bad.example` outranks `example`: a moderator who wrote both meant the
+  # narrower one to say what happens to that server.
+  defp most_specific(stored, candidates) do
+    candidates
+    |> Enum.flat_map(&List.wrap(Map.get(stored, &1)))
+    |> Enum.max_by(&String.length(&1.domain), fn -> nil end)
   end
 
   @doc """

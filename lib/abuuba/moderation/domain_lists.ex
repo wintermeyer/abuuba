@@ -25,6 +25,7 @@ defmodule Abuuba.Moderation.DomainLists do
   """
 
   alias Abuuba.Accounts.Account
+  alias Abuuba.Moderation.DomainBlock
   alias Abuuba.Moderation.Domains
 
   @doc """
@@ -84,8 +85,7 @@ defmodule Abuuba.Moderation.DomainLists do
     end)
   end
 
-  defp normalise(nil), do: ""
-  defp normalise(domain), do: domain |> String.trim() |> String.downcase()
+  defp normalise(domain), do: DomainBlock.normalise(domain)
 
   # An unknown severity is a silence rather than a suspension. A file from
   # somebody else must not be able to delete accounts here because a column

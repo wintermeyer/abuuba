@@ -29,6 +29,8 @@ defmodule Abuuba.Federation.Instances do
 
   alias Abuuba.Accounts.Account
   alias Abuuba.Federation.Availability
+  alias Abuuba.Moderation.DomainBlock
+  alias Abuuba.Moderation.Domains
   alias Abuuba.Repo
   alias Abuuba.Statuses.Status
 
@@ -166,15 +168,16 @@ defmodule Abuuba.Federation.Instances do
 
   # The severity where there is a block, so the screen can say "blocked" rather
   # than offering to block a server that already is.
-  defp blocks_for([]), do: %{}
-
+  #
+  # Through `Abuuba.Moderation.Domains`, which is what decides this everywhere
+  # else. Reading `domain_blocks` here with an exact match answered about a
+  # different question: a block on `bad.example` covers `mail.bad.example`, so
+  # this screen called a subdomain unblocked while `Domains.suspended?/1`
+  # called it suspended, from the same rows.
   defp blocks_for(domains) do
-    from(b in "domain_blocks",
-      where: b.domain in ^domains,
-      select: {b.domain, b.severity}
-    )
-    |> Repo.all()
-    |> Map.new()
+    domains
+    |> Domains.blocks_for()
+    |> Map.new(fn {domain, block} -> {domain, block.severity} end)
   end
 
   defp details_for([]), do: %{}
@@ -223,7 +226,10 @@ defmodule Abuuba.Federation.Instances do
     :ok
   end
 
-  defp normalise(domain), do: domain |> to_string() |> String.trim() |> String.downcase()
+  # One spelling of the key, and `DomainBlock.normalise/1` is it. This one
+  # kept a trailing dot, and `instance_availability` is keyed on the result --
+  # so `bad.example.` and `bad.example` were two rows for one host.
+  defp normalise(domain), do: DomainBlock.normalise(domain)
 
   defp normalise_note(nil), do: nil
 

@@ -159,6 +159,38 @@ defmodule AbuubaWeb.AdminInstancesTest do
       assert html =~ "Blocked"
       assert %{severity: "silence"} = Domains.block_for("remote.example")
     end
+
+    test "and a block on a parent domain is reported on the subdomain", %{conn: conn} do
+      # The screen read `domain_blocks` itself and matched the column exactly,
+      # so it offered to block a server that already was: `Domains.suspended?/1`
+      # said suspended and this said nothing, from the same row.
+      account_fixture(%{username: "sub", domain: "mail.bad.example"})
+      moderator = account_fixture()
+      {:ok, _} = Domains.block(moderator, %{"domain" => "bad.example", "severity" => "suspend"})
+
+      assert Domains.suspended?("mail.bad.example")
+
+      {:ok, _live, html} = live(conn, ~p"/admin/instances")
+
+      assert html =~ "mail.bad.example"
+
+      assert Map.has_key?(Domains.blocks_for(["mail.bad.example"]), "mail.bad.example"),
+             "the screen asks this, and it answered about a different question"
+    end
+
+    test "and the narrower block is the one that applies", %{conn: _conn} do
+      moderator = account_fixture()
+      {:ok, _} = Domains.block(moderator, %{"domain" => "bad.example", "severity" => "silence"})
+
+      {:ok, _} =
+        Domains.block(moderator, %{"domain" => "mail.bad.example", "severity" => "suspend"})
+
+      assert %{severity: "suspend"} =
+               Domains.blocks_for(["mail.bad.example"])["mail.bad.example"]
+
+      assert %{severity: "silence"} =
+               Domains.blocks_for(["other.bad.example"])["other.bad.example"]
+    end
   end
 
   describe "the audit log" do
