@@ -40,6 +40,7 @@ defmodule Abuuba.Trends do
 
   import Ecto.Query
 
+  alias Abuuba.Accounts
   alias Abuuba.Accounts.Account
   alias Abuuba.Federation.InstanceActor
   alias Abuuba.Moderation.AuditLog
@@ -499,9 +500,10 @@ defmodule Abuuba.Trends do
   @doc """
   Whether a post may contribute to trends at all.
 
-  Public, from somebody who asked to be findable, not sensitive, and not a
-  reply. A conversation is not a trend, and counting replies makes the loudest
-  argument on the server the thing everybody is shown.
+  Public, not sensitive, not a reply, and from an author
+  `Abuuba.Accounts.listable/1` will offer unasked. A conversation is not a
+  trend, and counting replies makes the loudest argument on the server the
+  thing everybody is shown.
   """
   @spec eligible?(Status.t()) :: boolean()
   def eligible?(%Status{} = status) do
@@ -515,14 +517,14 @@ defmodule Abuuba.Trends do
   def eligible?(_status), do: false
 
   defp author_eligible?(account_id) do
-    case Repo.get(Account, account_id) do
-      nil ->
-        false
-
-      account ->
-        account.discoverable and is_nil(account.silenced_at) and is_nil(account.suspended_at) and
-          account.trendable != false
-    end
+    from(a in Account, as: :account, where: a.id == ^account_id)
+    |> Accounts.listable()
+    # `trendable` is the moderator's separate, smaller "not in the trends" --
+    # and it is nullable, so the column being unset has to be spelled out. A
+    # bare `!= false` is NULL for every account nobody has ever touched, which
+    # in SQL is not true and would empty the trends.
+    |> where([account: a], is_nil(a.trendable) or a.trendable)
+    |> Repo.exists?()
   end
 
   ## Counting, inside

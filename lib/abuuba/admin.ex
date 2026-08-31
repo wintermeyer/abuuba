@@ -697,7 +697,10 @@ defmodule Abuuba.Admin do
 
   Ranked the way the suggestions themselves are — by how many people here
   already follow them — because a screen for tuning suggestions that showed a
-  different order from the suggestions would be tuning something else.
+  different order from the suggestions would be tuning something else. Who is
+  eligible at all comes from the same `Abuuba.Accounts.listable/1` they do,
+  which this claimed and did not do: it went on offering an account that had
+  migrated away long after the suggestions stopped.
   """
   @spec suggestion_candidates(pos_integer()) :: [Account.t()]
   def suggestion_candidates(limit \\ 50) do
@@ -706,13 +709,14 @@ defmodule Abuuba.Admin do
     popular =
       from(f in Follow,
         join: a in Account,
+        as: :account,
         on: a.id == f.target_account_id,
-        where: a.discoverable and is_nil(a.suspended_at) and is_nil(a.silenced_at),
         group_by: a.id,
         order_by: [desc: count(f.account_id), desc: a.id],
         limit: ^limit,
         select: a
       )
+      |> Accounts.listable()
       |> Repo.all()
 
     # The suppressed ones are shown too, and first: an admin looking at this

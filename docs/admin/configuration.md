@@ -263,7 +263,8 @@ rather than a default.
 ### Follow suggestions
 
 **Administration → Suggestions** lists who this server puts in front of a
-newcomer, ranked the way the suggestions themselves are. Taking somebody out is
+newcomer, drawn from the same pool as the suggestions and ranked the same way,
+so what you see here is what a newcomer could be shown. Taking somebody out is
 not a block and not a silence: their account carries on exactly as before and
 nobody is told. It is for the account you would rather not lead with — a bot
 with a thousand followers, somebody who asked not to be suggested — where a

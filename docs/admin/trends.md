@@ -60,7 +60,10 @@ working day. One half-life for all three would be wrong twice.
 ## What is eligible
 
 A post contributes only if it is public, not a reply, not marked sensitive, and
-its author asked to be discoverable and is neither silenced nor suspended.
+its author asked to be discoverable and is neither silenced, suspended, nor
+migrated to another account. That last list is the same one the public
+directory and the follow suggestions use, so an account you take out of one is
+out of all three.
 Replies are left out deliberately: a conversation is not a trend, and counting
 replies makes the loudest argument on the server the thing everybody is shown.
 
