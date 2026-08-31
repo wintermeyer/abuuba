@@ -6,6 +6,7 @@ defmodule Abuuba.WebPushTest do
 
   alias Abuuba.Notifications
   alias Abuuba.OAuth
+  alias Abuuba.Relationships
   alias Abuuba.WebPush
   alias Abuuba.WebPush.Encryption
   alias Abuuba.WebPush.Subscription
@@ -392,6 +393,34 @@ defmodule Abuuba.WebPushTest do
       payload = WebPush.payload(notification, subscription, "token")
 
       assert String.length(payload["body"]) == WebPush.body_limit()
+    end
+
+    test "carries no words from a post the reader may no longer read", %{
+      account: account,
+      subscription: subscription
+    } do
+      # A push is the one copy that arrives somewhere the reader cannot be
+      # shown a filtered list, so it is the last place a bare `Repo.get` on
+      # `statuses` belongs -- whatever is in the payload is on a lock screen.
+      sender = account_fixture()
+      status = status_fixture(%{account_id: sender.id, text: "words from a blocker"})
+      {:ok, notification} = Notifications.notify(account, sender, "mention", status_id: status.id)
+
+      assert WebPush.payload(notification, subscription, "t")["body"] == "words from a blocker"
+
+      {:ok, _} = Relationships.block(sender, account)
+
+      assert WebPush.payload(notification, subscription, "t")["body"] == ""
+    end
+
+    test "nor from one that has been deleted", %{account: account, subscription: subscription} do
+      sender = account_fixture()
+      status = status_fixture(%{account_id: sender.id, text: "taken back"})
+      {:ok, notification} = Notifications.notify(account, sender, "mention", status_id: status.id)
+
+      {:ok, _} = Abuuba.Statuses.delete_status(status)
+
+      assert WebPush.payload(notification, subscription, "t")["body"] == ""
     end
 
     test "falls back to a username where somebody set no display name", %{
