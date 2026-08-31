@@ -150,9 +150,14 @@ defmodule Abuuba.BroadcastTest do
       {:ok, _} = Statuses.boost(other, status)
 
       {:ok, counter} = Agent.start_link(fn -> 0 end)
+      handler = "reader-state-#{System.unique_integer([:positive])}"
+
+      # Detached when the test ends, or it keeps firing for the rest of the
+      # suite and dies against an agent that is gone.
+      on_exit(fn -> :telemetry.detach(handler) end)
 
       :telemetry.attach(
-        "reader-state-#{System.unique_integer([:positive])}",
+        handler,
         [:abuuba, :repo, :query],
         fn _event, _measure, _meta, _config -> Agent.update(counter, &(&1 + 1)) end,
         nil

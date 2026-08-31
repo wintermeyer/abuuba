@@ -49,6 +49,7 @@ defmodule AbuubaWeb.ComposeComponent do
   alias Abuuba.Accounts.PostingDefaults
   alias Abuuba.Accounts.Preferences
   alias Abuuba.ActionLimits
+  alias Abuuba.Federation.URIs
   alias Abuuba.Instance
   alias Abuuba.Media
   alias Abuuba.Media.Attachment
@@ -1431,20 +1432,67 @@ defmodule AbuubaWeb.ComposeComponent do
 
   # Everything the box shows about itself is computed from the draft rather
   # than tracked alongside it, so there is no second copy to fall behind.
+  # Split by what each part actually depends on, because these do not all
+  # change together. `assets/js/compose.js` pushes `caret` on input, keyup and
+  # click, undebounced -- and every one of those used to re-resolve each
+  # `@mention` against the database, ask for the parent author again, and run a
+  # search if the caret happened to sit in a word. A reply opens with an
+  # `@alice @bob ` prefix already in it, so moving the cursor with an arrow key
+  # cost three queries and rendering the whole preview.
   defp derive(socket) do
     draft = socket.assigns.draft
-    {token, suggestions} = suggest(draft)
 
     socket
-    |> assign(
-      form: to_form(draft, as: :draft),
-      preview: Formatter.to_html(draft["text"]),
-      remaining: Instance.max_characters() - length_of(draft),
-      mentions: reply_chips(socket.assigns),
-      token: token,
-      suggestions: suggestions
-    )
+    |> assign(form: to_form(draft, as: :draft))
+    |> derive_from_text(draft)
+    |> derive_suggestions(draft)
   end
+
+  # The preview, the counter and the reply chips: all of the text, none of the
+  # caret. The warning counts towards the length and the parent decides the
+  # chips, so both are part of what says this is unchanged.
+  defp derive_from_text(socket, draft) do
+    key = {draft["text"], warning(draft), reply_to_id(socket.assigns)}
+
+    if socket.assigns[:derived_from] == key do
+      socket
+    else
+      assign(socket,
+        derived_from: key,
+        preview: Formatter.to_html(draft["text"], accounts: mention_links(draft["text"])),
+        remaining: Instance.max_characters() - length_of(draft),
+        mentions: reply_chips(socket.assigns)
+      )
+    end
+  end
+
+  # One query for every handle in the text rather than one each. `to_html/2`
+  # resolves them itself when it is not told, which is a lookup per mention on
+  # every render of a post being written.
+  defp mention_links(text) do
+    text
+    |> Formatter.mentions()
+    |> Accounts.lookup_many()
+    |> Map.new(fn {handle, account} -> {handle, URIs.profile_url(account)} end)
+  end
+
+  # These do move with the caret, which is the one thing that changes on its
+  # own -- but only into a different word, so the same word twice is the same
+  # offer.
+  defp derive_suggestions(socket, draft) do
+    key = {draft["text"], caret(draft)}
+
+    if socket.assigns[:suggested_for] == key do
+      socket
+    else
+      {token, suggestions} = suggest(draft)
+
+      assign(socket, suggested_for: key, token: token, suggestions: suggestions)
+    end
+  end
+
+  defp reply_to_id(%{reply_to: %Status{id: id}}), do: id
+  defp reply_to_id(_assigns), do: nil
 
   # In the author's order, which lives in the component rather than in the
   # table: the table has no column for an order that only matters until the
