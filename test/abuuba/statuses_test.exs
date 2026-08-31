@@ -489,6 +489,21 @@ defmodule Abuuba.StatusesTest do
   end
 
   describe "the public timeline" do
+    test "min_id fills a gap forwards, newest first like every other page" do
+      author = account_fixture()
+      [first, second, third] = for _ <- 1..3, do: status_fixture(%{account_id: author.id})
+
+      # This query had `max_id` and `since_id` and no third branch, so a
+      # client filling a gap forwards was answered from the newest end and
+      # read the same page over and over. `min_id` takes the oldest side of
+      # the gap; the rows still arrive newest first, which is what a client
+      # renders.
+      assert Enum.map(Statuses.public_timeline(min_id: first.id, limit: 2), & &1.id) ==
+               [third.id, second.id]
+
+      assert Enum.map(Statuses.public_timeline(min_id: second.id), & &1.id) == [third.id]
+    end
+
     test "shows public posts newest first" do
       first = status_fixture()
       second = status_fixture()

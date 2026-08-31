@@ -283,30 +283,14 @@ defmodule Abuuba.Timelines do
     end
   end
 
+  # The precedence this used to argue for in a comment now lives in
+  # `Pagination.window/2`, which is where the disagreement was.
   defp paginate(query, page) do
-    # `since_id` yields to `min_id` when a client sends both, matching the
-    # reference implementation: `min_id` names the gap being filled, and a
-    # second lower bound would cut a hole in it.
-    since_id = if Map.get(page, :min_id), do: nil, else: Map.get(page, :since_id)
-
     query
-    |> maybe_before(Map.get(page, :max_id))
-    |> maybe_since(since_id)
-    |> maybe_after(Map.get(page, :min_id))
-    |> order_by([s], [{^Pagination.direction(page), s.id}])
-    |> limit(^Map.get(page, :limit, 20))
+    |> Pagination.window(page)
     |> Repo.all()
     |> Pagination.reading_order(page)
   end
-
-  defp maybe_before(query, nil), do: query
-  defp maybe_before(query, id), do: where(query, [s], s.id < ^id)
-
-  defp maybe_since(query, nil), do: query
-  defp maybe_since(query, id), do: where(query, [s], s.id > ^id)
-
-  defp maybe_after(query, nil), do: query
-  defp maybe_after(query, id), do: where(query, [s], s.id > ^id)
 
   @doc """
   What the people in one list said.

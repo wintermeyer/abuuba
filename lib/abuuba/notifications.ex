@@ -854,17 +854,13 @@ defmodule Abuuba.Notifications do
 
   defp paginate(query, page) do
     query
-    |> older_than(Map.get(page, :max_id))
-    |> newer_than(Map.get(page, :min_id) || Map.get(page, :since_id))
-    |> order_by([n], [{^Pagination.direction(page), n.id}])
-    |> limit(^Map.get(page, :limit, 40))
+    |> Pagination.window(Map.put_new(page, :limit, 40))
     |> Repo.all()
     |> Pagination.reading_order(page)
   end
 
-  defp older_than(query, nil), do: query
-  defp older_than(query, id), do: where(query, [n], n.id < ^id)
-
+  # Still here for the unread counts, which bound on an id a caller passed
+  # rather than on a page's cursors.
   defp newer_than(query, nil), do: query
   defp newer_than(query, id), do: where(query, [n], n.id > ^id)
 end

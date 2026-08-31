@@ -45,6 +45,18 @@ defmodule Abuuba.Pagination do
   Both bounds are exclusive, matching the reference implementation: a client
   that passes back the id it last saw must not receive it again, or it pages
   forever.
+
+  A client sending `min_id` and `since_id` together gets the `min_id`
+  behaviour and the other is ignored, which is what the reference does --
+  `Paginable.to_a_paginated_by_id` branches on `min_id` being present and
+  never reads `since_id` in that branch. `min_id` names the gap being filled
+  and a second lower bound would cut a hole in it.
+
+  This function used to resolve the pair the other way round while
+  `direction/1` two functions up flipped to `:asc` on `min_id`, so a client
+  sending both got an ascending page from a `since_id` bound -- neither of the
+  two behaviours it could have asked for. Three contexts had grown their own
+  copy with the right order, which is how the disagreement was found.
   """
   @spec window(Ecto.Queryable.t(), map()) :: Ecto.Query.t()
   def window(query, page) do
@@ -58,7 +70,7 @@ defmodule Abuuba.Pagination do
       end
     end)
     |> then(fn q ->
-      case Map.get(page, :since_id) || Map.get(page, :min_id) do
+      case Map.get(page, :min_id) || Map.get(page, :since_id) do
         nil -> q
         after_id -> where(q, [x], x.id > ^after_id)
       end
