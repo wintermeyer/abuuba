@@ -19,10 +19,9 @@ defmodule AbuubaWeb.API.StreamingController do
   alias Abuuba.Accounts
   alias Abuuba.OAuth
   alias Abuuba.OAuth.Scopes
-  alias Abuuba.Settings
   alias Abuuba.Streaming
   alias AbuubaWeb.Streaming.Filter
-  alias AbuubaWeb.Streaming.Payload
+  alias AbuubaWeb.Streaming.Subscription
 
   @heartbeat_ms 15_000
 
@@ -88,9 +87,9 @@ defmodule AbuubaWeb.API.StreamingController do
   def stream(conn, %{"stream" => stream} = params) do
     state = connect_state(conn, params)
 
-    case topic_for(stream, params, state) do
-      {:ok, topic} ->
-        if allowed?(state, stream) do
+    case Subscription.topic_for(stream, params, state) do
+      {:ok, name, topic} ->
+        if Subscription.allowed?(state, stream) do
           Streaming.subscribe(topic)
 
           # The token and the announcements, shared with the websocket so a
@@ -101,7 +100,7 @@ defmodule AbuubaWeb.API.StreamingController do
           |> put_resp_header("content-type", "text/event-stream")
           |> put_resp_header("cache-control", "no-cache")
           |> send_chunked(200)
-          |> loop(%{state | topics: MapSet.put(state.topics, {stream, topic})})
+          |> loop(%{state | topics: MapSet.put(state.topics, {name, topic})})
         else
           AbuubaWeb.API.error(conn, 401, "This method requires an authenticated user")
         end
@@ -161,55 +160,6 @@ defmodule AbuubaWeb.API.StreamingController do
         }
     end
   end
-
-  defp allowed?(state, stream) do
-    timelines_readable?(state, stream) and scope_allows?(state, stream)
-  end
-
-  defp scope_allows?(state, stream) do
-    case Payload.required_scope(stream) do
-      nil -> true
-      required -> state.account != nil and Scopes.covers_all?(state.scopes, [required])
-    end
-  end
-
-  # An admin who closes the timelines has said strangers do not read this
-  # server. The API refuses them and the front page refuses them; this is the
-  # third door, and it was answering. Matched on the name rather than on a
-  # list, so a public stream added later is covered without anybody
-  # remembering to add it here.
-  defp timelines_readable?(state, stream) do
-    if String.starts_with?(stream, "public") or String.starts_with?(stream, "hashtag") do
-      Settings.public_timelines_readable?(state.account)
-    else
-      true
-    end
-  end
-
-  defp topic_for("user", _params, %{account: nil}), do: :error
-  defp topic_for("user", _params, state), do: {:ok, Streaming.account_topic(state.account)}
-  defp topic_for("user:notification", _params, %{account: nil}), do: :error
-
-  defp topic_for("user:notification", _params, state),
-    do: {:ok, Streaming.account_topic(state.account)}
-
-  defp topic_for("direct", _params, %{account: nil}), do: :error
-  defp topic_for("direct", _params, state), do: {:ok, Streaming.account_topic(state.account)}
-  defp topic_for("public", _params, _state), do: {:ok, Streaming.public_topic()}
-  defp topic_for("public/local", _params, _state), do: {:ok, Streaming.public_topic(local: true)}
-
-  defp topic_for("public/remote", _params, _state),
-    do: {:ok, Streaming.public_topic(remote: true)}
-
-  defp topic_for("hashtag", params, _state) do
-    case params["tag"] do
-      tag when is_binary(tag) and tag != "" -> {:ok, Streaming.hashtag_topic(tag)}
-      _ -> :error
-    end
-  end
-
-  defp topic_for("hashtag/local", params, state), do: topic_for("hashtag", params, state)
-  defp topic_for(_stream, _params, _state), do: :error
 
   defp bearer(conn) do
     case get_req_header(conn, "authorization") do
