@@ -41,6 +41,12 @@ defmodule AbuubaWeb.NotificationsLive do
 
   @page_size 40
 
+  # Long enough that a burst arrives as one redraw, short enough that a single
+  # notification still feels immediate. Configurable because a test must not
+  # wait on a real clock: the test env sets it to zero, which still goes
+  # through the same flag and the same `:reload_notifications` message.
+  @coalesce_ms 300
+
   # The ones worth offering as a checkbox. The rest are rare enough that a list
   # of fourteen boxes would hide the four somebody actually wanted.
   @offered_types ~w(mention reblog follow follow_request favourite poll update quote status)
@@ -58,6 +64,7 @@ defmodule AbuubaWeb.NotificationsLive do
      |> assign(
        page_title: gettext("Notifications"),
        viewer: account,
+       reload_pending?: false,
        types: stored_types(socket.assigns.current_scope.user)
      )
      |> PostActions.attach(put_back: &put_status_back/2, remove: &drop_status/2)}
@@ -280,14 +287,41 @@ defmodule AbuubaWeb.NotificationsLive do
 
   def handle_event(_event, _params, socket), do: {:noreply, socket}
 
+  # Coalesced rather than reloaded per arrival. `Streaming.publish_notification/1`
+  # broadcasts once per row, and one thing happening is often several rows: the
+  # moduledoc's own example is twelve people boosting one post, which arrived
+  # as twelve reloads of seventeen queries each to end up drawing one group.
+  #
+  # The flag rather than the timer reference, because a second arrival while
+  # one is pending should join it rather than push it later -- a steady trickle
+  # would otherwise never redraw at all.
   @impl Phoenix.LiveView
   def handle_info({:streaming, "notification", _notification}, socket) do
-    {:noreply, load(socket)}
+    if socket.assigns[:reload_pending?] do
+      {:noreply, socket}
+    else
+      schedule_reload(coalesce_ms())
+
+      {:noreply, assign(socket, reload_pending?: true)}
+    end
+  end
+
+  def handle_info(:reload_notifications, socket) do
+    {:noreply, socket |> assign(reload_pending?: false) |> load()}
   end
 
   def handle_info(_message, socket), do: {:noreply, socket}
 
   ## Plumbing
+
+  defp coalesce_ms, do: Application.get_env(:abuuba, :notifications_coalesce_ms, @coalesce_ms)
+
+  # Straight to the mailbox where there is no window to wait for.
+  # `send_after/3` with a zero delay still goes through the timer, so the
+  # message can arrive after a render that was asked for later -- which passes
+  # when the test file runs alone and fails under a full suite.
+  defp schedule_reload(0), do: send(self(), :reload_notifications)
+  defp schedule_reload(ms), do: Process.send_after(self(), :reload_notifications, ms)
 
   defp load(socket) do
     account = socket.assigns.viewer
