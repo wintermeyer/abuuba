@@ -14,9 +14,11 @@ defmodule Abuuba.Accounts.Suggestions do
 
   ## Nobody appears who has not asked to be found
 
-  Only accounts marked discoverable, and never one that is suspended, blocked,
-  muted, already followed, or the reader themselves. A suggestion that names
-  somebody the reader has blocked is the server arguing with them.
+  `Abuuba.Accounts.listable/1` decides the first half -- discoverable, not
+  suspended, not limited, not migrated away -- and this list adds the reader's
+  own answers: never somebody blocked, muted, already followed, or the reader
+  themselves. A suggestion that names somebody the reader has blocked is the
+  server arguing with them.
 
   Blocks count in both directions, which they did not at first: an account that
   had blocked the reader was still being offered to them, and a block exists to
@@ -37,6 +39,7 @@ defmodule Abuuba.Accounts.Suggestions do
   # and a table for it would be four files to say "these few, not those".
   @suppressed_setting "suppressed_suggestions"
 
+  alias Abuuba.Accounts
   alias Abuuba.Accounts.Account
   alias Abuuba.Accounts.SuggestionDismissal
   alias Abuuba.Relationships.Block
@@ -62,14 +65,11 @@ defmodule Abuuba.Accounts.Suggestions do
 
     from(f in Follow,
       join: a in Account,
+      as: :account,
       on: a.id == f.target_account_id,
       where: f.account_id in subquery(mine),
       where: f.target_account_id != ^account_id,
       where: f.target_account_id not in subquery(mine),
-      where: a.discoverable and is_nil(a.suspended_at) and is_nil(a.silenced_at),
-      # Nobody who has migrated away: suggesting an account somebody left is
-      # suggesting one that will never post again.
-      where: is_nil(a.moved_to_account_id),
       where: f.target_account_id not in ^suppressed(),
       where: f.target_account_id not in subquery(dismissed(account_id)),
       where: f.target_account_id not in subquery(hidden(Block, account_id)),
@@ -85,6 +85,7 @@ defmodule Abuuba.Accounts.Suggestions do
       offset: ^offset,
       select: a
     )
+    |> Accounts.listable()
     |> Repo.all()
   end
 

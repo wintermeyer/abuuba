@@ -492,25 +492,55 @@ defmodule Abuuba.Accounts do
   end
 
   @doc """
+  Narrows a query to the accounts this server will put in front of somebody who
+  did not ask for them by name.
+
+  Four surfaces need that: the public directory below, follow suggestions, the
+  admin's list of who is most likely to be suggested, and whether a post may
+  feed the trends. Each used to spell the answer itself and no two agreed --
+  the admin list and the trends check both still offered an account that had
+  migrated away, and the admin's docstring claimed it matched the suggestions
+  it did not match.
+
+  Composed rather than complete: a surface with a rule of its own adds it on
+  top. The directory is local-only, because nobody on another server agreed to
+  appear in ours, and the trends honour `trendable`, which is a smaller thing
+  than limiting somebody.
+
+  Searching for an account is the fifth door and is deliberately not this one:
+  `Abuuba.Search.Postgres.accounts/3` drops the suspended and the moved-away and
+  keeps the rest, because somebody typing a name has asked for that account by
+  name. Being limited, or not discoverable, is about not being offered unasked.
+
+  Expects the account binding to be named `:account`, so it works on a query
+  rooted at `Account` and on one that reached it through a join.
+  """
+  @spec listable(Ecto.Queryable.t()) :: Ecto.Query.t()
+  def listable(query) do
+    where(
+      query,
+      [account: a],
+      # Limiting an account says it should not be put in front of people who
+      # did not ask for it, and each of the four is exactly that. Somebody who
+      # has moved is left out for a different reason: the listing should send
+      # people to the account that will answer, not to the one they left.
+      a.discoverable and is_nil(a.suspended_at) and is_nil(a.silenced_at) and
+        is_nil(a.moved_to_account_id)
+    )
+  end
+
+  @doc """
   Accounts a server is willing to list publicly.
 
-  Only accounts that asked to be discoverable, and only local ones: a directory
-  of everybody a server has ever heard of is a directory of the fediverse, not
-  of this instance, and nobody on another server agreed to appear in it.
+  `listable/1`, and only local ones: a directory of everybody a server has ever
+  heard of is a directory of the fediverse, not of this instance, and nobody on
+  another server agreed to appear in it.
   """
   @spec directory(keyword()) :: [Account.t()]
   def directory(opts \\ []) do
-    Account
-    |> where([a], is_nil(a.suspended_at) and a.discoverable)
-    # Limiting an account says it should not be put in front of people who did
-    # not ask for it, which is what a directory does. Suggestions, trends and
-    # the admin's popular list all left them out already; this was the one
-    # place that still offered them.
-    |> where([a], is_nil(a.silenced_at))
-    # And somebody who has moved: the listing should send people to the account
-    # that will answer, not to the one they left.
-    |> where([a], is_nil(a.moved_to_account_id))
-    |> where([a], is_nil(a.domain))
+    from(a in Account, as: :account)
+    |> listable()
+    |> where([account: a], is_nil(a.domain))
     |> directory_order(Keyword.get(opts, :order, "active"))
     |> offset(^Keyword.get(opts, :offset, 0))
     |> limit(^Keyword.get(opts, :limit, 40))
