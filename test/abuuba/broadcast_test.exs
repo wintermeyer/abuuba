@@ -136,6 +136,55 @@ defmodule Abuuba.BroadcastTest do
       assert mine["content"] == theirs["content"]
     end
 
+    test "in one query, however many readers and whichever marks they made", %{
+      status: status,
+      reader: reader
+    } do
+      # Five queries ran per socket per arriving post, so a post reaching a
+      # hundred sockets asked five hundred questions to fill in five booleans
+      # each. Counted rather than asserted about, because this is the whole
+      # point of the change and nothing else would notice it going back.
+      other = account_fixture()
+      {:ok, _} = Statuses.favourite(reader, status)
+      {:ok, _} = Statuses.bookmark(reader, status)
+      {:ok, _} = Statuses.boost(other, status)
+
+      {:ok, counter} = Agent.start_link(fn -> 0 end)
+
+      :telemetry.attach(
+        "reader-state-#{System.unique_integer([:positive])}",
+        [:abuuba, :repo, :query],
+        fn _event, _measure, _meta, _config -> Agent.update(counter, &(&1 + 1)) end,
+        nil
+      )
+
+      state = Statuses.reader_state(status, [reader.id, other.id])
+
+      assert Agent.get(counter, & &1) == 1
+
+      assert state[reader.id]["favourited"]
+      assert state[reader.id]["bookmarked"]
+      refute state[reader.id]["reblogged"]
+      assert state[other.id]["reblogged"]
+      refute state[other.id]["favourited"]
+    end
+
+    test "a muted conversation is one of the five it answers", %{reader: reader} do
+      # The fifth branch of the union, and the one that is left out when a
+      # post has no conversation -- a branch matching nothing costs a scan.
+      conversation = conversation_fixture()
+      author = account_fixture()
+
+      status =
+        status_fixture(%{account_id: author.id, conversation_id: conversation.id})
+
+      refute Statuses.reader_state(status, [reader.id])[reader.id]["muted"]
+
+      {:ok, _} = Statuses.mute_thread(reader, status)
+
+      assert Statuses.reader_state(status, [reader.id])[reader.id]["muted"]
+    end
+
     test "answers for many readers at once", %{status: status, reader: reader} do
       other = account_fixture()
       {:ok, _} = Statuses.favourite(reader, status)

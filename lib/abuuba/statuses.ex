@@ -1413,61 +1413,87 @@ defmodule Abuuba.Statuses do
   end
 
   @doc """
-  The four things only a reader can answer about one post, for several readers
+  The five things only a reader can answer about one post, for several readers
   at once.
 
-  Four queries however many readers there are, which is what makes pushing one
+  One query however many readers there are, which is what makes pushing one
   post to a room full of sockets cheap: the expensive half of the payload is
   the same for everybody, and this is the half that is not.
+
+  A `union_all` of five small selects rather than five round trips, the shape
+  `AbuubaWeb.API.Entities.interactions/2` uses to ask the same questions the
+  other way round -- one reader about many posts, where this is many readers
+  about one. Five of these ran per socket per arriving post, so a post
+  reaching a hundred sockets asked five hundred questions to fill in five
+  booleans each.
   """
   @spec reader_state(Status.t(), [integer()]) :: %{integer() => map()}
   def reader_state(status, account_ids)
   def reader_state(_status, []), do: %{}
 
   def reader_state(%Status{id: id, conversation_id: conversation_id}, account_ids) do
-    favourited = own_ids(Favourite, id, account_ids)
-    bookmarked = own_ids(Bookmark, id, account_ids)
-    pinned = own_ids(Pin, id, account_ids)
-    boosted = boosters(id, account_ids)
-    muted = muted_conversation(conversation_id, account_ids)
+    marks = own_marks(id, conversation_id, account_ids)
 
     Map.new(account_ids, fn account_id ->
+      kinds = Map.get(marks, account_id, MapSet.new())
+
       {account_id,
        %{
-         "favourited" => MapSet.member?(favourited, account_id),
-         "reblogged" => MapSet.member?(boosted, account_id),
-         "bookmarked" => MapSet.member?(bookmarked, account_id),
-         "muted" => MapSet.member?(muted, account_id),
-         "pinned" => MapSet.member?(pinned, account_id)
+         "favourited" => MapSet.member?(kinds, 0),
+         "reblogged" => MapSet.member?(kinds, 3),
+         "bookmarked" => MapSet.member?(kinds, 1),
+         "muted" => MapSet.member?(kinds, 4),
+         "pinned" => MapSet.member?(kinds, 2)
        }}
     end)
   end
 
-  defp own_ids(schema, status_id, account_ids) do
-    schema
-    |> where([r], r.status_id == ^status_id and r.account_id in ^account_ids)
-    |> select([r], r.account_id)
+  defp own_marks(status_id, conversation_id, account_ids) do
+    favourited = marked(Favourite, 0, status_id, account_ids)
+    bookmarked = marked(Bookmark, 1, status_id, account_ids)
+    pinned = marked(Pin, 2, status_id, account_ids)
+
+    # The odd one out: a boost is a status of its own, so what identifies it is
+    # what it points at rather than a `status_id` column.
+    boosted =
+      from(s in Status,
+        where: s.reblog_of_id == ^status_id and s.account_id in ^account_ids,
+        where: is_nil(s.deleted_at),
+        select: %{kind: 3, account_id: s.account_id}
+      )
+
+    favourited
+    |> union_all(^bookmarked)
+    |> union_all(^pinned)
+    |> union_all(^boosted)
+    |> then(&union_muted_conversation(&1, conversation_id, account_ids))
     |> Repo.all()
-    |> MapSet.new()
+    |> Enum.group_by(& &1.account_id, & &1.kind)
+    |> Map.new(fn {account_id, kinds} -> {account_id, MapSet.new(kinds)} end)
   end
 
-  defp boosters(status_id, account_ids) do
-    Status
-    |> where([s], s.reblog_of_id == ^status_id and s.account_id in ^account_ids)
-    |> where([s], is_nil(s.deleted_at))
-    |> select([s], s.account_id)
-    |> Repo.all()
-    |> MapSet.new()
+  # `type(^kind, :integer)` and not a bare `^kind`: the other two branches of
+  # the union select an integer literal, and an untyped parameter arrives as
+  # text, which Postgres refuses to union with them.
+  defp marked(schema, kind, status_id, account_ids) do
+    from(r in schema,
+      where: r.status_id == ^status_id and r.account_id in ^account_ids,
+      select: %{kind: type(^kind, :integer), account_id: r.account_id}
+    )
   end
 
-  defp muted_conversation(nil, _account_ids), do: MapSet.new()
+  # A post outside a conversation cannot be in a muted one, and asking would
+  # be a branch of the union that matches nothing.
+  defp union_muted_conversation(query, nil, _account_ids), do: query
 
-  defp muted_conversation(conversation_id, account_ids) do
-    ConversationMute
-    |> where([c], c.conversation_id == ^conversation_id and c.account_id in ^account_ids)
-    |> select([c], c.account_id)
-    |> Repo.all()
-    |> MapSet.new()
+  defp union_muted_conversation(query, conversation_id, account_ids) do
+    muted =
+      from(c in ConversationMute,
+        where: c.conversation_id == ^conversation_id and c.account_id in ^account_ids,
+        select: %{kind: 4, account_id: c.account_id}
+      )
+
+    union_all(query, ^muted)
   end
 
   ## Mentions
