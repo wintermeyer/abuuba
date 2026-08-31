@@ -1285,6 +1285,7 @@ defmodule Abuuba.Statuses do
     |> maybe_language(Keyword.get(opts, :language))
     |> paginate(opts)
     |> Repo.all()
+    |> reading_order(opts)
   end
 
   @doc """
@@ -1327,27 +1328,30 @@ defmodule Abuuba.Statuses do
   defp maybe_language(query, language), do: from(s in query, where: s.language == ^language)
 
   # Ids sort by creation time, so they are the cursor. See `Abuuba.Snowflake`.
+  # `min_id` runs the query the other way up, so the rows come back oldest
+  # first and have to be turned round before anybody reads them. These two
+  # take a keyword list where `Abuuba.Pagination` takes a map, which is the
+  # only reason this is not a straight call to `reading_order/2`.
+  defp reading_order(rows, opts) do
+    Pagination.reading_order(rows, %{min_id: Keyword.get(opts, :min_id)})
+  end
+
   defp paginate(query, opts) do
     # Clamped at both ends. A negative limit reaches Postgres as LIMIT -1 and
     # errors; a zero one silently returns nothing, which reads as "no posts"
     # rather than as the bad request it is.
     limit = opts |> Keyword.get(:limit, 20) |> max(1) |> min(40)
 
-    query
-    |> then(fn q ->
-      case Keyword.get(opts, :max_id) do
-        nil -> q
-        max_id -> from(s in q, where: s.id < ^max_id)
-      end
-    end)
-    |> then(fn q ->
-      case Keyword.get(opts, :since_id) do
-        nil -> q
-        since_id -> from(s in q, where: s.id > ^since_id)
-      end
-    end)
-    |> order_by([s], desc: s.id)
-    |> limit(^limit)
+    # Through `Pagination.window/2` like every other list, which is also how
+    # this one gets a `min_id` at all: it had a `max_id` and a `since_id` and
+    # no third branch, so a client filling a gap forwards was answered from
+    # the newest end and read the same page over and over.
+    Pagination.window(query, %{
+      max_id: Keyword.get(opts, :max_id),
+      min_id: Keyword.get(opts, :min_id),
+      since_id: Keyword.get(opts, :since_id),
+      limit: limit
+    })
   end
 
   @doc """
@@ -1562,6 +1566,7 @@ defmodule Abuuba.Statuses do
     |> where([_s, st], st.tag_id == ^tag_id)
     |> paginate(opts)
     |> Repo.all()
+    |> reading_order(opts)
   end
 
   ## Favourites and bookmarks
@@ -2789,10 +2794,7 @@ defmodule Abuuba.Statuses do
     |> maybe_exclude_reblogs(Map.get(page, :exclude_reblogs, false))
     |> maybe_only_media(Map.get(page, :only_media, false))
     |> maybe_tagged(Map.get(page, :tagged))
-    |> maybe_before_id(Map.get(page, :max_id))
-    |> maybe_after_id(Map.get(page, :min_id) || Map.get(page, :since_id))
-    |> order_by([s], [{^Pagination.direction(page), s.id}])
-    |> limit(^Map.get(page, :limit, 20))
+    |> Pagination.window(page)
     |> Repo.all()
     |> Pagination.reading_order(page)
   end
@@ -2826,12 +2828,6 @@ defmodule Abuuba.Statuses do
 
     where(query, [s], s.id in subquery(tagged))
   end
-
-  defp maybe_before_id(query, nil), do: query
-  defp maybe_before_id(query, id), do: where(query, [s], s.id < ^id)
-
-  defp maybe_after_id(query, nil), do: query
-  defp maybe_after_id(query, id), do: where(query, [s], s.id > ^id)
 
   @doc """
   What somebody favourited, newest mark first, as `%{mark_id, status}` rows.
