@@ -116,8 +116,11 @@ defmodule AbuubaWeb.API.SearchController do
         %{empty() | "accounts" => [Entities.account(account, viewer)]}
 
       _ ->
+        # Re-read through the viewer's own door rather than rendering what
+        # the fetch handed back: what a remote server sends is a document,
+        # and whether this reader may see it is a separate question.
         case ResolveStatus.resolve(url) do
-          {:ok, status} -> %{empty() | "statuses" => Entities.statuses([status], viewer)}
+          {:ok, %{id: id}} -> found_status(Statuses.readable(id, viewer), viewer)
           _ -> empty()
         end
     end
@@ -125,16 +128,19 @@ defmodule AbuubaWeb.API.SearchController do
 
   defp resolve(url, viewer, false) do
     # Not fetched, but something we already hold under that address is still
-    # the answer somebody pasting it wanted.
+    # the answer somebody pasting it wanted -- if it is theirs to read.
     account = Accounts.get_account_by_uri(url)
-    status = Statuses.get_status_unchecked_by_uri(url)
 
     %{
-      empty()
-      | "accounts" => if(account, do: [Entities.account(account, viewer)], else: []),
-        "statuses" => if(status, do: Entities.statuses([status], viewer), else: [])
+      found_status(Statuses.readable_by_uri(url, viewer), viewer)
+      | "accounts" => if(account, do: [Entities.account(account, viewer)], else: [])
     }
   end
+
+  defp found_status(nil, _viewer), do: empty()
+
+  defp found_status(status, viewer),
+    do: %{empty() | "statuses" => Entities.statuses([status], viewer)}
 
   defp empty, do: %{"accounts" => [], "statuses" => [], "hashtags" => []}
 

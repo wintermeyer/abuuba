@@ -1254,6 +1254,23 @@ defmodule Abuuba.Statuses do
 
   def get_status_unchecked_by_uri(_uri), do: nil
 
+  @doc """
+  Fetches a status by its federation URI that `viewer` may read, or `nil`.
+
+  The viewer-aware twin of `get_status_unchecked_by_uri/1`, for the one caller
+  that renders what it finds: search resolves a pasted address, and reading it
+  unchecked handed anybody holding the address of a followers-only post its
+  full text with no account at all. Everything else that looks a URI up acts
+  on a document rather than on behalf of a reader, and keeps the unchecked one.
+  """
+  @spec readable_by_uri(String.t() | nil, Account.t() | integer() | nil) :: Status.t() | nil
+  def readable_by_uri(uri, viewer) do
+    case get_status_unchecked_by_uri(uri) do
+      %Status{id: id} -> readable(id, viewer)
+      nil -> nil
+    end
+  end
+
   defp local_status(id) do
     case Repo.get(Status, id) do
       %Status{local: true} = status -> status

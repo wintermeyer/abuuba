@@ -158,6 +158,38 @@ defmodule AbuubaWeb.API.SearchControllerTest do
       assert id == to_string(status.id)
     end
 
+    test "and a pasted URL does not hand over a post its address alone names", %{
+      anon: anon,
+      conn: conn,
+      account: account
+    } do
+      # Resolving by address read the post through the unchecked lookup --
+      # `Abuuba.Statuses.get_status_unchecked_by_uri/1`, whose own docstring
+      # says "never for rendering" -- and handed it straight to the entity
+      # renderer, which asks nothing about who is reading. Anybody holding the
+      # address of a followers-only post could read it by pasting it in, with
+      # no account at all.
+      secret =
+        status_fixture(%{
+          account_id: account.id,
+          text: "kryptonite",
+          visibility: :private,
+          uri: "https://remote.example/statuses/secret",
+          local: false
+        })
+
+      url = "https://remote.example/statuses/secret"
+
+      assert json_response(get(anon, "/api/v2/search", %{"q" => url}), 200)["statuses"] == []
+
+      # The positive half: its author still finds it, so an empty list above
+      # is the check and not a lookup that stopped working.
+      assert [%{"id" => id}] =
+               json_response(get(conn, "/api/v2/search", %{"q" => url}), 200)["statuses"]
+
+      assert id == to_string(secret.id)
+    end
+
     test "offset needs a token, because it is how a box becomes a crawler", %{anon: anon} do
       conn = get(anon, "/api/v2/search", %{"q" => "alice", "offset" => "20"})
 
