@@ -18,6 +18,23 @@ defmodule Abuuba.Timelines do
   Not one of these composes `Abuuba.Statuses.not_deleted/0` on its own. A
   timeline is exactly where somebody else's followers-only post sits next to
   public ones, so every query here goes through `visible_to/2` as well.
+
+  ## And answers `timeline_access` itself
+
+  Whether a server shows its public timelines to strangers at all was a
+  caller-side `if` at seven sites in four shapes, and the shapes disagreed:
+  explore gated the recent half and not the trending half, and what was
+  trending answered anybody. A rule spelled out by each caller is a rule each
+  new caller may forget, and the ones that forgot were the surfaces nobody
+  thought of as a timeline.
+
+  So `public/2` and `tag/3` answer it themselves and hand back nothing when
+  the setting says so, and `Abuuba.Trends.statuses/2` does the same for the
+  third of these lists. Two copies are left on purpose:
+  `AbuubaWeb.API.TimelineController`, because it has to say *which* refusal it
+  is -- 404 for a server that has turned them off, 422 for one that wants an
+  account -- and an empty list cannot carry that; and the two streaming
+  transports, which answer it when a socket subscribes rather than per post.
   """
 
   import Ecto.Query
@@ -29,6 +46,7 @@ defmodule Abuuba.Timelines do
   alias Abuuba.Pagination
   alias Abuuba.Relationships.Follow
   alias Abuuba.Repo
+  alias Abuuba.Settings
   alias Abuuba.Statuses
   alias Abuuba.Statuses.Status
   alias Abuuba.Statuses.Tag
@@ -50,6 +68,28 @@ defmodule Abuuba.Timelines do
     "home"
     |> Feed.status_ids(account_id, page)
     |> load_statuses(account, page)
+  end
+
+  @doc """
+  Statuses by id, in the order the ids were given, narrowed to what this
+  reader may be shown.
+
+  The ids come from the trends table, which ranked them knowing nothing about
+  who is reading. This is the step that asks, and the reason a ranking cannot
+  become a way around a block.
+  """
+  @spec by_ids([integer() | String.t()], Account.t() | nil) :: [Status.t()]
+  def by_ids(ids, viewer) do
+    Statuses.not_deleted()
+    |> Statuses.visible_to(viewer)
+    |> exclude_unwanted(viewer)
+    # A ranking is written once and never revisited, so a moderator silencing
+    # somebody afterwards does not take their post out of it. Both other reads
+    # here drop those authors; this one has to as well, or a silence is a
+    # thing every timeline honours except the most prominent list on the
+    # server.
+    |> exclude_moderated_authors()
+    |> then(&Statuses.by_ids(ids, &1))
   end
 
   # In the feed's order, which is the order the ids came back in, rather than
@@ -82,14 +122,18 @@ defmodule Abuuba.Timelines do
   """
   @spec public(Account.t() | nil, map()) :: [Status.t()]
   def public(viewer, page \\ %{}) do
-    # No `visible_to/2` on top: the scope already pins visibility to public,
-    # which anybody may read, and restating it would only widen the query
-    # away from the partial index the scope is written against.
-    Statuses.public_timeline_scope()
-    |> filter_origin(page)
-    |> filter_media(page)
-    |> exclude_unwanted(viewer)
-    |> paginate(page)
+    if Settings.public_timelines_readable?(viewer) do
+      # No `visible_to/2` on top: the scope already pins visibility to public,
+      # which anybody may read, and restating it would only widen the query
+      # away from the partial index the scope is written against.
+      Statuses.public_timeline_scope()
+      |> filter_origin(page)
+      |> filter_media(page)
+      |> exclude_unwanted(viewer)
+      |> paginate(page)
+    else
+      []
+    end
   end
 
   @doc """
@@ -101,6 +145,14 @@ defmodule Abuuba.Timelines do
   """
   @spec tag(String.t(), Account.t() | nil, map()) :: [Status.t()]
   def tag(name, viewer, page \\ %{}) do
+    if Settings.public_timelines_readable?(viewer) do
+      tagged(name, viewer, page)
+    else
+      []
+    end
+  end
+
+  defp tagged(name, viewer, page) do
     case tag_ids([name | Map.get(page, :any, [])]) do
       [] ->
         []

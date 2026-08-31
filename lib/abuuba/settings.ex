@@ -141,6 +141,23 @@ defmodule Abuuba.Settings do
     end
   end
 
+  @doc """
+  Whether this reader is told which servers this one has blocked.
+
+  `all` is anybody, `users` is people with an account here, and `disabled` --
+  the default -- is nobody. The same three shapes as `timeline_access/0`, and
+  here for the same reason: the one caller read the raw string and matched on
+  it, so the next one would have matched on it slightly differently.
+  """
+  @spec domain_blocks_visible?(term()) :: boolean()
+  def domain_blocks_visible?(viewer) do
+    case get("show_domain_blocks") do
+      "all" -> true
+      "users" -> not is_nil(viewer)
+      _disabled -> false
+    end
+  end
+
   # Long enough that a busy server reads settings from memory, short enough
   # that a node which missed the invalidation broadcast rights itself within
   # a minute.
