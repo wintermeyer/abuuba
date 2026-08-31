@@ -43,7 +43,8 @@
       <div class="hero-grid">
         <div>
           <h1>The cheetah that outran the mastodon.</h1>
-          <p class="lede">abuuba is a fediverse server written in <a href="https://elixir-lang.org">Elixir</a> and <a href="https://www.phoenixframework.org">Phoenix</a>. It speaks <a href="https://joinmastodon.org">Mastodon</a>'s protocols: ActivityPub for federation and the complete Mastodon client API, all 289 endpoints, so existing apps work unchanged. Think of it as a drop-in replacement for Mastodon. It takes an instance over in place, keeping the domain, the accounts, the posts and the tokens on people's phones. It exists for one reason: <strong>Mastodon is too slow.</strong></p>
+          <p class="lede">abuuba is a fediverse server written in <a href="https://elixir-lang.org">Elixir</a> and <a href="https://www.phoenixframework.org">Phoenix</a>. It speaks <a href="https://joinmastodon.org">Mastodon</a>'s protocols: ActivityPub for federation and the complete Mastodon client API, all 289 endpoints, so existing apps work unchanged. Think of it as a drop-in replacement for Mastodon. It takes an instance over in place, keeping the domain, the accounts, the posts and the tokens on people's phones. It exists for one reason: <strong>Mastodon is too slow.</strong> I needed a fast peer to test <a href="https://vutuv.de">vutuv</a>, my ultrafast business network, against, and Mastodon could not keep up.</p>
+          <p class="warn"><strong>Version 1.0. Do not run this in production.</strong> It has bugs nobody has found yet, and it has never run a real community. Put it on a lab machine, break it, and tell me what broke.</p>
         </div>
         <div class="giant" aria-live="polite">
           <span class="giant-num" id="giant-num">68<span class="times">×</span></span>
@@ -400,7 +401,7 @@ docker compose up -d</pre>
             <dt>Speaks</dt><dd>ActivityPub, the complete Mastodon client API (289 endpoints)</dd>
             <dt>Verified against</dt><dd>Mastodon 4.4.7 and GoToSocial 0.19.1, 32 scenarios</dd>
             <dt>Licence</dt><dd>MIT</dd>
-            <dt>Version</dt><dd>1.0.0</dd>
+            <dt>Version</dt><dd>1.0, and not ready for production</dd>
           </dl>
         </div>
       </div>
@@ -452,7 +453,7 @@ docker compose up -d</pre>
 </main>
 
 <footer class="wrap">
-  <span>abuuba 1.0.1 · MIT licence · built by the founder of <a href="https://vutuv.de">vutuv</a>, because vutuv is fast and its peer was not.</span>
+  <span>abuuba 1.0 · MIT licence · built by the founder of <a href="https://vutuv.de">vutuv</a>, because vutuv is fast and its peer was not.</span>
   <nav aria-label="Secondary"><a href="press.html">Press</a><a href="impressum.html">Impressum</a><a href="datenschutz.html">Datenschutz</a><a href="https://github.com/wintermeyer/abuuba">GitHub</a></nav>
 </footer>
 

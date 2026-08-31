@@ -45,6 +45,8 @@
   h1 { margin: 0; font: 400 clamp(2.8rem, 6.4vw, 5.4rem)/1.02 var(--display); letter-spacing: -0.012em; text-wrap: balance; }
   .lede { max-width: 56ch; margin: 22px 0 0; font-size: 1.12rem; color: var(--muted); }
   .lede strong { color: var(--ink); font-weight: 500; }
+  .warn { max-width: 56ch; margin: 20px 0 0; padding: 12px 16px; background: var(--surface); border-left: 3px solid var(--accent); color: var(--muted); font-size: .98rem; }
+  .warn strong { color: var(--accent); font-weight: 600; }
 
   .giant { position: relative; text-align: center; padding: 20px 0; min-height: 300px; display: flex; flex-direction: column; justify-content: center; }
   .giant::before { content: ""; position: absolute; inset: 0; z-index: -1; background: radial-gradient(closest-side, rgba(229,167,46,.16), transparent 70%); }
