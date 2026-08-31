@@ -97,13 +97,11 @@ defmodule AbuubaWeb.API.PushSubscriptionController do
   end
 
   defp put_alerts(attrs, alerts) when is_map(alerts) do
-    Map.put(attrs, "alerts", Map.new(alerts, fn {key, value} -> {key, truthy?(value)} end))
+    Map.put(attrs, "alerts", Map.new(alerts, fn {key, value} -> {key, API.truthy?(value)} end))
   end
 
   defp put_alerts(attrs, _alerts), do: attrs
 
   defp put_policy(attrs, policy) when is_binary(policy), do: Map.put(attrs, "policy", policy)
   defp put_policy(attrs, _policy), do: attrs
-
-  defp truthy?(value), do: value in [true, "true", "1", 1]
 end

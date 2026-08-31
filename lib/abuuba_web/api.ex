@@ -60,15 +60,33 @@ defmodule AbuubaWeb.API do
   @spec id_param(map(), String.t()) :: integer() | nil
   def id_param(params, key), do: params |> Map.get(key) |> parse_id()
 
+  # What the reference calls false, which is Rails' `ActiveModel::Type::Boolean`
+  # cast: everything else a client sends is yes. Written out rather than
+  # narrowed to `"false"` and `"0"`, because `"off"` and `"f"` are what a
+  # checkbox and a shell client send and both mean no.
+  @falsey ["false", "0", "f", "off", false, 0]
+
   @doc """
   Whether a query parameter means yes.
 
   A flag arrives as a string from a query string and as a boolean from a JSON
-  body, and clients send `1` for both. Anything else is no, including the
-  absent one.
+  body, and clients send `1` for both. The absent one is no.
+
+  A denylist and not an allowlist, matching `truthy_param?` in the reference:
+  `"on"` and `"yes"` are what some clients send for a checkbox, and answering
+  no to them is the kind of difference that shows up as a setting which will
+  not turn on. This module and `AbuubaWeb.API.AccountController` used to
+  disagree about exactly that, one each way.
+
+  `AbuubaWeb.API.boolean/2` and `Abuuba.Moderation.Domains.truthy/1` are
+  deliberately stricter and say so; they are not this question.
   """
   @spec truthy?(term()) :: boolean()
-  def truthy?(value), do: value in [true, "true", "1", 1]
+  def truthy?(nil), do: false
+
+  def truthy?(value) when is_binary(value), do: String.downcase(value) not in @falsey
+
+  def truthy?(value), do: value not in @falsey
 
   @doc """
   An id a caller already holds, or `nil` where it is not one.

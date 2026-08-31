@@ -234,14 +234,12 @@ defmodule AbuubaWeb.API.TimelineController do
     params
     |> Pagination.params(default: 20, max: 40)
     |> Map.merge(%{
-      local: truthy?(params["local"]),
-      remote: truthy?(params["remote"]),
-      only_media: truthy?(params["only_media"]),
+      local: API.truthy?(params["local"]),
+      remote: API.truthy?(params["remote"]),
+      only_media: API.truthy?(params["only_media"]),
       any: NestedParams.list(params["any"]),
       all: NestedParams.list(params["all"]),
       none: NestedParams.list(params["none"])
     })
   end
-
-  defp truthy?(value), do: value in [true, "true", "1", 1]
 end

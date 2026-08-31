@@ -55,8 +55,8 @@ defmodule AbuubaWeb.API.SearchController do
       # when the caller asked to resolve: without that it is an ordinary search
       # over what this server already holds, which is what `resolve=false`
       # means.
-      url?(query) or (truthy?(params["resolve"]) and ResolveActor.resolvable?(query)) ->
-        json(conn, resolve(query, viewer, truthy?(params["resolve"])))
+      url?(query) or (API.truthy?(params["resolve"]) and ResolveActor.resolvable?(query)) ->
+        json(conn, resolve(query, viewer, API.truthy?(params["resolve"])))
 
       true ->
         json(conn, run(query, viewer, params))
@@ -72,8 +72,8 @@ defmodule AbuubaWeb.API.SearchController do
     # answer, which is worse than a refusal: somebody searching within one
     # profile was given everybody's posts and no reason to doubt them.
     account_id = API.id_param(params, "account_id")
-    followed_by = if truthy?(params["following"]) and viewer, do: viewer.id
-    exclude_unreviewed = truthy?(params["exclude_unreviewed"])
+    followed_by = if API.truthy?(params["following"]) and viewer, do: viewer.id
+    exclude_unreviewed = API.truthy?(params["exclude_unreviewed"])
 
     %{
       "accounts" =>
@@ -145,7 +145,7 @@ defmodule AbuubaWeb.API.SearchController do
   defp empty, do: %{"accounts" => [], "statuses" => [], "hashtags" => []}
 
   defp needs_account?(params) do
-    truthy?(params["resolve"]) or offset(params) > 0
+    API.truthy?(params["resolve"]) or offset(params) > 0
   end
 
   defp url?(query),
@@ -157,6 +157,4 @@ defmodule AbuubaWeb.API.SearchController do
       _ -> 0
     end
   end
-
-  defp truthy?(value), do: value in [true, "true", "1", 1]
 end

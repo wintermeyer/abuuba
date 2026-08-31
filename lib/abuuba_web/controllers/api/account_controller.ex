@@ -718,7 +718,7 @@ defmodule AbuubaWeb.API.AccountController do
 
   defp put_if(attrs, params, key, field) do
     case Map.fetch(params, key) do
-      {:ok, value} -> Map.put(attrs, field, truthy?(value))
+      {:ok, value} -> Map.put(attrs, field, API.truthy?(value))
       :error -> attrs
     end
   end
@@ -744,8 +744,6 @@ defmodule AbuubaWeb.API.AccountController do
   defp expiry(attrs, seconds) do
     Map.put(attrs, :expires_at, DateTime.add(DateTime.utc_now(), seconds, :second))
   end
-
-  defp truthy?(value), do: value not in [false, "false", "0", 0, nil]
 
   defp put_role(payload, user) do
     case Entities.role(Roles.of(user)) do
