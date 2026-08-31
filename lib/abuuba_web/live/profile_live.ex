@@ -628,13 +628,14 @@ defmodule AbuubaWeb.ProfileLive do
   # Every account here is one the subject follows, so this list is a slice of
   # the follows list — and hiding that list while publishing a slice of it on
   # the tab next to it would be the setting quietly not meaning what it says.
-  # Only the first tab shows the strip, so only that tab asks for it.
+  # The same question, then, and not a fourth spelling of it. Only the first
+  # tab shows the strip, so only that tab asks.
   defp assign_featured(socket) do
     subject = socket.assigns.subject
 
     featured =
       if socket.assigns.tab == :posts and
-           (not subject.hide_collections or own_profile?(socket)) do
+           Relationships.collections_visible?(subject, socket.assigns.viewer) do
         Relationships.endorsements(subject, %{limit: @featured_limit})
       else
         []
@@ -658,7 +659,7 @@ defmodule AbuubaWeb.ProfileLive do
   defp load_people(socket) do
     subject = socket.assigns.subject
     viewer = socket.assigns.viewer
-    hidden? = collections_hidden?(socket, subject)
+    hidden? = not Relationships.collections_visible?(subject, viewer)
     page = %{limit: @page_size}
 
     people =
@@ -672,35 +673,9 @@ defmodule AbuubaWeb.ProfileLive do
     assign(socket, people: people, hidden?: hidden?)
   end
 
-  # Two reasons to close the lists, and the API has honoured both since it was
-  # written: the setting, and a block. A profile that shows the person it
-  # blocked who its followers are has not blocked them, and the list is the
-  # part they came for.
-  defp collections_hidden?(socket, subject) do
-    cond do
-      own_profile?(socket) -> false
-      subject.hide_collections -> true
-      true -> blocked_reader?(socket, subject)
-    end
-  end
-
-  defp blocked_reader?(socket, subject) do
-    case socket.assigns.viewer do
-      %Account{} = viewer -> Relationships.blocking?(subject, viewer)
-      _ -> false
-    end
-  end
-
   # Somebody may always see their own. `hide_collections` is about strangers,
   # and a setting that hid the lists from the person who set it would look like
   # a bug the first time they checked it worked.
-  defp own_profile?(socket) do
-    case socket.assigns.viewer do
-      %Account{id: id} -> id == socket.assigns.subject.id
-      _ -> false
-    end
-  end
-
   defp collection?(tab), do: tab in [:followers, :following]
 
   defp filters(:posts), do: %{exclude_replies: true}

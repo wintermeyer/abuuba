@@ -399,19 +399,13 @@ defmodule AbuubaWeb.API.AccountController do
   # it blocked has not blocked them.
   defp with_collection(conn, id, params, list) do
     with_account(conn, id, fn account, viewer ->
-      if collection_hidden?(account, viewer) do
-        json(conn, [])
-      else
+      if Relationships.collections_visible?(account, viewer) do
         collection(conn, viewer, list.(account, viewer, Pagination.params(params)))
+      else
+        json(conn, [])
       end
     end)
   end
-
-  defp collection_hidden?(%Account{id: id}, %Account{id: id}), do: false
-  defp collection_hidden?(%Account{hide_collections: true}, _viewer), do: true
-  defp collection_hidden?(_account, nil), do: false
-
-  defp collection_hidden?(account, viewer), do: Relationships.blocking?(account, viewer)
 
   ## Acting on somebody
 
