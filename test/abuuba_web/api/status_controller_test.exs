@@ -8,6 +8,7 @@ defmodule AbuubaWeb.API.StatusControllerTest do
   alias Abuuba.Media
   alias Abuuba.Media.Attachment
   alias Abuuba.OAuth
+  alias Abuuba.Relationships
   alias Abuuba.Repo
   alias Abuuba.Statuses
   alias Abuuba.Statuses.ScheduledStatus
@@ -746,6 +747,76 @@ defmodule AbuubaWeb.API.StatusControllerTest do
 
       assert json_response(get(stranger, "/api/v1/statuses/#{private.id}"), 404)["error"]
     end
+
+    test "nor is a public one, once its author has blocked them", %{
+      account: account,
+      status: status,
+      application: application
+    } do
+      blocked = account_fixture()
+      {:ok, _} = Relationships.block(account, blocked)
+      conn = token_for(application, blocked)
+
+      assert json_response(get(conn, "/api/v1/statuses/#{status.id}"), 404)["error"]
+
+      for path <- ~w(context history reblogged_by favourited_by quotes) do
+        assert json_response(get(conn, "/api/v1/statuses/#{status.id}/#{path}"), 404)["error"],
+               "#{path} is a way of reading the same post"
+      end
+
+      assert json_response(post(conn, "/api/v1/statuses/#{status.id}/translate"), 404)["error"],
+             "and so is asking for it in another language"
+    end
+
+    test "and neither does putting a mark on it", %{
+      account: account,
+      status: status,
+      application: application
+    } do
+      # Being shown the post is what these do, so they come through the same
+      # door. The reference implementation refuses all five in the same place.
+      blocked = account_fixture()
+      {:ok, _} = Relationships.block(account, blocked)
+      conn = token_for(application, blocked)
+
+      for action <- ~w(favourite bookmark reblog mute pin) do
+        assert json_response(post(conn, "/api/v1/statuses/#{status.id}/#{action}"), 404)["error"],
+               "#{action} handed back the body of a post its author refused them"
+      end
+    end
+
+    test "a reader's own block does not close the link they followed", %{
+      status: status,
+      account: account,
+      application: application
+    } do
+      # The other direction, and deliberately not symmetrical: "the one place
+      # you still see them is their own profile, if you go and look".
+      reader = account_fixture()
+      {:ok, _} = Relationships.block(reader, account)
+      conn = token_for(application, reader)
+
+      assert json_response(get(conn, "/api/v1/statuses/#{status.id}"), 200)["content"]
+    end
+
+    test "and the batch drops it rather than answering it", %{
+      account: account,
+      status: status,
+      application: application
+    } do
+      blocked = account_fixture()
+      mine = status_fixture(%{account_id: blocked.id})
+      {:ok, _} = Relationships.block(account, blocked)
+      conn = token_for(application, blocked)
+
+      body =
+        json_response(
+          get(conn, "/api/v1/statuses", %{"id" => [to_string(status.id), to_string(mine.id)]}),
+          200
+        )
+
+      assert Enum.map(body, & &1["id"]) == [to_string(mine.id)]
+    end
   end
 
   describe "editing and deleting" do
@@ -991,6 +1062,32 @@ defmodule AbuubaWeb.API.StatusControllerTest do
       refute json_response(post(conn, "/api/v1/statuses/#{status.id}/unmute"), 200)["muted"]
     end
 
+    test "and the mark still comes off a post whose author has since blocked them", %{
+      conn: conn,
+      status: status,
+      account: account,
+      author: author
+    } do
+      # `/bookmarks` lists what somebody saved whatever has happened since, so
+      # taking a mark back reads through `Statuses.actionable/2` rather than
+      # `readable/2`. A sweep moving it would leave the button in every client
+      # doing nothing, with a green suite.
+      assert json_response(post(conn, "/api/v1/statuses/#{status.id}/bookmark"), 200)[
+               "bookmarked"
+             ]
+
+      {:ok, _} = Relationships.block(author, account)
+
+      assert Enum.any?(Statuses.bookmarks(account), &(&1.status.id == status.id))
+
+      refute json_response(post(conn, "/api/v1/statuses/#{status.id}/unbookmark"), 200)[
+               "bookmarked"
+             ]
+
+      assert json_response(get(conn, "/api/v1/statuses/#{status.id}"), 404)["error"],
+             "reading it is still refused"
+    end
+
     test "every un-action is a POST, because that is what clients send", %{
       conn: conn,
       status: status
@@ -1063,6 +1160,24 @@ defmodule AbuubaWeb.API.StatusControllerTest do
 
       assert body["own_votes"] == [0]
       assert body["voters_count"] == 1
+    end
+
+    test "neither, once the author has blocked the reader", %{
+      conn: conn,
+      poll: poll,
+      author: author,
+      voter: voter
+    } do
+      # The poll is reachable exactly when its status is, and the status is now
+      # not: a block reaches the poll form the same way it reaches the words.
+      {:ok, _} = Relationships.block(author, voter)
+
+      assert json_response(get(conn, "/api/v1/polls/#{poll.id}"), 404)["error"]
+
+      assert json_response(
+               post(conn, "/api/v1/polls/#{poll.id}/votes", %{"choices" => ["0"]}),
+               404
+             )["error"]
     end
 
     test "voting twice is refused with a message a client can show", %{conn: conn, poll: poll} do

@@ -371,6 +371,123 @@ defmodule Abuuba.StatusesTest do
     end
   end
 
+  describe "readable/2, the door a reader comes through" do
+    setup do
+      author = account_fixture()
+      reader = account_fixture()
+
+      %{author: author, reader: reader}
+    end
+
+    test "answers the same audience question get_status/2 does", %{author: author} do
+      public = status_fixture(%{account_id: author.id})
+      secret = status_fixture(%{account_id: author.id, visibility: :direct})
+
+      assert Statuses.readable(public.id, nil)
+      assert Statuses.readable(secret.id, author)
+      refute Statuses.readable(secret.id, nil)
+      refute Statuses.readable(nil, author)
+    end
+
+    test "and the block question get_status/2 does not", %{author: author, reader: reader} do
+      status = status_fixture(%{account_id: author.id})
+      {:ok, _} = Relationships.block(author, reader)
+
+      assert Statuses.get_status(status.id, reader), "the audience gate lets it through"
+      refute Statuses.readable(status.id, reader)
+    end
+
+    test "a boost of somebody who blocked the reader is refused too", %{
+      author: author,
+      reader: reader
+    } do
+      original = status_fixture(%{account_id: author.id})
+      booster = account_fixture()
+      {:ok, boost} = Statuses.boost(booster, original)
+      {:ok, _} = Relationships.block(author, reader)
+
+      refute Statuses.readable(boost.id, reader),
+             "a third party passing the words along does not undo the block"
+    end
+
+    test "the reader's own blocks and mutes do not close a link they followed", %{
+      author: author,
+      reader: reader
+    } do
+      # "The one place you still see them is their own profile, if you go and
+      # look" -- docs/user/safety.md. A profile that lists a post whose link
+      # answers nothing breaks that promise, and a mute is the softer tool
+      # still. All three say what may be delivered, not what may be opened.
+      blocked = status_fixture(%{account_id: author.id})
+      {:ok, _} = Relationships.block(reader, author)
+
+      muted_author = account_fixture()
+      muted = status_fixture(%{account_id: muted_author.id})
+      {:ok, _} = Relationships.mute(reader, muted_author)
+
+      elsewhere = remote_account_fixture()
+      abroad = status_fixture(%{account_id: elsewhere.id})
+      {:ok, _} = Relationships.block_domain(reader, elsewhere.domain)
+
+      conversation = conversation_fixture()
+      thread = status_fixture(%{account_id: author.id, conversation_id: conversation.id})
+      {:ok, _} = Statuses.mute_thread(reader, thread)
+
+      for status <- [blocked, muted, abroad, thread] do
+        assert Statuses.readable(status.id, reader)
+        refute Statuses.readable?(status, reader), "and none of them is delivered"
+      end
+    end
+
+    test "readable?/2 refuses what the audience refuses", %{author: author, reader: reader} do
+      secret = status_fixture(%{account_id: author.id, visibility: :direct})
+
+      refute Statuses.readable?(secret, reader)
+      refute Statuses.readable?(secret, nil)
+      assert Statuses.readable?(secret, author)
+    end
+
+    test "readable_many/2 keeps the caller's order and drops what is refused", %{
+      author: author,
+      reader: reader
+    } do
+      first = status_fixture(%{account_id: author.id})
+      refuser = account_fixture()
+      refused = status_fixture(%{account_id: refuser.id})
+      last = status_fixture(%{account_id: author.id})
+      {:ok, _} = Relationships.block(refuser, reader)
+
+      ids = [last.id, refused.id, first.id]
+
+      assert Enum.map(Statuses.readable_many(ids, reader), & &1.id) == [last.id, first.id]
+      assert Statuses.readable_many([], reader) == []
+    end
+
+    test "actionable/2 reaches a mark the reader made before hiding the author", %{
+      author: author,
+      reader: reader
+    } do
+      status = status_fixture(%{account_id: author.id})
+      {:ok, _} = Statuses.bookmark(reader, status)
+      {:ok, _} = Relationships.block(author, reader)
+
+      refute Statuses.readable(status.id, reader), "no longer theirs to read"
+
+      assert Statuses.actionable(status.id, reader),
+             "but the bookmarks list still returns it, and the button has to work"
+    end
+
+    test "actionable/2 is not a way past a block for a post nobody marked", %{
+      author: author,
+      reader: reader
+    } do
+      status = status_fixture(%{account_id: author.id})
+      {:ok, _} = Relationships.block(author, reader)
+
+      refute Statuses.actionable(status.id, reader)
+    end
+  end
+
   describe "the public timeline" do
     test "shows public posts newest first" do
       first = status_fixture()

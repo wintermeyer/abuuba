@@ -1797,13 +1797,11 @@ defmodule AbuubaWeb.API.Entities do
       |> Enum.flat_map(&Map.get(&1.data, "top_statuses", []))
       |> Enum.map(&API.parse_id(&1["id"]))
       |> Enum.reject(&is_nil/1)
+      |> Enum.uniq()
 
     # Through the viewer-aware read, so a report never carries a post the
     # person reading it may not see — a shared report is read by strangers.
-    found =
-      if ids == [],
-        do: [],
-        else: Enum.flat_map(ids, fn id -> List.wrap(Statuses.get_status(id, viewer)) end)
+    found = Statuses.readable_many(ids, viewer)
 
     %{
       "annual_reports" => Enum.map(reports, &annual_report/1),
@@ -2094,15 +2092,7 @@ defmodule AbuubaWeb.API.Entities do
       |> Enum.reject(&is_nil/1)
       |> Enum.uniq()
 
-    if ids == [] do
-      []
-    else
-      Statuses.not_deleted()
-      |> Statuses.visible_to(viewer)
-      |> where([s], s.id in ^ids)
-      |> Repo.all()
-      |> statuses(viewer)
-    end
+    ids |> Statuses.get_visible_statuses(viewer) |> statuses(viewer)
   end
 
   @doc """

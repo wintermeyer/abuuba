@@ -204,15 +204,9 @@ defmodule AbuubaWeb.HomeLive do
   end
 
   def handle_info({:composed, status}, socket) do
-    account = socket.assigns.account
+    fresh = Statuses.readable(status.id, socket.assigns.account)
 
-    case Statuses.get_status(status.id, account) do
-      nil ->
-        {:noreply, socket}
-
-      fresh ->
-        {:noreply, insert_one(socket, fresh, at: 0)}
-    end
+    {:noreply, insert_one(socket, fresh, at: 0)}
   end
 
   def handle_info(_message, socket), do: {:noreply, socket}
@@ -288,7 +282,7 @@ defmodule AbuubaWeb.HomeLive do
       status ->
         Statuses.unmute_thread(account, status)
 
-        {:noreply, insert_one(socket, Statuses.get_status(status.id, account))}
+        {:noreply, insert_one(socket, Statuses.readable(status.id, account))}
     end
   end
 
@@ -392,7 +386,13 @@ defmodule AbuubaWeb.HomeLive do
   # a live arrival without naming the context meant the same post was filtered
   # on reload and not while somebody watched, which reads as the filter being
   # unreliable rather than as two code paths disagreeing.
-  defp insert_one(socket, status, opts \\ []) do
+  defp insert_one(socket, status, opts \\ [])
+
+  # The read that fed this may have answered nothing: the post was deleted, or
+  # the reader has since blocked or muted whoever wrote it.
+  defp insert_one(socket, nil, _opts), do: socket
+
+  defp insert_one(socket, status, opts) do
     case render_all([status], socket.assigns.account) do
       [rendered] -> stream_insert(socket, :statuses, rendered, opts)
       # Hidden by one of the reader's own rules. Nothing to insert, and
@@ -407,12 +407,16 @@ defmodule AbuubaWeb.HomeLive do
   defp newest_id([]), do: nil
   defp newest_id(statuses), do: statuses |> Enum.map(& &1.id) |> Enum.max()
 
+  # `readable/2`, the same door the timeline itself came through: every id here
+  # names a post already drawn on this screen. Unmuting a thread still finds
+  # its post, because a muted thread is the one rule `readable/2` leaves out.
+  #
   # Through the id type rather than a lenient parse. `to_integer/1` happily
   # answers with a number too large for a bigint column, which reaches Postgres
   # as an encode error rather than as a post that is not there.
   defp status_by_id(id, viewer) do
     case Snowflake.cast(id) do
-      {:ok, id} -> Statuses.get_status(id, viewer)
+      {:ok, id} -> Statuses.readable(id, viewer)
       :error -> nil
     end
   end

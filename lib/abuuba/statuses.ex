@@ -74,6 +74,51 @@ defmodule Abuuba.Statuses do
   def not_deleted, do: from(s in Status, as: :status, where: is_nil(s.deleted_at))
 
   @doc """
+  Removes what the author will not show this reader.
+
+  The author's own side of a block and nothing else: to somebody they have
+  blocked, a blocker is a stranger, and public posts are exactly what
+  strangers are otherwise handed. Asked of the post's author and of whoever a
+  boost is carrying, because a block is about the person whose words these
+  are, not about who passed them along.
+
+  The narrow half of `excluding_hidden/2`, for the surfaces a reader reaches
+  on purpose. Their own blocks and mutes are not here: those say what may be
+  delivered, and "the one place you still see them is their own profile, if
+  you go and look" is a promise the user guide makes about the other
+  direction. `readable/2` is what composes this.
+
+  Needs the `:status` binding that `not_deleted/0` carries.
+  """
+  @spec excluding_refused(Ecto.Query.t(), Account.t() | integer() | nil) :: Ecto.Query.t()
+  def excluding_refused(query, nil), do: query
+
+  def excluding_refused(query, %Account{id: viewer_id}), do: excluding_refused(query, viewer_id)
+
+  def excluding_refused(query, viewer_id) do
+    query
+    |> where(
+      [s],
+      not exists(
+        from b in Block,
+          where:
+            b.target_account_id == ^viewer_id and
+              b.account_id == parent_as(:status).account_id
+      )
+    )
+    |> where(
+      [s],
+      is_nil(s.reblog_of_id) or
+        not exists(
+          from o in Status,
+            join: b in Block,
+            on: b.target_account_id == ^viewer_id and b.account_id == o.account_id,
+            where: o.id == parent_as(:status).reblog_of_id
+        )
+    )
+  end
+
+  @doc """
   Removes what a reader's blocks and mutes hide, in both directions.
 
   Separate from `visible_to/2` because the two answer different questions:
@@ -138,6 +183,37 @@ defmodule Abuuba.Statuses do
       )
     )
     |> excluding_hidden_boosts(viewer_id, now)
+  end
+
+  @doc """
+  Removes the threads this reader has put down.
+
+  Apart from `excluding_hidden/2` because it answers a different question: not
+  whether the two are on speaking terms, but whether this conversation is one
+  the reader has stopped following. A timeline applies it and a search does
+  not, which is why it is a filter of its own rather than folded into that
+  one.
+
+  Needs the `:status` binding that `not_deleted/0` carries.
+  """
+  @spec excluding_muted_threads(Ecto.Query.t(), Account.t() | integer() | nil) :: Ecto.Query.t()
+  def excluding_muted_threads(query, nil), do: query
+
+  def excluding_muted_threads(query, %Account{id: viewer_id}),
+    do: excluding_muted_threads(query, viewer_id)
+
+  def excluding_muted_threads(query, viewer_id) do
+    where(
+      query,
+      [s],
+      is_nil(s.conversation_id) or
+        not exists(
+          from c in ConversationMute,
+            where:
+              c.account_id == ^viewer_id and
+                c.conversation_id == parent_as(:status).conversation_id
+        )
+    )
   end
 
   @doc """
@@ -955,8 +1031,12 @@ defmodule Abuuba.Statuses do
   Statuses by id, in the order the ids were given, narrowed to what `viewer`
   may see. Pass `nil` for a logged out reader.
 
-  `get_statuses/1` without the narrowing is for callers whose ids are public
-  by construction; anything shown to a person goes through this one.
+  Audience only, the batch twin of `get_status/2`. `get_statuses/1` without the
+  narrowing is for callers whose ids are public by construction. What a reader
+  is about to be shown goes through `readable_many/2`, which asks their blocks
+  and mutes as well; this one is left for the notification and conversation
+  envelopes, where a row referring to a post the reader has since hidden is a
+  question of its own.
   """
   @spec get_visible_statuses([integer() | String.t()], Account.t() | nil) :: [Status.t()]
   def get_visible_statuses(ids, viewer), do: by_ids(ids, visible_to(not_deleted(), viewer))
@@ -1004,8 +1084,16 @@ defmodule Abuuba.Statuses do
   defp to_id(_value), do: nil
 
   @doc """
-  Fetches a status `viewer` may read, or `nil`. Pass `nil` for a logged out
-  reader, which restricts the result to public and unlisted statuses.
+  Fetches a status `viewer` was addressed widely enough to reach, or `nil`.
+
+  Audience only. It answers whether the post was public, or private to people
+  including this reader — not whether the two are on speaking terms. For
+  anything a person is about to be shown, use `readable/2`, which asks both.
+
+  This one is for a caller acting on a post the reader named from a list that
+  was not filtered for them. `bookmarks/2` and `favourites/2` are that list:
+  they answer what somebody saved, whatever they have done about the author
+  since, and the action bar drawn over them has to reach every row it draws.
 
   A viewer is required rather than optional: the version of this function that
   took an id alone was one autocomplete away from serving direct messages.
@@ -1017,6 +1105,109 @@ defmodule Abuuba.Statuses do
 
   def get_status(id, viewer) do
     not_deleted() |> visible_to(viewer) |> Repo.get(id)
+  end
+
+  @doc """
+  Fetches a status to show to `viewer`, or `nil`. Pass `nil` for a logged out
+  reader, which restricts the result to public and unlisted statuses.
+
+  The one door for handing a reader a post they asked for by id. Two questions
+  in a single query: `visible_to/2` for the audience, and `excluding_refused/2`
+  for the author's own block — of the reader, and of the reader by whoever a
+  boost is carrying.
+
+  Only `visible_to/2` used to be asked here, so `GET /statuses/:id`, the batch,
+  a poll, an annual report and the post pages all handed a reader posts from
+  an account that had blocked them. The rule was written down once in the
+  timeline queries and enforced only there. The embed and the oEmbed have no
+  reader to ask about and come through for the sake of one door, not because
+  they leaked.
+
+  The reader's *own* blocks and mutes are deliberately not part of it. Those
+  decide what is delivered, not what may be opened: "the one place you still
+  see them is their own profile, if you go and look" is a promise the user
+  guide makes, and a profile that lists a post whose link answers nothing
+  breaks it. `readable?/2` is the twin that asks the reader's side, for the
+  paths where a post arrives unasked.
+  """
+  @spec readable(integer() | nil, Account.t() | integer() | nil) :: Status.t() | nil
+  def readable(nil, _viewer), do: nil
+  def readable(id, viewer), do: not_deleted() |> reading_scope(viewer) |> Repo.get(id)
+
+  @doc """
+  The same read for several ids at once, in the order they were given.
+
+  One query rather than one per id, and one answer rather than a caller's
+  choice of filters.
+  """
+  @spec readable_many([integer() | String.t()], Account.t() | integer() | nil) :: [Status.t()]
+  def readable_many([], _viewer), do: []
+  def readable_many(ids, viewer), do: by_ids(ids, reading_scope(not_deleted(), viewer))
+
+  @doc """
+  Fetches a status `viewer` may take one of their own marks off, or `nil`.
+
+  `readable/2`, or failing that a post they have already favourited,
+  bookmarked, boosted or muted the thread of. `bookmarks/2` and `favourites/2`
+  answer what somebody saved whatever they have done about the author since,
+  so the button drawn over a saved row has to reach it — and having a mark on
+  a post is proof they could read it when they made it.
+
+  Only for taking a mark back. Putting one on is being shown the post, so
+  `favourite`, `bookmark`, `reblog`, `mute` and `pin` go through `readable/2`
+  like any other read: the reference implementation draws the line in the same
+  place, refusing all five to a reader the author has blocked.
+  """
+  @spec actionable(integer() | nil, Account.t() | integer() | nil) :: Status.t() | nil
+  def actionable(id, viewer), do: readable(id, viewer) || own_mark(id, viewer)
+
+  defp own_mark(id, viewer) do
+    with %Status{} = status <- get_status(id, viewer),
+         true <- marked_by?(status, viewer_id(viewer)) do
+      status
+    else
+      _unmarked -> nil
+    end
+  end
+
+  defp marked_by?(_status, nil), do: false
+
+  defp marked_by?(%Status{id: status_id} = status, viewer_id) do
+    favourited?(viewer_id, status_id) or bookmarked?(viewer_id, status_id) or
+      boosted?(viewer_id, status_id) or thread_muted?(viewer_id, status)
+  end
+
+  @doc """
+  Whether a post that arrived unasked may be handed to `viewer`.
+
+  Everything `readable/2` asks and the reader's own side as well — their
+  blocks, their mutes, the servers they have shut out and the threads they
+  have put down. That is the difference between the two: opening a link is
+  deliberate, and a timeline is where all four are meant to take effect.
+
+  The streaming transports ask this once per post per open socket, and a
+  boolean is all they want, so it is one `EXISTS` rather than a row fetch
+  followed by `hidden_for?/2` — three round trips for one answer, on the
+  hottest path in the server.
+  """
+  @spec readable?(Status.t(), Account.t() | integer() | nil) :: boolean()
+  def readable?(%Status{} = status, viewer) do
+    not_deleted()
+    |> delivery_scope(viewer)
+    |> where([s], s.id == ^status.id)
+    |> Repo.exists?()
+  end
+
+  # What a reader may open, and what may be pushed at them. Two scopes because
+  # they are two questions, and the second is the first plus the reader's own
+  # side of it.
+  defp reading_scope(query, viewer), do: query |> visible_to(viewer) |> excluding_refused(viewer)
+
+  defp delivery_scope(query, viewer) do
+    query
+    |> visible_to(viewer)
+    |> excluding_hidden(viewer)
+    |> excluding_muted_threads(viewer)
   end
 
   defp stamp_edit(attrs, now) do

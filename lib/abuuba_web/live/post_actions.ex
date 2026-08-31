@@ -82,7 +82,7 @@ defmodule AbuubaWeb.PostActions do
 
         # Re-read rather than returning what the write handed back: the
         # counters live on another row, and the caller is about to draw them.
-        {:ok, Statuses.get_status(status.id, viewer)}
+        {:ok, Statuses.actionable(status.id, viewer)}
     end
   end
 
@@ -106,9 +106,13 @@ defmodule AbuubaWeb.PostActions do
   def vote(viewer, poll_id, choices)
 
   def vote(%Account{} = viewer, poll_id, choices) when is_list(choices) do
+    # Through the post rather than the poll alone: a poll is reachable exactly
+    # when the post carrying it is, and asking the poll separately would be a
+    # second set of rules to keep in step with the first.
     with %Poll{} = poll <- Statuses.fetch_poll(poll_id),
+         %Status{} = status <- Statuses.readable(poll.status_id, viewer),
          {:ok, _voted} <- Statuses.vote(poll, viewer, to_indexes(choices)) do
-      {:ok, Statuses.get_status(poll.status_id, viewer)}
+      {:ok, Statuses.readable(status.id, viewer)}
     else
       _refused -> :error
     end
@@ -269,8 +273,11 @@ defmodule AbuubaWeb.PostActions do
   def own?(%Status{account_id: account_id}, %Account{id: account_id}), do: true
   def own?(_status, _viewer), do: false
 
-  # `get_status/2` is what applies the viewer's own visibility, so a post
-  # somebody cannot see answers nil here rather than being acted on.
+  # `actionable/2`: readable, or a post this reader has already marked. The
+  # bookmarks and favourites screens list what somebody saved whatever they
+  # have done about the author since, so the button drawn over a row has to
+  # reach it -- and nothing else does, so a made-up id cannot favourite a post
+  # from an account that blocked them and draw it into their timeline.
   #
   # `Snowflake.cast/1` rather than `Integer.parse/1`, which reads a number too
   # big for the column and hands it to Ecto, where it is a cast error that
@@ -278,7 +285,7 @@ defmodule AbuubaWeb.PostActions do
   # so one id nobody could have meant emptied the page.
   defp find(viewer, id) do
     case Snowflake.cast(id) do
-      {:ok, number} -> Statuses.get_status(number, viewer)
+      {:ok, number} -> Statuses.actionable(number, viewer)
       :error -> nil
     end
   end

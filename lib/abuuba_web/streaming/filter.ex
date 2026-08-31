@@ -178,10 +178,8 @@ defmodule AbuubaWeb.Streaming.Filter do
   # socket sees public posts and nothing else.
   defp visible?(%Status{} = status, %{account: nil}), do: status.visibility == :public
 
-  defp visible?(%Status{} = status, %{account: account}) do
-    Statuses.get_status(status.id, account) != nil and
-      not Statuses.hidden_for?(status, account)
-  end
+  defp visible?(%Status{} = status, %{account: account}),
+    do: Statuses.readable?(status, account)
 
   defp subscribed?(state, stream) do
     Enum.any?(state.topics, fn {name, _topic} -> name == stream end)
