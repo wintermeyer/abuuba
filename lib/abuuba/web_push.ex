@@ -218,10 +218,10 @@ defmodule Abuuba.WebPush do
 
   defp body(%Notification{status_id: status_id, account_id: account_id}) do
     # Through `Statuses` and with the reader named, which a bare `Repo.get`
-    # was neither: a push is the one copy of a post that arrives somewhere the
-    # reader cannot be shown a filtered list, so a post they may no longer read
-    # -- deleted, or from somebody they have since blocked -- must not be the
-    # thing on their lock screen.
+    # was neither. `Abuuba.WebPush.DeliveryWorker` is what decides whether the
+    # push goes at all; this is the second half, for a post that has been
+    # deleted or whose author has since blocked the reader -- the thing on a
+    # lock screen is the one copy no list can filter afterwards.
     case Statuses.readable(status_id, account_id) do
       nil ->
         ""

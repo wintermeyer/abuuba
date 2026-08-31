@@ -23,6 +23,7 @@ defmodule Abuuba.WebPush.DeliveryWorker do
   require Logger
 
   alias Abuuba.Federation.HTTP
+  alias Abuuba.Notifications
   alias Abuuba.Notifications.Notification
   alias Abuuba.Repo
   alias Abuuba.WebPush
@@ -100,8 +101,19 @@ defmodule Abuuba.WebPush.DeliveryWorker do
     HTTP.post_json(url, body, headers: headers, sign_as: nil)
   end
 
+  # Through the reader's own door, not a bare fetch. A push is queued the
+  # moment a notification is written and runs later, and "later" is long
+  # enough to block somebody in: the job would then ring a phone with the
+  # blocked account's name in the title, which is the one copy of a
+  # notification that arrives somewhere no list can filter it.
   defp get_notification(id) do
-    Repo.get(Notification, id)
+    case Repo.get(Notification, id) do
+      nil ->
+        nil
+
+      %Notification{} = notification ->
+        Notifications.get(notification.account_id, notification.id)
+    end
   end
 
   @doc """

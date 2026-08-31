@@ -8,6 +8,7 @@ defmodule Abuuba.WebPushTest do
   alias Abuuba.OAuth
   alias Abuuba.Relationships
   alias Abuuba.WebPush
+  alias Abuuba.WebPush.DeliveryWorker
   alias Abuuba.WebPush.Encryption
   alias Abuuba.WebPush.Subscription
   alias Abuuba.WebPush.VAPID
@@ -393,6 +394,32 @@ defmodule Abuuba.WebPushTest do
       payload = WebPush.payload(notification, subscription, "token")
 
       assert String.length(payload["body"]) == WebPush.body_limit()
+    end
+
+    test "and a queued push is dropped when the reader blocks the sender first", %{
+      account: account,
+      token: token,
+      keys: keys
+    } do
+      # The gap between writing a notification and the phone waking up. The
+      # worker fetched the row directly, so a block made in between still rang
+      # with the blocked account's name in the title -- the one copy of a
+      # notification that arrives somewhere no list can filter it.
+      {:ok, subscription} = subscribe(token, account, keys, %{"follow" => true})
+      sender = account_fixture()
+      {:ok, notification} = Notifications.notify(account, sender, "follow")
+
+      {:ok, _} = Relationships.block(account, sender)
+
+      job = %Oban.Job{
+        args: %{
+          "subscription_id" => subscription.id,
+          "notification_id" => notification.id
+        }
+      }
+
+      assert DeliveryWorker.perform(job) == :ok,
+             "a dropped push is done, not delivered and not retried"
     end
 
     test "carries no words from a post the reader may no longer read", %{
