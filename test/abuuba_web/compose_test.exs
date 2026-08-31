@@ -856,6 +856,28 @@ defmodule AbuubaWeb.ComposeTest do
       assert render(live) =~ "media-attachment"
     end
 
+    test "and the post is announced with them already on it", %{conn: conn, account: account} do
+      # The composer wrote three times: `create_status/2` announces on commit,
+      # so the streaming API, the live timeline and the outbox were each handed
+      # a photo post with no photographs. `ordered_media_attachment_ids` is on
+      # the row that goes out, so what the broadcast carried says whether the
+      # pictures were on it yet.
+      Abuuba.Streaming.subscribe(Abuuba.Streaming.public_topic())
+
+      {:ok, live, _html} = live(conn, ~p"/home")
+
+      pick(live, [png("cat.png")])
+      submit(live, %{"text" => "a photograph"})
+
+      assert [status] = posted(account)
+
+      assert_receive {:streaming, "update", announced}, 2_000
+      assert announced.id == status.id
+
+      refute announced.ordered_media_attachment_ids == [],
+             "the post went out before its pictures were on it"
+    end
+
     test "hangs them on the post, in order", %{conn: conn, account: account} do
       {:ok, live, _html} = live(conn, ~p"/home")
 
