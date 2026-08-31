@@ -153,6 +153,60 @@ defmodule AbuubaWeb.ComposeTest do
     end
   end
 
+  describe "what a caret move costs" do
+    test "nothing, once the text has not changed", %{conn: conn, account: account} do
+      # `assets/js/compose.js` pushes `caret` on input, keyup and click,
+      # undebounced. Every one of those used to re-resolve each `@mention`
+      # against the database, ask for the parent author again, and search if
+      # the caret sat in a word -- so an arrow key through a reply cost three
+      # queries and a whole preview render.
+      other = account_fixture(%{username: "bobby"})
+      {:ok, _parent} = Abuuba.Statuses.create_status(%{account_id: other.id, text: "hello"})
+
+      {:ok, live, _html} = live(conn, ~p"/home")
+
+      draft(live, %{"text" => "@bobby and @#{account.username} "})
+
+      # Settle whatever the first render owes, then count only the caret.
+      _ = caret(live, 3)
+
+      {:ok, counter} = Agent.start_link(fn -> 0 end)
+      handler = "caret-#{System.unique_integer([:positive])}"
+
+      # Detached when the test ends. A handler that outlives the agent it
+      # updates keeps firing for every query the rest of the suite makes, dies
+      # against a dead process, and logs its own detaching -- which is enough
+      # to abort the run under `--warnings-as-errors`.
+      on_exit(fn -> :telemetry.detach(handler) end)
+
+      :telemetry.attach(
+        handler,
+        [:abuuba, :repo, :query],
+        fn _event, _measure, _meta, _config -> Agent.update(counter, &(&1 + 1)) end,
+        nil
+      )
+
+      # Back into the same word: same text, same token, nothing to ask.
+      _ = caret(live, 3)
+
+      assert Agent.get(counter, & &1) == 0
+    end
+
+    test "and the preview still follows the text when it does change", %{conn: conn} do
+      # The control. Caching the derived state on a key is one typo away from
+      # a preview that never updates, and every assertion above is that
+      # something did not happen.
+      {:ok, live, _html} = live(conn, ~p"/home")
+
+      assert draft(live, %{"text" => "first words"}) =~ "first words"
+
+      html = draft(live, %{"text" => "second words"})
+
+      assert html =~ "second words"
+      refute html =~ "first words"
+    end
+  end
+
   describe "the preview" do
     test "shows a mention as the link it will become", %{conn: conn} do
       account_fixture(%{username: "bob"})

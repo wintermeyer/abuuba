@@ -363,6 +363,76 @@ defmodule Abuuba.Accounts do
 
   def lookup(_handle), do: nil
 
+  @doc """
+  The same for several handles at once, keyed by the handle as it was given.
+
+  One query rather than one per handle. The compose box renders a preview of
+  what is being written on every keystroke, and resolving each `@mention`
+  separately made a post naming four people four round trips per render.
+
+  Handles that name nobody are simply absent, the way `lookup/1` answers `nil`.
+  """
+  @spec lookup_many([String.t()]) :: %{String.t() => Account.t()}
+  def lookup_many([]), do: %{}
+
+  def lookup_many(handles) do
+    wanted =
+      handles
+      |> Enum.uniq()
+      |> Enum.flat_map(fn handle ->
+        case split_handle(handle) do
+          nil -> []
+          pair -> [{handle, pair}]
+        end
+      end)
+
+    found = accounts_by_handle(wanted |> Enum.map(&elem(&1, 1)) |> Enum.uniq())
+
+    wanted
+    |> Enum.flat_map(fn {handle, pair} ->
+      case Map.get(found, pair) do
+        nil -> []
+        account -> [{handle, account}]
+      end
+    end)
+    |> Map.new()
+  end
+
+  defp accounts_by_handle([]), do: %{}
+
+  defp accounts_by_handle(pairs) do
+    pairs
+    |> Enum.reduce(Account, fn {username, domain}, query ->
+      or_where(
+        query,
+        [a],
+        fragment("lower(?)", a.username) == ^username and
+          fragment("coalesce(lower(?), '')", a.domain) == ^domain
+      )
+    end)
+    |> Repo.all()
+    |> Map.new(&{{String.downcase(&1.username), String.downcase(&1.domain || "")}, &1})
+  end
+
+  # The three shapes `lookup/1` accepts, as the pair the column comparison
+  # wants: a handle naming this server's own domain is the local account.
+  defp split_handle(handle) when is_binary(handle) do
+    case handle |> String.trim() |> String.trim_leading("@") |> String.split("@") do
+      [username] ->
+        {String.downcase(username), ""}
+
+      [username, domain] ->
+        if URIs.local_domain?(domain),
+          do: {String.downcase(username), ""},
+          else: {String.downcase(username), String.downcase(domain)}
+
+      _ ->
+        nil
+    end
+  end
+
+  defp split_handle(_handle), do: nil
+
   defp lookup_with_domain(username, domain) do
     if URIs.local_domain?(domain) do
       get_account_by_handle(username, nil)
