@@ -252,21 +252,20 @@ defmodule Abuuba.Moderation.Reports do
     end
   end
 
+  # The join already carries the permissions, so the mask comes back with the
+  # account and `Roles.allows?/2` answers without reading anything: this used
+  # to select every account with a role and then re-read each one's user row
+  # to ask what it was allowed to do.
   defp moderators do
     from(u in "users",
       join: r in "user_roles",
       on: r.id == u.role_id,
-      select: u.account_id
+      select: {u.account_id, r.permissions}
     )
     |> Repo.all()
-    |> Enum.filter(&can_handle?/1)
-  end
-
-  defp can_handle?(account_id) do
-    case Repo.get_by(Abuuba.Accounts.User, account_id: account_id) do
-      nil -> false
-      user -> Roles.can?(user, "manage_reports")
-    end
+    |> Enum.flat_map(fn {account_id, held} ->
+      if Roles.allows?(held, "manage_reports"), do: [account_id], else: []
+    end)
   end
 
   # Only for a remote account, and only when asked. Forwarding tells the other

@@ -324,12 +324,18 @@ defmodule Abuuba.Timelines do
   they have said they do not want.
   """
   @spec merge_account(Account.t() | integer(), Account.t() | integer()) :: :ok
-  def merge_account(%Account{id: reader_id}, author), do: merge_account(reader_id, author)
-  def merge_account(reader_id, %Account{id: author_id}), do: merge_account(reader_id, author_id)
+  def merge_account(%Account{} = reader, %Account{id: author_id}),
+    do: merge_account(reader, author_id)
 
-  def merge_account(reader_id, author_id) do
-    reader = Accounts.get_account(reader_id)
+  # Keeps the reader the caller already holds. `regenerate/1` calls this once
+  # per followed account, and the clause here used to throw the struct away
+  # and read the same row back -- so rebuilding the feed of somebody following
+  # five hundred people read their own account five hundred times.
+  def merge_account(%Account{} = reader, author_id), do: backfill(reader, author_id)
 
+  def merge_account(reader_id, author), do: merge_account(Accounts.get_account(reader_id), author)
+
+  defp backfill(%Account{id: reader_id} = reader, author_id) do
     Statuses.not_deleted()
     |> Statuses.visible_to(reader)
     |> where([s], s.account_id == ^author_id)
@@ -357,10 +363,12 @@ defmodule Abuuba.Timelines do
   def regenerate(%Account{id: account_id}), do: regenerate(account_id)
 
   def regenerate(account_id) do
+    reader = Accounts.get_account(account_id)
+
     # Their own posts first. A home timeline has always included them, and the
     # fan-out is what usually puts them there — which is no help to a feed
     # being built from nothing.
-    Enum.each([account_id | followed_ids(account_id)], &merge_account(account_id, &1))
+    Enum.each([account_id | followed_ids(account_id)], &merge_account(reader, &1))
 
     account_id
     |> Statuses.followed_tags(%{limit: 100})

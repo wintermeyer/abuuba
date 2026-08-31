@@ -25,7 +25,6 @@ defmodule Abuuba.Federation.Activity.Move do
   alias Abuuba.Accounts
   alias Abuuba.Federation.Activity.Helpers
   alias Abuuba.Relationships
-  alias Abuuba.Repo
 
   @cooldown_days 7
 
@@ -75,17 +74,17 @@ defmodule Abuuba.Federation.Activity.Move do
         moved_at: DateTime.utc_now()
       })
 
+    # `local_follower_ids/1` asks the same question in one query -- the join
+    # does the local filter that a `Repo.get` per follower was doing here --
+    # and `follow/3` and `unfollow/2` both take an id, so the rows were never
+    # needed. An account with a thousand followers moved in a thousand and one
+    # queries.
     origin
-    |> Relationships.follower_ids()
-    |> Enum.map(&Repo.get(Abuuba.Accounts.Account, &1))
-    |> Enum.filter(&local?/1)
+    |> Relationships.local_follower_ids()
     |> Enum.each(&refollow(&1, origin, target))
 
     :ok
   end
-
-  defp local?(nil), do: false
-  defp local?(account), do: is_nil(account.domain)
 
   # Follow first, then unfollow. The other order leaves somebody following
   # nobody if the second step fails, and following both for a moment is a much
