@@ -153,7 +153,7 @@ defmodule AbuubaWeb.API.MediaController do
   defp with_own(conn, id, fun) do
     account = current_account(conn)
 
-    case Media.get_own_unattached(account, API.id_param(%{"id" => id}, "id") || 0) do
+    case Media.get_own_unattached(account, API.parse_id(id) || 0) do
       nil -> API.error(conn, 404, "Record not found")
       attachment -> fun.(attachment)
     end

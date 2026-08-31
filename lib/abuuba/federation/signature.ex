@@ -418,7 +418,7 @@ defmodule Abuuba.Federation.Signature do
   ## Crypto
 
   defp rsa_sign(signing_string, pem) do
-    with {:ok, key} <- decode_private_key(pem) do
+    with {:ok, key} <- decode_key(pem) do
       {:ok,
        signing_string
        |> :public_key.sign(:sha256, key)
@@ -428,23 +428,17 @@ defmodule Abuuba.Federation.Signature do
 
   defp rsa_verify(signing_string, signature, pem) do
     with {:ok, decoded} <- Base.decode64(signature),
-         {:ok, key} <- decode_public_key(pem) do
+         {:ok, key} <- decode_key(pem) do
       :public_key.verify(signing_string, :sha256, decoded, key)
     else
       _ -> false
     end
   end
 
-  defp decode_private_key(pem) do
-    case :public_key.pem_decode(pem) do
-      [entry | _] -> {:ok, :public_key.pem_entry_decode(entry)}
-      [] -> {:error, :bad_key}
-    end
-  rescue
-    _ -> {:error, :bad_key}
-  end
-
-  defp decode_public_key(pem) do
+  # One function for both halves of the pair: `pem_decode/1` reads whichever
+  # kind of key the PEM holds, so signing and verifying were asking the same
+  # question through two byte-identical private functions.
+  defp decode_key(pem) do
     case :public_key.pem_decode(pem) do
       [entry | _] -> {:ok, :public_key.pem_entry_decode(entry)}
       [] -> {:error, :bad_key}

@@ -384,7 +384,7 @@ defmodule AbuubaWeb.API.StatusController do
   """
   def revoke_quote(conn, %{"status_id" => status_id, "id" => quoting_id}) do
     with_own_status(conn, status_id, fn status, viewer ->
-      case Quotes.revoke_for(status, API.id_param(%{"id" => quoting_id}, "id")) do
+      case Quotes.revoke_for(status, API.parse_id(quoting_id)) do
         :ok -> json(conn, Entities.status(status, viewer))
         :error -> API.error(conn, 404, "Record not found")
       end
@@ -687,7 +687,7 @@ defmodule AbuubaWeb.API.StatusController do
   defp fetch(conn, id, read, fun) do
     viewer = current_account(conn)
 
-    case read.(API.id_param(%{"id" => id}, "id"), viewer) do
+    case read.(API.parse_id(id), viewer) do
       nil -> API.error(conn, 404, "Record not found")
       status -> fun.(status, viewer)
     end

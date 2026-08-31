@@ -96,7 +96,7 @@ defmodule Abuuba.Federation.ResolveActor do
   # re-read below turns the loser into an update instead of a second insert.
   defp fetch_and_store(uri, existing_account, opts) do
     with :ok <- check_uri(uri),
-         {:ok, document} <- fetch(uri, opts),
+         {:ok, document} <- HTTP.fetch_json(uri, opts),
          :ok <- check_document(document, uri),
          {:ok, handle} <- handle_from(document, uri),
          :ok <- check_loopback(handle, document["id"], opts),
@@ -116,13 +116,6 @@ defmodule Abuuba.Federation.ResolveActor do
         {:ok, account}
       end
     end)
-  end
-
-  defp fetch(uri, opts) do
-    case Keyword.get(opts, :fetch) do
-      nil -> HTTP.get_json(uri, opts)
-      fetcher -> fetcher.(uri)
-    end
   end
 
   @doc """
@@ -148,7 +141,7 @@ defmodule Abuuba.Federation.ResolveActor do
   end
 
   defp resolve_owner_of(key_id, opts) do
-    with {:ok, document} <- fetch(key_id, opts),
+    with {:ok, document} <- HTTP.fetch_json(key_id, opts),
          owner when is_binary(owner) <- owner_uri(document),
          true <- URIs.same_host?(owner, key_id) do
       resolve(owner, opts)
@@ -179,7 +172,7 @@ defmodule Abuuba.Federation.ResolveActor do
       not is_map(document) -> {:error, :malformed_actor}
       document["type"] not in @actor_types -> {:error, :not_an_actor}
       not is_binary(document["id"]) -> {:error, :malformed_actor}
-      not same_host?(document["id"], requested_uri) -> {:error, :actor_host_mismatch}
+      not URIs.same_host?(document["id"], requested_uri) -> {:error, :actor_host_mismatch}
       is_nil(inbox(document)) -> {:error, :actor_without_inbox}
       true -> :ok
     end
@@ -188,14 +181,6 @@ defmodule Abuuba.Federation.ResolveActor do
   # A document may only describe an actor on the host that served it.
   # Otherwise a hostile server hands back a document claiming to be somebody
   # on another host and we file it under their name.
-  defp same_host?(id, requested) do
-    with %URI{host: a} when is_binary(a) <- URI.parse(id),
-         %URI{host: b} when is_binary(b) <- URI.parse(requested) do
-      String.downcase(a) == String.downcase(b)
-    else
-      _ -> false
-    end
-  end
 
   @doc """
   Resolves whatever somebody typed: an address, or a handle.

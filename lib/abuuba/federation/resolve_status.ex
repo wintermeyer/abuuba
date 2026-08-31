@@ -40,6 +40,7 @@ defmodule Abuuba.Federation.ResolveStatus do
   alias Abuuba.Federation.Limits
   alias Abuuba.Federation.Quotes
   alias Abuuba.Federation.ResolveActor
+  alias Abuuba.Federation.URIs
   alias Abuuba.Instance
   alias Abuuba.Media
   alias Abuuba.Moderation.Domains
@@ -70,12 +71,9 @@ defmodule Abuuba.Federation.ResolveStatus do
   """
   @spec trustworthy_attribution?(String.t() | nil, term()) :: boolean()
   def trustworthy_attribution?(object_id, attributed_to) do
-    with author when is_binary(author) <- attribution_uri(attributed_to),
-         %URI{host: object_host} when is_binary(object_host) <- URI.parse(object_id || ""),
-         %URI{host: author_host} when is_binary(author_host) <- URI.parse(author) do
-      String.downcase(object_host) == String.downcase(author_host)
-    else
-      _ -> false
+    case attribution_uri(attributed_to) do
+      author when is_binary(author) -> URIs.same_host?(object_id, author)
+      _not_a_uri -> false
     end
   end
 
@@ -142,7 +140,7 @@ defmodule Abuuba.Federation.ResolveStatus do
   ## Fetching
 
   defp fetch_and_store(uri, opts) do
-    with {:ok, document} <- fetch(uri, opts),
+    with {:ok, document} <- HTTP.fetch_json(uri, opts),
          {:ok, object} <- unwrap(document),
          {:ok, object} <- refetch_by_id(object, uri, opts),
          :ok <- check_object(object),
@@ -158,13 +156,6 @@ defmodule Abuuba.Federation.ResolveStatus do
 
       other ->
         other
-    end
-  end
-
-  defp fetch(uri, opts) do
-    case Keyword.get(opts, :fetch) do
-      nil -> HTTP.get_json(uri, opts)
-      fetcher -> fetcher.(uri)
     end
   end
 
@@ -192,7 +183,7 @@ defmodule Abuuba.Federation.ResolveStatus do
   end
 
   defp refetch(id, opts) do
-    with {:ok, document} <- fetch(id, Keyword.put(opts, :refetched, true)),
+    with {:ok, document} <- HTTP.fetch_json(id, Keyword.put(opts, :refetched, true)),
          {:ok, object} <- unwrap(document) do
       if same_uri?(object["id"], id), do: {:ok, object}, else: {:error, :id_mismatch}
     end
@@ -620,7 +611,7 @@ defmodule Abuuba.Federation.ResolveStatus do
   defp walk(_uri, _opts, _depth, 0), do: {:error, :discovery_budget_exhausted}
 
   defp walk(uri, opts, depth, budget) do
-    with {:ok, document} <- fetch(uri, opts),
+    with {:ok, document} <- HTTP.fetch_json(uri, opts),
          {:ok, object} <- unwrap(document) do
       parent_id = resolve_parent(object, opts, depth, budget)
 
