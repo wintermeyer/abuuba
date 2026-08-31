@@ -48,9 +48,11 @@ defmodule Abuuba.Trends do
   alias Abuuba.Repo
   alias Abuuba.Roles
   alias Abuuba.Settings
+  alias Abuuba.Statuses
   alias Abuuba.Statuses.Formatter
   alias Abuuba.Statuses.Status
   alias Abuuba.Statuses.Tag
+  alias Abuuba.Timelines
   alias Abuuba.Trends.Link
   alias Abuuba.Trends.Trend
 
@@ -329,6 +331,59 @@ defmodule Abuuba.Trends do
   defp filter_language(query, :any), do: query
   defp filter_language(query, nil), do: where(query, [t], is_nil(t.language))
   defp filter_language(query, language), do: where(query, [t], t.language == ^language)
+
+  @doc """
+  The posts trending right now, as this reader may be shown them.
+
+  `list/2` answers with rows of a ranking table, which knows what is busy and
+  nothing about who is asking. Handing those subjects straight to a caller
+  made trending the one door into the public timelines that asked nothing at
+  all -- not `timeline_access`, and not the reader's own blocks and mutes
+  either, so `eligible?/1` at write time was the whole of the check.
+
+  Both are asked here rather than by the caller, through the same
+  `Abuuba.Timelines` the public timeline goes through. A ranking is not a
+  reason to show somebody a post they have said they do not want.
+  """
+  @spec statuses(Account.t() | nil, keyword()) :: [Status.t()]
+  def statuses(viewer, opts \\ []) do
+    if Settings.public_timelines_readable?(viewer) do
+      "status" |> list(opts) |> Enum.map(& &1.subject) |> Timelines.by_ids(viewer)
+    else
+      []
+    end
+  end
+
+  @doc """
+  The hashtags trending right now, as this reader may be shown them.
+
+  Behind the same setting as `statuses/2`, because a trend is a summary of the
+  timeline rather than a thing apart: a tag entity carries how many people
+  used it on each of the last seven days, all of it counted from the posts a
+  server set to `authenticated` has just refused to show. A front page
+  advertising `#outdoors` and a `/tags/outdoors` that answers nothing is the
+  setting saying one thing and the door doing another.
+  """
+  @spec tags(Account.t() | nil, keyword()) :: [Tag.t()]
+  def tags(viewer, opts \\ []) do
+    if Settings.public_timelines_readable?(viewer) do
+      "tag" |> list(opts) |> Enum.map(& &1.subject) |> Statuses.get_tags()
+    else
+      []
+    end
+  end
+
+  @doc """
+  The links trending right now, as this reader may be shown them.
+
+  Same setting, same reason as `tags/2`: a link trends because of the posts
+  that carried it. Named the long way because `links/1` is already the
+  moderation listing of every link this server has seen.
+  """
+  @spec trending_links(Account.t() | nil, keyword()) :: [Trend.t()]
+  def trending_links(viewer, opts \\ []) do
+    if Settings.public_timelines_readable?(viewer), do: list("link", opts), else: []
+  end
 
   ## Review
 

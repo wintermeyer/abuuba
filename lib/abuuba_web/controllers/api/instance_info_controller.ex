@@ -184,10 +184,10 @@ defmodule AbuubaWeb.API.InstanceInfoController do
   which would announce that there is something being withheld.
   """
   def domain_blocks(conn, _params) do
-    case {Settings.get("show_domain_blocks"), current_account(conn)} do
-      {"all", _anyone} -> json(conn, Domains.public_blocks())
-      {"users", %Abuuba.Accounts.Account{}} -> json(conn, Domains.public_blocks())
-      _not_for_this_reader -> API.error(conn, 404, "Record not found")
+    if Settings.domain_blocks_visible?(current_account(conn)) do
+      json(conn, Domains.public_blocks())
+    else
+      API.error(conn, 404, "Record not found")
     end
   end
 
@@ -264,29 +264,23 @@ defmodule AbuubaWeb.API.InstanceInfoController do
   ## Trends
 
   def trending_tags(conn, params) do
-    tags =
-      "tag"
-      |> Trends.list(trend_opts(params))
-      |> Enum.map(& &1.subject)
-      |> Statuses.get_tags()
+    viewer = current_account(conn)
 
-    json(conn, Entities.tags(tags, current_account(conn)))
+    json(conn, Entities.tags(Trends.tags(viewer, trend_opts(params)), viewer))
   end
 
   def trending_statuses(conn, params) do
-    statuses =
-      "status"
-      |> Trends.list(trend_opts(params))
-      |> Enum.map(& &1.subject)
-      |> Statuses.get_statuses()
+    viewer = current_account(conn)
 
     # One rendering batch. Rendering each status alone ran the whole
     # per-page query set once per trending post.
-    json(conn, Entities.statuses(statuses, current_account(conn)))
+    json(conn, Entities.statuses(Trends.statuses(viewer, trend_opts(params)), viewer))
   end
 
   def trending_links(conn, params) do
-    json(conn, "link" |> Trends.list(trend_opts(params)) |> Entities.trend_links())
+    links = Trends.trending_links(current_account(conn), trend_opts(params))
+
+    json(conn, Entities.trend_links(links))
   end
 
   defp trend_opts(params) do

@@ -30,7 +30,6 @@ defmodule AbuubaWeb.FeedController do
   alias Abuuba.Accounts
   alias Abuuba.Accounts.Account
   alias Abuuba.Federation.Serializer
-  alias Abuuba.Settings
   alias Abuuba.Statuses
   alias Abuuba.Statuses.Formatter
   alias Abuuba.Timelines
@@ -64,13 +63,11 @@ defmodule AbuubaWeb.FeedController do
   """
   def tag(conn, %{"tag" => tag}) do
     # The same question the page at /tags/:name asks, because this is that
-    # timeline in another format. An admin who closed the timelines to
-    # strangers closed this too, and a feed that answered anyway was a way to
-    # read exactly what the page refused to show.
-    statuses =
-      if Settings.public_timelines_readable?(nil),
-        do: Timelines.tag(tag, nil, feed_params()),
-        else: []
+    # timeline in another format, and `Timelines.tag/3` is where it is asked.
+    # An admin who closed the timelines to strangers closed this too, and a
+    # feed that answered anyway was a way to read exactly what the page
+    # refused to show.
+    statuses = Timelines.tag(tag, nil, feed_params())
 
     render_feed(conn,
       title: "#" <> tag,

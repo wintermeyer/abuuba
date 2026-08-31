@@ -1041,12 +1041,18 @@ defmodule Abuuba.Statuses do
   @spec get_visible_statuses([integer() | String.t()], Account.t() | nil) :: [Status.t()]
   def get_visible_statuses(ids, viewer), do: by_ids(ids, visible_to(not_deleted(), viewer))
 
-  # The shared body: normalise the ids, fetch what the scope allows, and hand
-  # the rows back in the caller's order — a ranking's whole content is its
-  # order, and the database has no opinion about it.
-  defp by_ids([], _scope), do: []
+  @doc """
+  Statuses by id, in the order the ids were given, narrowed by `scope`.
 
-  defp by_ids(ids, scope) do
+  The shared body behind the three reads above, public because a caller with
+  a scope of its own needs it too: `Abuuba.Timelines` reads a ranking's ids
+  through the filters a timeline applies, which is none of the three. Ids may
+  be strings, and anything that is not a number is simply not a post.
+  """
+  @spec by_ids([integer() | String.t()], Ecto.Query.t()) :: [Status.t()]
+  def by_ids([], _scope), do: []
+
+  def by_ids(ids, scope) do
     numbers = Enum.flat_map(ids, &List.wrap(to_id(&1)))
 
     found =

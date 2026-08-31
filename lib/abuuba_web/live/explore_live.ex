@@ -121,7 +121,11 @@ defmodule AbuubaWeb.ExploreLive do
       </ul>
 
       <p :if={empty?(assigns)} class="p-8 text-center text-base-content/60">
-        {gettext("Nothing here yet. Come back once people have posted.")}
+        <%= if @open? do %>
+          {gettext("Nothing here yet. Come back once people have posted.")}
+        <% else %>
+          {gettext("This server shows what people are posting to those with an account here.")}
+        <% end %>
       </p>
     </Layouts.app>
     """
@@ -165,8 +169,12 @@ defmodule AbuubaWeb.ExploreLive do
     socket
     |> assign(
       posts: posts(socket.assigns.tab, viewer),
-      tags: tags(socket.assigns.tab),
-      people: people(socket.assigns.tab)
+      tags: tags(socket.assigns.tab, viewer),
+      people: people(socket.assigns.tab),
+      # For the empty state only. `Abuuba.Timelines` decides what is shown;
+      # this decides which of the two silences to explain, because "nothing
+      # here yet" is a lie on a server that has posts and is refusing them.
+      open?: Settings.public_timelines_readable?(viewer)
     )
     |> assign(
       following: following(socket.assigns.tab, viewer),
@@ -187,40 +195,23 @@ defmodule AbuubaWeb.ExploreLive do
   # Only the tab being looked at asks the database. Three queries for a page
   # that shows one of them is two queries nobody needed.
   defp posts(:posts, viewer) do
-    trending =
-      "status"
-      |> Trends.list(limit: @page_size)
-      |> Enum.map(& &1.subject)
-      |> Statuses.get_statuses()
+    # Both halves ask the same two questions, because both go through
+    # `Abuuba.Timelines`. The trending half used to ask neither.
+    trending = Trends.statuses(viewer, limit: @page_size)
+    recent = Timelines.public(viewer, %{limit: @page_size})
 
-    recent =
-      if readable?(viewer), do: Timelines.public(viewer, %{limit: @page_size}), else: []
-
-    # `Timelines.public/2` answers the reader's blocks and mutes; what is
-    # trending arrives from a counter that knows nobody, so the same question
-    # is asked of those rows one at a time. Without it this page showed a
-    # reader the posts of people they had blocked.
     dedupe(trending ++ recent)
-    |> Enum.reject(&Statuses.hidden_for?(&1, viewer))
     |> Entities.statuses(viewer, filter_context: "public")
     |> Enum.reject(&hidden?/1)
   end
 
   defp posts(_tab, _viewer), do: []
 
-  # The same rule the API enforces. A server whose admin keeps its timelines
-  # for people with an account here has to keep them on its own pages too, or
-  # the setting says one thing and the front door does another.
-  defp readable?(viewer), do: Settings.public_timelines_readable?(viewer)
-
-  defp tags(:tags) do
-    trending =
-      "tag" |> Trends.list(limit: @page_size) |> Enum.map(& &1.subject) |> Statuses.get_tags()
-
-    dedupe(trending ++ Statuses.listable_tags(limit: @page_size))
+  defp tags(:tags, viewer) do
+    dedupe(Trends.tags(viewer, limit: @page_size) ++ Statuses.listable_tags(limit: @page_size))
   end
 
-  defp tags(_tab), do: []
+  defp tags(_tab, _viewer), do: []
 
   # Trending first, the rest behind it, nothing twice.
   defp dedupe(records), do: Enum.uniq_by(records, & &1.id)

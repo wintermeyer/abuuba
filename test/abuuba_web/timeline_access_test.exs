@@ -22,16 +22,24 @@ defmodule AbuubaWeb.TimelineAccessTest do
   import Abuuba.AccountsFixtures
   import Abuuba.StatusesFixtures
 
+  alias Abuuba.Accounts
   alias Abuuba.Accounts.Auth
   alias Abuuba.Settings
+  alias Abuuba.Trends
 
   setup do
-    author = account_fixture()
-    status_fixture(%{account_id: author.id, text: "in the square #outdoors"})
+    {:ok, author} = Accounts.update_profile(account_fixture(), %{"discoverable" => true})
+    status = status_fixture(%{account_id: author.id, text: "in the square #outdoors"})
+
+    # Trending is the same posts reached by a different door, and it was the
+    # one door that asked nothing: no setting, and no viewer either.
+    :ok = Trends.approve(account_fixture(), "status", to_string(status.id))
+    Trends.put_counts("status", to_string(status.id), Date.utc_today(), accounts: 40)
+    :ok = Trends.rank()
 
     on_exit(fn -> Settings.put("timeline_access", "public") end)
 
-    %{author: author}
+    %{author: author, status: status}
   end
 
   # Approved as well as confirmed: `Auth.check_sign_in/1` refuses an account
@@ -71,6 +79,39 @@ defmodule AbuubaWeb.TimelineAccessTest do
       assert conn |> get(~p"/api/v1/timelines/public") |> json_response(422)
     end
 
+    test "and through what is trending in tags and links, which summarise it", %{conn: conn} do
+      # A tag entity carries how many people used it on each of the last seven
+      # days, counted from exactly the posts this server has just refused to
+      # show. A front page advertising #outdoors beside a /tags/outdoors that
+      # answers nothing is the setting saying one thing and the door another.
+      assert conn |> get(~p"/api/v1/trends/tags") |> json_response(200) == []
+      assert conn |> get(~p"/api/v1/trends/links") |> json_response(200) == []
+
+      # The tags tab still lists the tags this server has, because a directory
+      # of names is not a timeline: what the setting withholds is the trend,
+      # which is the counting of the posts behind them.
+      assert Trends.tags(nil) == []
+    end
+
+    test "and says which silence it is rather than blaming an empty server", %{conn: conn} do
+      # "Nothing here yet" is a lie on a server that has posts and is
+      # refusing them, and it sends somebody away instead of telling them an
+      # account would work.
+      html = conn |> get(~p"/explore") |> html_response(200)
+
+      refute html =~ "Nothing here yet"
+      assert html =~ "those with an account here"
+    end
+
+    test "including through what is trending, which is the same posts", %{conn: conn} do
+      # The door nobody had gated. `/api/v1/trends/statuses` read a ranking
+      # table and handed the rows straight over: no setting, and no viewer, so
+      # `Trends.eligible?/1` at write time was the whole of the check.
+      assert conn |> get(~p"/api/v1/trends/statuses") |> json_response(200) == []
+
+      refute conn |> get(~p"/explore") |> html_response(200) =~ "in the square"
+    end
+
     test "but somebody signed in reads them as before", %{conn: conn} do
       # The positive half. Every assertion above is that something is absent,
       # which a server showing nobody anything would satisfy just as well.
@@ -92,6 +133,47 @@ defmodule AbuubaWeb.TimelineAccessTest do
       refute conn |> signed_in() |> get(~p"/explore") |> html_response(200) =~ "in the square",
              "off means off, including for the people who live here"
     end
+
+    test "and trending is off with them", %{conn: conn} do
+      assert conn |> get(~p"/api/v1/trends/statuses") |> json_response(200) == []
+
+      assert conn |> signed_in() |> get(~p"/api/v1/trends/statuses") |> json_response(200) == []
+    end
+  end
+
+  describe "which servers this one blocks, the sibling setting" do
+    # `show_domain_blocks` has the same three shapes and had no accessor at
+    # all: its one caller matched the raw string, so the next one would have
+    # matched it slightly differently. Here beside `timeline_access` for the
+    # reason the moduledoc gives -- one question, one answer.
+    setup do
+      on_exit(fn -> Settings.put("show_domain_blocks", "disabled") end)
+      :ok
+    end
+
+    test "nobody by default", %{conn: conn} do
+      refute Settings.domain_blocks_visible?(nil)
+      refute Settings.domain_blocks_visible?(account_fixture())
+
+      assert conn |> get(~p"/api/v1/instance/domain_blocks") |> json_response(404)
+    end
+
+    test "people with an account here, when set to users", %{conn: conn} do
+      :ok = Settings.put("show_domain_blocks", "users")
+
+      refute Settings.domain_blocks_visible?(nil)
+      assert Settings.domain_blocks_visible?(account_fixture())
+
+      assert conn |> get(~p"/api/v1/instance/domain_blocks") |> json_response(404),
+             "a stranger is told nothing rather than that something is withheld"
+    end
+
+    test "anybody, when set to all", %{conn: conn} do
+      :ok = Settings.put("show_domain_blocks", "all")
+
+      assert Settings.domain_blocks_visible?(nil)
+      assert conn |> get(~p"/api/v1/instance/domain_blocks") |> json_response(200) == []
+    end
   end
 
   describe "a server that leaves them open" do
@@ -100,6 +182,11 @@ defmodule AbuubaWeb.TimelineAccessTest do
 
       assert conn |> get(~p"/explore") |> html_response(200) =~ "in the square"
       assert conn |> get(~p"/api/v1/timelines/public") |> json_response(200) != []
+
+      # The positive control for the two cases above: trending answers when
+      # the setting allows it, so an empty list there means the gate and not a
+      # ranking that was never built.
+      assert conn |> get(~p"/api/v1/trends/statuses") |> json_response(200) != []
     end
   end
 end

@@ -240,6 +240,40 @@ defmodule Abuuba.TimelinesTest do
       assert Enum.map(Timelines.public(nil), & &1.id) == [visible.id]
     end
 
+    test "and by_ids/2 drops them too, because a ranking is never revisited",
+         %{author: author} do
+      # `Timelines.by_ids/2` reads what a ranking chose, and a ranking is
+      # written once: a moderator silencing somebody afterwards does not take
+      # their post out of it. Without this the most prominent list on the
+      # server was the one place a silence did not reach.
+      visible = status_fixture(%{account_id: author.id})
+
+      silenced = account_fixture()
+      hidden = status_fixture(%{account_id: silenced.id})
+
+      {:ok, _} =
+        Abuuba.Accounts.update_moderation(silenced, %{silenced_at: DateTime.utc_now()})
+
+      ids = [to_string(hidden.id), to_string(visible.id)]
+
+      assert Enum.map(Timelines.by_ids(ids, nil), & &1.id) == [visible.id]
+    end
+
+    test "and the reader's own blocks, which a ranking knows nothing about",
+         %{author: author} do
+      reader = account_fixture()
+      mine = status_fixture(%{account_id: author.id})
+
+      unwanted_author = account_fixture()
+      unwanted = status_fixture(%{account_id: unwanted_author.id})
+      {:ok, _} = Abuuba.Relationships.block(reader, unwanted_author)
+
+      ids = [to_string(unwanted.id), to_string(mine.id)]
+
+      assert Enum.map(Timelines.by_ids(ids, reader), & &1.id) == [mine.id]
+      assert Enum.map(Timelines.by_ids(ids, nil), & &1.id) == [unwanted.id, mine.id]
+    end
+
     test "min_id wins over since_id when both arrive", %{author: author} do
       first = status_fixture(%{account_id: author.id})
       second = status_fixture(%{account_id: author.id})

@@ -21,20 +21,17 @@ defmodule AbuubaWeb.LandingLive do
 
   alias Abuuba.Instance
   alias Abuuba.Settings
-  alias Abuuba.Statuses
+  alias Abuuba.Timelines
   alias AbuubaWeb.API.Entities
   alias AbuubaWeb.RegistrationWords
 
   @page_size 10
 
   # Nobody is signed in on this page, so a server that keeps its timelines for
-  # people with an account shows no preview at all here.
+  # people with an account shows no preview at all here -- which
+  # `Timelines.public/2` answers, rather than this page remembering to.
   defp preview do
-    if Settings.public_timelines_readable?(nil) do
-      Entities.statuses(Statuses.public_timeline(local: true, limit: @page_size), nil)
-    else
-      []
-    end
+    Entities.statuses(Timelines.public(nil, %{local: true, limit: @page_size}), nil)
   end
 
   @impl Phoenix.LiveView

@@ -20,7 +20,6 @@ defmodule AbuubaWeb.TagLive do
 
   import AbuubaWeb.StatusComponent
 
-  alias Abuuba.Settings
   alias Abuuba.Statuses
   alias Abuuba.Statuses.Tag
   alias Abuuba.Timelines
@@ -118,15 +117,12 @@ defmodule AbuubaWeb.TagLive do
 
   defp posts(nil, _viewer), do: []
 
-  defp posts(tag, viewer) do
-    if Settings.public_timelines_readable?(viewer), do: tag_posts(tag, viewer), else: []
-  end
-
   # Through `Timelines.tag/3`, which is what the API answers this question
-  # with. `Statuses.tag_timeline/2` is the bare query and is never told who
-  # is reading, so this page showed a reader the posts of people they had
-  # blocked or muted -- hidden everywhere else, and sitting here.
-  defp tag_posts(tag, viewer) do
+  # with, and which answers `timeline_access` itself. `Statuses.tag_timeline/2`
+  # is the bare query and is never told who is reading, so this page showed a
+  # reader the posts of people they had blocked or muted -- hidden everywhere
+  # else, and sitting here.
+  defp posts(tag, viewer) do
     tag.name
     |> Timelines.tag(viewer, %{limit: @page_size})
     |> Entities.statuses(viewer, filter_context: "public")
