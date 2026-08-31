@@ -45,6 +45,7 @@
   h1 { margin: 0; font: 400 clamp(2.8rem, 6.4vw, 5.4rem)/1.02 var(--display); letter-spacing: -0.012em; text-wrap: balance; }
   .lede { max-width: 56ch; margin: 22px 0 0; font-size: 1.12rem; color: var(--muted); }
   .lede strong { color: var(--ink); font-weight: 500; }
+  .lede a.url { color: var(--accent); border-bottom: 1px solid var(--accent-deep); }
   .warn { max-width: 56ch; margin: 20px 0 0; padding: 12px 16px; background: var(--surface); border-left: 3px solid var(--accent); color: var(--muted); font-size: .98rem; }
   .warn strong { color: var(--accent); font-weight: 600; }
 

@@ -13,8 +13,8 @@ for federation and the complete [Mastodon client API](https://docs.joinmastodon.
 for apps. Every one of the 289 endpoints Mastodon 4.6 declares under `/api/v1`
 and `/api/v2` is answered here, a test fails the build when one goes missing,
 and existing apps work unchanged. It exists for one reason: Mastodon is too
-slow. I needed a fast peer to test [vutuv](https://vutuv.de), my ultrafast
-business network, against, and Mastodon could not keep up.
+slow. I needed a fast peer to test my ultrafast business network
+[https://vutuv.de](https://vutuv.de) against, and Mastodon could not keep up.
 
 | Same machine, same data, same Postgres | abuuba | Mastodon | |
 | --- | ---: | ---: | ---: |
