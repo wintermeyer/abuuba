@@ -36,6 +36,7 @@ defmodule AbuubaWeb.ActivityPubController do
   alias Abuuba.Stats
   alias Abuuba.Statuses
   alias Abuuba.Statuses.Status
+  alias AbuubaWeb.API
   alias AbuubaWeb.SignedRequest
 
   @content_type "application/activity+json"
@@ -352,7 +353,7 @@ defmodule AbuubaWeb.ActivityPubController do
   # peer walks from one to the other.
   defp render_replies(conn, %Status{} = status, account, params) do
     collection_id = Serializer.replies_uri(status, account)
-    others? = truthy?(params["only_other_accounts"])
+    others? = API.truthy?(params["only_other_accounts"])
     # Bounded like any other id off the wire. A min_id no column could hold
     # raises inside the query rather than simply matching nothing.
     min_id =
@@ -385,7 +386,7 @@ defmodule AbuubaWeb.ActivityPubController do
     # same page nested inside the collection does not, because the collection
     # around it already did.
     document =
-      if truthy?(params["page"]) do
+      if API.truthy?(params["page"]) do
         Actor.with_activitystreams_context(page)
       else
         Actor.inline_collection(collection_id, page, context: true)
@@ -393,8 +394,6 @@ defmodule AbuubaWeb.ActivityPubController do
 
     conn |> put_resp_content_type(@content_type) |> json(document)
   end
-
-  defp truthy?(value), do: value in ["true", "1", true]
 
   # A full page means there may be more of the same kind. A short one means the
   # author is done talking, so the walk carries on into everybody else's

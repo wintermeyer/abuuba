@@ -43,6 +43,29 @@ defmodule AbuubaWeb.APITest do
     end
   end
 
+  describe "whether a flag means yes" do
+    test "the values the reference calls no, and nothing else" do
+      # `ActiveModel::Type::Boolean` is what `truthy_param?` casts with, and
+      # its false set is these plus their capitalisations. Everything else a
+      # client sends is yes.
+      for no <- [false, 0, "0", "f", "F", "false", "FALSE", "off", "OFF", nil] do
+        refute API.truthy?(no), "#{inspect(no)} should be no"
+      end
+
+      for yes <- [true, 1, "1", "true", "TRUE", "on", "yes", "banana"] do
+        assert API.truthy?(yes), "#{inspect(yes)} should be yes"
+      end
+    end
+
+    test "which is a denylist, and used to be two functions disagreeing" do
+      # `AbuubaWeb.API.AccountController` carried its own, the other way round:
+      # an allowlist here said `"on"` was no while its denylist said `"f"` was
+      # yes, so the same word meant opposite things on two endpoints.
+      assert API.truthy?("on")
+      refute API.truthy?("f")
+    end
+  end
+
   describe "how many records a request asked for" do
     test "the default when it did not ask" do
       assert API.limit(%{}, 20) == 20
