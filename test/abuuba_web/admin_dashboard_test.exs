@@ -84,6 +84,79 @@ defmodule AbuubaWeb.AdminDashboardTest do
     end
   end
 
+  describe "what the charts count" do
+    test "one number per day, and a total that is their sum" do
+      author = account_fixture()
+      today = Date.utc_today()
+
+      for _ <- 1..3, do: status_fixture(%{account_id: author.id, local: true})
+
+      assert {:ok, [%{key: "new_statuses", total: total, data: data}]} =
+               Metrics.measure(["new_statuses"], Date.add(today, -6), today)
+
+      assert length(data) == 7
+      assert Enum.map(data, & &1.date) == Enum.to_list(Date.range(Date.add(today, -6), today))
+
+      # The total was a second pass over the same days, so it could disagree
+      # with the series it sits above. It is their sum now, and cannot.
+      assert total == "3"
+      assert total == data |> Enum.map(&String.to_integer(&1.value)) |> Enum.sum() |> to_string()
+      assert Enum.find(data, &(&1.date == today)).value == "3"
+    end
+
+    test "a day nobody posted is a zero rather than a gap" do
+      today = Date.utc_today()
+
+      assert {:ok, [%{data: data}]} =
+               Metrics.measure(["new_statuses"], Date.add(today, -2), today)
+
+      assert Enum.map(data, & &1.value) |> Enum.all?(&is_binary/1)
+      assert Enum.find(data, &(&1.date == Date.add(today, -2))).value == "0"
+    end
+
+    test "active users counts people, not posts" do
+      author = account_fixture()
+      today = Date.utc_today()
+
+      for _ <- 1..4, do: status_fixture(%{account_id: author.id, local: true})
+
+      assert {:ok, [%{total: total}]} =
+               Metrics.measure(["active_users"], Date.add(today, -1), today)
+
+      assert total == "1", "four posts from one person is one active person"
+    end
+
+    test "retention asks for weeks and gets weeks" do
+      today = Date.utc_today()
+
+      rows = Metrics.retention(Date.add(today, -84), today, "week")
+
+      # `"week"` had no clause and fell through to a day, so this answered with
+      # eighty-five one-day cohorts labelled as weeks.
+      assert length(rows) <= 14, "eighty-five daily cohorts is not a weekly chart"
+
+      assert [%{period: first}, %{period: second} | _] = rows
+      assert Date.diff(second, first) == 7
+      assert Enum.all?(rows, &(length(&1.data) == length(rows)))
+    end
+
+    test "somebody who posted twice in a week is one person still here" do
+      today = Date.utc_today()
+      account = account_fixture()
+      user_fixture(%{account_id: account.id})
+
+      for _ <- 1..2, do: status_fixture(%{account_id: account.id, local: true})
+
+      rows = Metrics.retention(Date.add(today, -84), today, "week")
+      last = List.last(rows)
+
+      assert last.total >= 1
+
+      assert Enum.all?(last.data, &(String.to_float(&1.rate) <= 1.0)),
+             "counting posts rather than people puts the rate over 100%"
+    end
+  end
+
   describe "the same numbers over the API" do
     test "are what the dashboard draws", %{conn: conn} do
       status_fixture(%{account_id: account_fixture().id, text: "something"})
