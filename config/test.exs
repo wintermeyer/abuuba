@@ -76,6 +76,11 @@ config :abuuba, Oban, testing: :manual
 # on the cache being on — that is the cache's contract.
 config :abuuba, cache_enabled: false
 
+# The notifications page coalesces a burst of arrivals into one redraw. Zero
+# here so a test does not wait on a real clock: the flag and the message are
+# the same, only the window is gone.
+config :abuuba, notifications_coalesce_ms: 0
+
 # The delivery breaker's cooling-off period, a minute in production. Asking
 # what it does on both sides of that gate is worth milliseconds, not a minute,
 # and a test that reads the real clock here would be a test nobody runs.

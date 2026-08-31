@@ -171,6 +171,58 @@ defmodule AbuubaWeb.NotificationsLiveTest do
       assert render(live) =~ "followed you"
     end
 
+    test "a burst of them is one redraw, not one each", %{conn: conn, reader: reader} do
+      # `Streaming.publish_notification/1` broadcasts once per row, and one
+      # thing happening is often several rows -- twelve people boosting a post
+      # is the moduledoc's own example. Each arrival used to reload the page:
+      # seventeen queries, twelve times, to end up drawing one group.
+      Application.put_env(:abuuba, :notifications_coalesce_ms, 80)
+      on_exit(fn -> Application.put_env(:abuuba, :notifications_coalesce_ms, 0) end)
+
+      {:ok, live, _html} = live(conn, ~p"/notifications")
+
+      post = status_fixture(%{account_id: reader.id, text: "boosted a lot"})
+
+      counter = count_queries()
+
+      for _ <- 1..12 do
+        sender = account_fixture()
+        {:ok, notification} = Notifications.notify(reader, sender, "reblog", status_id: post.id)
+        Streaming.publish_notification(notification)
+      end
+
+      # Nothing reloaded yet: the window is still open.
+      during = Agent.get(counter, & &1)
+
+      Process.sleep(150)
+      html = render(live)
+
+      after_window = Agent.get(counter, & &1) - during
+
+      assert after_window > 0, "the coalesced reload never happened"
+
+      assert after_window < during / 2,
+             "one redraw should cost less than the twelve writes that triggered it"
+
+      assert html =~ "boosted"
+    end
+
+    defp count_queries do
+      {:ok, counter} = Agent.start_link(fn -> 0 end)
+      handler = "notif-#{System.unique_integer([:positive])}"
+
+      on_exit(fn -> :telemetry.detach(handler) end)
+
+      :telemetry.attach(
+        handler,
+        [:abuuba, :repo, :query],
+        fn _event, _measure, _meta, _config -> Agent.update(counter, &(&1 + 1)) end,
+        nil
+      )
+
+      counter
+    end
+
     test "somebody else's does not", %{conn: conn} do
       {:ok, live, _html} = live(conn, ~p"/notifications")
 
