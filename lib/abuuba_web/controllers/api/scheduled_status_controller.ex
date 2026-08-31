@@ -63,7 +63,7 @@ defmodule AbuubaWeb.API.ScheduledStatusController do
   defp with_own(conn, id, fun) do
     account = current_account(conn)
 
-    case Statuses.get_scheduled(account, API.id_param(%{"id" => id}, "id") || 0) do
+    case Statuses.get_scheduled(account, API.parse_id(id) || 0) do
       nil -> API.error(conn, 404, "Record not found")
       scheduled -> fun.(scheduled)
     end

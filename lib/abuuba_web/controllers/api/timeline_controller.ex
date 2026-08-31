@@ -108,7 +108,7 @@ defmodule AbuubaWeb.API.TimelineController do
   def list(conn, %{"id" => id} = params) do
     account = current_account(conn)
 
-    case Lists.get(account, API.id_param(%{"id" => id}, "id")) do
+    case Lists.get(account, API.parse_id(id)) do
       # An empty list and a list that does not exist are different things, and
       # a client shows them differently.
       nil -> API.error(conn, 404, "Record not found")

@@ -40,7 +40,7 @@ defmodule AbuubaWeb.API.ReportController do
   end
 
   defp target(params) do
-    params |> Map.get("account_id") |> then(&API.id_param(%{"id" => &1}, "id")) |> account()
+    params |> Map.get("account_id") |> API.parse_id() |> account()
   end
 
   defp account(nil), do: nil

@@ -370,7 +370,7 @@ defmodule AbuubaWeb.API.InstanceInfoController do
   end
 
   defp with_announcement(conn, id, fun) do
-    case Instance.get_announcement(API.id_param(%{"id" => id}, "id")) do
+    case Instance.get_announcement(API.parse_id(id)) do
       nil -> API.error(conn, 404, "Record not found")
       announcement -> fun.(announcement)
     end

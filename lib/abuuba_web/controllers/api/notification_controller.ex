@@ -69,7 +69,7 @@ defmodule AbuubaWeb.API.NotificationController do
   def show(conn, %{"id" => id}) do
     account = current_account(conn)
 
-    case Notifications.get(account, API.id_param(%{"id" => id}, "id")) do
+    case Notifications.get(account, API.parse_id(id)) do
       nil -> API.error(conn, 404, "Record not found")
       notification -> json(conn, Entities.notification(notification, account))
     end
@@ -78,7 +78,7 @@ defmodule AbuubaWeb.API.NotificationController do
   def dismiss(conn, %{"id" => id}) do
     account = current_account(conn)
 
-    case API.id_param(%{"id" => id}, "id") do
+    case API.parse_id(id) do
       nil -> API.error(conn, 404, "Record not found")
       notification_id -> Notifications.dismiss(account, notification_id) && json(conn, %{})
     end

@@ -4,7 +4,7 @@ defmodule Abuuba.MixProject do
   def project do
     [
       app: :abuuba,
-      version: "1.0.18",
+      version: "1.0.19",
       elixir: "~> 1.17",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,

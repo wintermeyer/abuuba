@@ -45,7 +45,7 @@ defmodule AbuubaWeb.API.PollController do
   # rules to keep in step with the first.
   defp with_poll(conn, id, fun) do
     viewer = current_account(conn)
-    poll = Abuuba.Repo.get(Poll, API.id_param(%{"id" => id}, "id") || 0)
+    poll = Abuuba.Repo.get(Poll, API.parse_id(id) || 0)
 
     case poll && Statuses.readable(poll.status_id, viewer) do
       nil -> API.error(conn, 404, "Record not found")

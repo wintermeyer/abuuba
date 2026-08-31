@@ -52,6 +52,23 @@ defmodule Abuuba.Federation.HTTP do
   @as2_profile ~s(profile="https://www.w3.org/ns/activitystreams")
 
   @doc """
+  Fetches an ActivityPub document, or lets a caller substitute the fetching.
+
+  `get_json/2` with the `:fetch` option honoured: a test hands in a function
+  and everything else goes over the wire. Three resolvers each carried a
+  byte-identical copy of this, which is three places to remember when the
+  option grows a second shape.
+  """
+  @spec fetch_json(String.t(), keyword()) ::
+          {:ok, map()} | {:error, atom() | {:status, integer()}}
+  def fetch_json(url, opts \\ []) do
+    case Keyword.get(opts, :fetch) do
+      nil -> get_json(url, opts)
+      fetcher -> fetcher.(url)
+    end
+  end
+
+  @doc """
   Fetches an ActivityPub document.
 
   Signed as the instance actor by default, because a growing number of servers

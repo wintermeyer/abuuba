@@ -108,7 +108,7 @@ defmodule AbuubaWeb.API.RelationshipController do
   # so `/follow_requests/:id/authorize` names the person, not the request.
   defp answer_request(conn, id, fun) do
     account = current_account(conn)
-    follower_id = API.id_param(%{"id" => id}, "id")
+    follower_id = API.parse_id(id)
 
     case follower_id && Relationships.get_follow_request(follower_id, account) do
       nil ->

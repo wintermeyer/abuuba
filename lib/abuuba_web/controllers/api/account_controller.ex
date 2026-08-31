@@ -628,7 +628,7 @@ defmodule AbuubaWeb.API.AccountController do
   defp with_account(conn, id, fun) do
     viewer = current_account(conn)
 
-    case Accounts.get_account(API.id_param(%{"id" => id}, "id") || 0) do
+    case Accounts.get_account(API.parse_id(id) || 0) do
       %Account{suspended_at: nil} = account -> fun.(account, viewer)
       _ -> API.error(conn, 404, "Record not found")
     end

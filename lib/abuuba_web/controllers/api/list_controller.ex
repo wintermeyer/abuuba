@@ -12,7 +12,6 @@ defmodule AbuubaWeb.API.ListController do
   alias Abuuba.Lists
   alias AbuubaWeb.API
   alias AbuubaWeb.API.Entities
-  alias AbuubaWeb.API.NestedParams
   alias AbuubaWeb.API.Pagination
 
   plug AbuubaWeb.Plugs.RequireUser
@@ -90,19 +89,15 @@ defmodule AbuubaWeb.API.ListController do
   end
 
   defp with_list(conn, id, fun) do
-    case Lists.get(current_account(conn), API.id_param(%{"id" => id}, "id")) do
+    case Lists.get(current_account(conn), API.parse_id(id)) do
       nil -> API.error(conn, 404, "Record not found")
       list -> fun.(list)
     end
   end
 
-  defp account_ids(params) do
-    params
-    |> Map.get("account_ids", [])
-    |> NestedParams.list()
-    |> Enum.map(&API.id_param(%{"id" => &1}, "id"))
-    |> Enum.reject(&is_nil/1)
-  end
+  # `API.id_list/2` is this, plus the `Enum.uniq/1` this one was missing --
+  # adding an account to a list twice in one request is adding it once.
+  defp account_ids(params), do: API.id_list(params, "account_ids")
 
   defp invalid(conn, changeset) do
     API.error(conn, 422, "Validation failed", Entities.field_errors(changeset))

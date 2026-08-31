@@ -33,6 +33,7 @@ defmodule Abuuba.Federation.Quotes do
   alias Abuuba.Accounts.Account
   alias Abuuba.Federation.HTTP
   alias Abuuba.Federation.Serializer
+  alias Abuuba.Federation.URIs
   alias Abuuba.Relationships
   alias Abuuba.Repo
   alias Abuuba.Stats
@@ -95,7 +96,7 @@ defmodule Abuuba.Federation.Quotes do
   end
 
   defp check(status, row, opts) do
-    with {:ok, document} <- fetch(row.approval_uri, opts),
+    with {:ok, document} <- HTTP.fetch_json(row.approval_uri, opts),
          :ok <- check_type(document),
          :ok <- check_host(row, document, opts),
          :ok <- check_interacting_object(document, status),
@@ -118,7 +119,7 @@ defmodule Abuuba.Federation.Quotes do
 
     cond do
       is_nil(quoted_author) -> {:error, :unknown_quoted_author}
-      same_host?(document["id"], quoted_author) -> :ok
+      URIs.same_host?(document["id"], quoted_author) -> :ok
       true -> {:error, :approval_from_wrong_host}
     end
   end
@@ -416,22 +417,6 @@ defmodule Abuuba.Federation.Quotes do
       }
     )
     |> Repo.one()
-  end
-
-  defp fetch(uri, opts) do
-    case Keyword.get(opts, :fetch) do
-      nil -> HTTP.get_json(uri, opts)
-      fetcher -> fetcher.(uri)
-    end
-  end
-
-  defp same_host?(a, b) do
-    with %URI{host: host_a} when is_binary(host_a) <- URI.parse(a || ""),
-         %URI{host: host_b} when is_binary(host_b) <- URI.parse(b || "") do
-      String.downcase(host_a) == String.downcase(host_b)
-    else
-      _ -> false
-    end
   end
 
   defp same_uri?(a, b) when is_binary(a) and is_binary(b) do
