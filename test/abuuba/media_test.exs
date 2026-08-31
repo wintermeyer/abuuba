@@ -114,14 +114,14 @@ defmodule Abuuba.MediaTest do
     test "is capped, generously" do
       assert {:error, changeset} =
                Media.create_attachment(%{
-                 description: String.duplicate("a", Attachment.description_max() + 1)
+                 description: String.duplicate("a", Attachment.max_description() + 1)
                })
 
       assert errors_on(changeset).description != []
     end
 
     test "accepts a long description, because a good one is long" do
-      long = String.duplicate("a", Attachment.description_max())
+      long = String.duplicate("a", Attachment.max_description())
 
       assert %{description: ^long} = attachment_fixture(%{description: long})
     end

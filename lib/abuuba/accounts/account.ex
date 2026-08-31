@@ -566,11 +566,6 @@ defmodule Abuuba.Accounts.Account do
   def username_max, do: @username_max
 
   @doc """
-  The actor types an account may have.
-  """
-  def actor_types, do: Keyword.keys(@actor_types)
-
-  @doc """
   The type behind an ActivityPub `type`, which arrives capitalised.
 
   Anything unrecognised is a Person: an actor whose type this server has never

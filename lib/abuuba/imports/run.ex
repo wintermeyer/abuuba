@@ -82,9 +82,4 @@ defmodule Abuuba.Imports.Run do
   The states a run can be in.
   """
   def states, do: @states
-
-  @doc """
-  What to do with what is already there.
-  """
-  def modes, do: @modes
 end

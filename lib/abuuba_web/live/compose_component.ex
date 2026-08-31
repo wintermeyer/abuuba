@@ -542,7 +542,7 @@ defmodule AbuubaWeb.ComposeComponent do
                     phx-value-media={attachment.id}
                     phx-target={@myself}
                     name="description"
-                    maxlength={Attachment.description_max()}
+                    maxlength={Attachment.max_description()}
                     placeholder={gettext("Describe this for people who cannot see it")}
                     class="textarea textarea-sm w-full"
                   >{attachment.description}</textarea>
