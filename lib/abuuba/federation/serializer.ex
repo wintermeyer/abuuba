@@ -137,7 +137,7 @@ defmodule Abuuba.Federation.Serializer do
       "sensitive" => status.sensitive or account.sensitized_at != nil,
       "to" => to,
       "cc" => cc,
-      "tag" => Enum.map(mentions, &mention_tag/1) ++ Enum.map(tags_of(status), &hashtag_tag/1),
+      "tag" => Enum.map(mentions, &mention_tag/1) ++ Enum.map(tags_of(status), &hashtag/1),
       "attachment" => Enum.map(attachments, &document/1),
       # The page a person reads the post on, which is not the id. A peer renders
       # this behind "open original", so falling back to the id sent every reader
@@ -979,14 +979,6 @@ defmodule Abuuba.Federation.Serializer do
   # The spelling somebody typed for the name, because that is what a reader
   # sees; the casefolded one for the link, because #Caturday and #caturday are
   # one tag and one timeline.
-  defp hashtag_tag(%Tag{} = tag) do
-    %{
-      "type" => "Hashtag",
-      "href" => "#{URIs.base_url()}/tags/#{tag.name}",
-      "name" => "#" <> (tag.display_name || tag.name)
-    }
-  end
-
   defp in_reply_to(%Status{in_reply_to_id: nil}), do: nil
 
   defp in_reply_to(%Status{in_reply_to_id: id}) do
