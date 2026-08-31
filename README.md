@@ -2,6 +2,10 @@
 
 [![CI](https://github.com/wintermeyer/abuuba/actions/workflows/ci.yml/badge.svg)](https://github.com/wintermeyer/abuuba/actions/workflows/ci.yml)
 
+> **Version 1.0. Do not run this in production.** It has bugs nobody has found
+> yet, and it has never run a real community. Put it on a lab machine, break
+> it, and tell me what broke.
+
 abuuba is a fediverse server written in [Elixir](https://elixir-lang.org) and
 [Phoenix](https://www.phoenixframework.org). It speaks
 [Mastodon](https://joinmastodon.org)'s protocols: [ActivityPub](https://www.w3.org/TR/activitypub/)
@@ -9,7 +13,8 @@ for federation and the complete [Mastodon client API](https://docs.joinmastodon.
 for apps. Every one of the 289 endpoints Mastodon 4.6 declares under `/api/v1`
 and `/api/v2` is answered here, a test fails the build when one goes missing,
 and existing apps work unchanged. It exists for one reason: Mastodon is too
-slow.
+slow. I needed a fast peer to test [vutuv](https://vutuv.de), my ultrafast
+business network, against, and Mastodon could not keep up.
 
 | Same machine, same data, same Postgres | abuuba | Mastodon | |
 | --- | ---: | ---: | ---: |
@@ -111,11 +116,11 @@ instead, and went with abuuba.
 
 ## Not for the faint of heart
 
-This is a 1.0. It has bugs, and nobody knows yet where they are. abuuba is
-version 1.1.0, it has never served real members on the open internet, and
-nobody but me has tested any of it. Mastodon's bugs have had a decade and
-thousands of admins to surface them; abuuba's have had me. Every number above
-is measured and reproducible, and that is all it says.
+This is version 1.0. It has bugs, and nobody knows yet where they are: it has
+never served real members on the open internet, and nobody but me has tested
+any of it. Mastodon's bugs have had a decade and thousands of admins to
+surface them; abuuba's have had me. Every number above is measured and
+reproducible, and that is all it says.
 
 **Do not put abuuba into production right now.** Not under a community you
 would be sorry to lose, not under accounts somebody depends on. Run it in a
