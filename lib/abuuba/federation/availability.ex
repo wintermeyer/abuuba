@@ -25,6 +25,7 @@ defmodule Abuuba.Federation.Availability do
 
   import Ecto.Query
 
+  alias Abuuba.Moderation.DomainBlock
   alias Abuuba.Repo
 
   @failure_days_before_unavailable 7
@@ -210,5 +211,8 @@ defmodule Abuuba.Federation.Availability do
     end
   end
 
-  defp normalise(domain), do: domain |> to_string() |> String.downcase()
+  # `DomainBlock.normalise/1` rather than a fourth spelling: this one dropped
+  # the trim and the trailing dot, and it keys `instance_availability`
+  # alongside `Abuuba.Federation.Instances`, which did not.
+  defp normalise(domain), do: DomainBlock.normalise(domain)
 end
