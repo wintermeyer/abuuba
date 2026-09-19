@@ -217,4 +217,5 @@ meet in production.
    the dev server, exercise the changed feature in the real browser, check the
    browser console for errors. For backend-only issues, exercise the nearest
    user-visible surface (an API endpoint or the page that consumes it).
-7. Only then commit (commit-message and footer rules are global).
+7. Only then commit, with the patch version in `mix.exs` raised by one
+   (commit-message and footer rules are global).
