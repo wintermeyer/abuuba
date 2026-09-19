@@ -18,6 +18,7 @@ defmodule Abuuba.Importer.CLI do
   alias Abuuba.Importer
   alias Abuuba.Importer.Checkpoint
   alias Abuuba.Importer.SourceRepo
+  alias Abuuba.Release
 
   @switches [execute: :boolean, reset: :boolean, verify: :boolean, media_root: :string]
 
@@ -38,7 +39,7 @@ defmodule Abuuba.Importer.CLI do
   """
   @spec run([option()]) :: {:ok, String.t()} | {:error, String.t()}
   def run(opts \\ []) do
-    start_application()
+    Release.start_for_command()
 
     said = if opts[:reset], do: reset(), else: ""
 
@@ -48,59 +49,6 @@ defmodule Abuuba.Importer.CLI do
       end
 
     {outcome, said <> text}
-  end
-
-  # The steps write through the ordinary contexts, so the application has to be
-  # under them. It is started as an import rather than as a server, and both
-  # halves of that have already cost somebody a bad day somewhere.
-  #
-  # No queues and no schedule: for the hours an import takes, this container is
-  # the instance's only Oban peer and would therefore run every cron entry.
-  # One of them clears the home feed of anybody who has not signed in for 180
-  # days, which on a freshly imported instance is most of it, so the sweep
-  # would delete the feeds the rebuild step just wrote.
-  #
-  # No listener: the image sets `PHX_SERVER` for every container it starts,
-  # `run --rm` included, so without this a half-imported instance answers
-  # requests on the compose network while it is still half imported.
-  #
-  # Left alone where the application is already up, which is a checkout and the
-  # test suite: this is a decision about how to start one, not about how a
-  # running one should behave.
-  defp start_application do
-    if :abuuba in started_applications() do
-      :ok
-    else
-      Application.load(:abuuba)
-
-      Enum.each(startup_config(), fn {key, value} -> Application.put_env(:abuuba, key, value) end)
-
-      {:ok, _started} = Application.ensure_all_started(:abuuba)
-
-      :ok
-    end
-  end
-
-  @doc """
-  The application environment an import starts under, merged onto the deployed
-  one.
-
-  Public because it is worth a test of its own: settings that were replaced
-  rather than merged would take Oban's `:repo` with them, and every import
-  container would die at boot with a message about a supervisor.
-  """
-  @spec startup_config() :: [{module(), keyword()}]
-  def startup_config do
-    [
-      {Oban,
-       :abuuba |> Application.get_env(Oban, []) |> Keyword.merge(queues: false, plugins: false)},
-      {AbuubaWeb.Endpoint,
-       :abuuba |> Application.get_env(AbuubaWeb.Endpoint, []) |> Keyword.put(:server, false)}
-    ]
-  end
-
-  defp started_applications do
-    Enum.map(Application.started_applications(), fn {app, _description, _vsn} -> app end)
   end
 
   defp reset do

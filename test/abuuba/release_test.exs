@@ -105,6 +105,21 @@ defmodule Abuuba.ReleaseTest do
     end
   end
 
+  describe "the application a command starts" do
+    test "keeps everything it is not deliberately turning off" do
+      # Merged onto the deployed configuration, never replacing it. Oban
+      # without its `:repo` cannot start, and a container that dies in its
+      # supervision tree says nothing about the command at all.
+      config = Release.startup_config()
+
+      assert config[Oban][:repo] == Abuuba.Repo
+      assert config[Oban][:queues] == false
+      assert config[Oban][:plugins] == false
+      refute config[AbuubaWeb.Endpoint][:server]
+      assert config[AbuubaWeb.Endpoint][:url]
+    end
+  end
+
   # Read straight from the table the migrator keeps, so a migration that ran is
   # a row rather than the absence of an exception.
   defp migrated_versions(repo) do
