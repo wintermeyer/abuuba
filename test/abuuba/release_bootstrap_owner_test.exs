@@ -9,44 +9,46 @@ defmodule Abuuba.ReleaseBootstrapOwnerTest do
 
   use Abuuba.DataCase, async: false
 
+  import ExUnit.CaptureIO
+
   alias Abuuba.Accounts
+  alias Abuuba.Accounts.Account
   alias Abuuba.Accounts.Auth
   alias Abuuba.Accounts.User
   alias Abuuba.Release
-  alias Abuuba.Repo
   alias Abuuba.Roles
 
   describe "bootstrap_owner/1" do
-    test "makes an account that can administer" do
-      {:ok, %{account: account, user: user, password: password}} =
-        Release.bootstrap_owner(%{username: "founder", email: "founder@example.com"})
+    test "prints the password that works, because `bin/abuuba eval` throws the return value away" do
+      # A password handed back as a return value reached nobody: `eval`
+      # evaluates the expression and prints nothing of it.
+      output = bootstrap("founder")
 
-      assert account.username == "founder"
-      assert Roles.can?(reload(user), :administrator)
-      assert is_binary(password) and byte_size(password) > 16
+      assert output =~ "Created @founder"
+      assert [_line, password] = Regex.run(~r/Password: (\S+)/, output)
+      assert byte_size(password) > 16
+      assert User.valid_password?(user_named("founder"), password)
+      refute User.valid_password?(user_named("founder"), password <> "x")
+    end
+
+    test "makes an account that can administer" do
+      bootstrap("founder")
+
+      assert Roles.can?(user_named("founder"), :administrator)
     end
 
     test "the account can sign in straight away" do
       # No confirmation link and no approval queue: there is nobody to send the
       # link to a mail server that may not be configured yet, and nobody to
       # approve it but itself.
-      {:ok, %{user: user}} =
-        Release.bootstrap_owner(%{username: "founder", email: "founder@example.com"})
+      bootstrap("founder")
 
-      assert :ok = Auth.check_sign_in(reload(user))
-    end
-
-    test "the password it prints is the password that works" do
-      {:ok, %{user: user, password: password}} =
-        Release.bootstrap_owner(%{username: "founder", email: "founder@example.com"})
-
-      assert User.valid_password?(reload(user), password)
-      refute User.valid_password?(reload(user), password <> "x")
+      assert :ok = Auth.check_sign_in(user_named("founder"))
     end
 
     test "running it twice does not make a second administrator role" do
-      {:ok, _first} = Release.bootstrap_owner(%{username: "one", email: "one@example.com"})
-      {:ok, _second} = Release.bootstrap_owner(%{username: "two", email: "two@example.com"})
+      bootstrap("one")
+      bootstrap("two")
 
       administrators =
         Enum.filter(Roles.all(), &(Bitwise.band(&1.permissions, Roles.bit(:administrator)) != 0))
@@ -58,28 +60,45 @@ defmodule Abuuba.ReleaseBootstrapOwnerTest do
       {:ok, existing} =
         Roles.create(%{name: "Chief", position: 900, permissions: Roles.mask([:administrator])})
 
-      {:ok, %{user: user}} =
-        Release.bootstrap_owner(%{username: "founder", email: "founder@example.com"})
+      bootstrap("founder")
 
-      assert reload(user).role_id == existing.id
+      assert user_named("founder").role_id == existing.id
     end
 
-    test "a name already taken is refused rather than half-done" do
-      {:ok, _first} = Release.bootstrap_owner(%{username: "taken", email: "one@example.com"})
+    test "a name already taken raises, so `bin/abuuba eval` exits non-zero and says why" do
+      bootstrap("taken", "one@example.com")
 
-      assert {:error, _reason} =
-               Release.bootstrap_owner(%{username: "taken", email: "two@example.com"})
+      assert_raise RuntimeError, ~r/Could not create that account: .*already been taken/, fn ->
+        bootstrap("taken", "two@example.com")
+      end
 
       assert Accounts.get_account_by_handle("taken", nil)
     end
 
-    test "string keys work too, because they are what a shell hands you" do
-      {:ok, %{account: account}} =
-        Release.bootstrap_owner(%{"username" => "founder", "email" => "founder@example.com"})
+    test "the refusal names the limit rather than a placeholder" do
+      too_long = String.duplicate("a", Account.username_max() + 1)
 
-      assert account.username == "founder"
+      assert_raise RuntimeError, ~r/username should be at most \d+ character/, fn ->
+        bootstrap(too_long)
+      end
+    end
+
+    test "string keys work too, because they are what a shell hands you" do
+      capture_io(fn ->
+        Release.bootstrap_owner(%{"username" => "founder", "email" => "founder@example.com"})
+      end)
+
+      assert user_named("founder")
     end
   end
 
-  defp reload(user), do: Repo.get!(User, user.id)
+  defp bootstrap(username, email \\ nil) do
+    capture_io(fn ->
+      Release.bootstrap_owner(%{username: username, email: email || "#{username}@example.com"})
+    end)
+  end
+
+  defp user_named(username) do
+    username |> Accounts.get_account_by_handle(nil) |> Accounts.get_user_by_account()
+  end
 end

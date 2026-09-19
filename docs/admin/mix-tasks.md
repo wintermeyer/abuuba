@@ -24,12 +24,18 @@ server, before there is a checkout anywhere near it, so `mix abuuba.import` and
 the release keeps the dry run, the checks and the report. See
 [taking over a Mastodon instance](importing-from-mastodon.md).
 
-Any public context function works the same way, so a one-off can be done by
-hand:
+Those four start what they need and print what they did. Any other public
+context function can be called by hand, but through `bin/abuuba rpc`, which runs
+it inside the server that is already up:
 
 ```sh
-bin/abuuba eval 'Abuuba.Settings.put_registration_mode("closed")'
+bin/abuuba rpc 'IO.inspect(Abuuba.Settings.put_registration_mode("closed"))'
 ```
+
+`eval` would start a fresh node with nothing running in it, so the same call
+fails with `could not lookup Ecto repo`. `rpc` prints nothing on its own either,
+hence the `IO.inspect`: without it a typo's `{:error, :unknown_mode}` goes
+unseen.
 
 What you lose doing that is the dry run, the progress and the argument
 checking, which is most of why these tasks exist. For anything routine, run

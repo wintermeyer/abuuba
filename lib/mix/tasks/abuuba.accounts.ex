@@ -128,27 +128,18 @@ defmodule Mix.Tasks.Abuuba.Accounts do
 
   defp dispatch([], _opts), do: Mix.raise("Say what to do: #{Enum.join(@commands, ", ")}")
 
-  # The same function `bin/abuuba eval` calls on a release, so a development
-  # server and a production one are bootstrapped by one piece of code rather
-  # than by two that can disagree. `create --role Owner` cannot do this job: it
-  # assigns a role by name and a fresh database has none to name.
+  # The same code `bin/abuuba eval` runs on a release, so a development server
+  # and a production one are bootstrapped by one piece of code rather than by
+  # two that can disagree. `create --role Owner` cannot do this job: it assigns
+  # a role by name and a fresh database has none to name.
   defp bootstrap_owner([], _opts), do: Mix.raise("Say which name to create.")
 
   defp bootstrap_owner([username | _rest], opts) do
     email = Keyword.get(opts, :email) || Mix.raise("An account needs --email.")
 
-    case Release.bootstrap_owner(%{username: username, email: email}) do
-      {:ok, %{account: account, password: password}} ->
-        Mix.shell().info("""
-        Created @#{account.username}, who can administer this server.
-        Password: #{password}
-        """)
-
-      {:error, %Ecto.Changeset{} = changeset} ->
-        Mix.raise("Could not create that account: #{errors(changeset)}")
-
-      {:error, reason} ->
-        Mix.raise("Could not create that account: #{inspect(reason)}")
+    case Release.create_owner(%{username: username, email: email}) do
+      {:ok, output} -> Mix.shell().info(output)
+      {:error, output} -> Mix.raise(output)
     end
   end
 

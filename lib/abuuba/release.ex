@@ -9,13 +9,16 @@ defmodule Abuuba.Release do
   The migrations start the repository and nothing else: migrating a database
   while the web server is already serving from it is how a deploy takes the
   site down with it. The two that write through the ordinary contexts —
-  `bootstrap_owner/1` and `import_mastodon/1` — start the whole application,
-  because that is what those contexts need under them.
+  `bootstrap_owner/1` and `import_mastodon/1` — start the application, because
+  that is what those contexts need under them, but through
+  `start_for_command/0`: without its listener and without its queues.
+
+  `bin/abuuba eval` throws away the value of the expression it runs, so these
+  say what happened by printing it, and a failure raises, which is what makes
+  the command exit non-zero.
   """
 
-  alias Abuuba.Accounts.Account
   alias Abuuba.Accounts.Auth
-  alias Abuuba.Accounts.User
   alias Abuuba.Importer.CLI
   alias Abuuba.Roles
 
@@ -127,7 +130,8 @@ defmodule Abuuba.Release do
   end
 
   @doc """
-  Makes the first account that can open the admin area.
+  Makes the first account that can open the admin area, and prints its
+  password.
 
       bin/abuuba eval 'Abuuba.Release.bootstrap_owner(%{username: "alice", email: "alice@example.com"})'
 
@@ -141,7 +145,7 @@ defmodule Abuuba.Release do
   confirmation link to on a server whose mail is very likely not configured
   yet, and nobody to approve the account but itself.
 
-  The password is generated and returned. It is the only time it exists in
+  The password is generated and printed. It is the only time it exists in
   readable form — the column holds a hash — so an operator who loses the line
   has to reset it rather than look it up.
 
@@ -150,11 +154,16 @@ defmodule Abuuba.Release do
   everything" is the state where taking somebody's access away appears to work
   and does not.
   """
-  @spec bootstrap_owner(map()) ::
-          {:ok, %{account: Account.t(), user: User.t(), password: String.t()}}
-          | {:error, term()}
-  def bootstrap_owner(attrs) do
-    start()
+  @spec bootstrap_owner(map()) :: :ok
+  def bootstrap_owner(attrs), do: attrs |> create_owner() |> say()
+
+  @doc """
+  `bootstrap_owner/1` with the report returned rather than printed, for
+  `mix abuuba.accounts bootstrap-owner`, which says it through Mix.
+  """
+  @spec create_owner(map()) :: {:ok, String.t()} | {:error, String.t()}
+  def create_owner(attrs) do
+    start_for_command()
 
     password = generated_password()
 
@@ -166,8 +175,11 @@ defmodule Abuuba.Release do
 
     with {:ok, %{account: account, user: user}} <- Auth.create_by_admin(attrs),
          {:ok, role} <- Roles.administrator_role(),
-         {:ok, user} <- Roles.assign(user, role) do
-      {:ok, %{account: account, user: user, password: password}}
+         {:ok, _user} <- Roles.assign(user, role) do
+      {:ok,
+       "Created @#{account.username}, who can administer this server.\nPassword: #{password}"}
+    else
+      {:error, reason} -> {:error, "Could not create that account: #{describe(reason)}"}
     end
   end
 
@@ -181,20 +193,17 @@ defmodule Abuuba.Release do
 
   `mix abuuba.import` under a different name, because a takeover is run on a
   server and a server has no Mix. Both call `Abuuba.Importer.CLI`, which starts
-  the application for them — with no queues and no HTTP listener, for reasons
-  that are written down there.
+  the application for them through `start_for_command/0`.
 
   A run that cannot start raises, so `bin/abuuba eval` exits non-zero and a
   script around it stops. The dry run is the default here as it is there:
   nothing is written unless `execute: true` says so.
   """
   @spec import_mastodon([CLI.option()]) :: :ok
-  def import_mastodon(opts \\ []) do
-    case CLI.run(opts) do
-      {:ok, output} -> IO.puts(output)
-      {:error, output} -> raise output
-    end
-  end
+  def import_mastodon(opts \\ []), do: opts |> CLI.run() |> say()
+
+  defp say({:ok, output}), do: IO.puts(output)
+  defp say({:error, output}), do: raise(output)
 
   # A shell hands you strings and a script hands you atoms, and an operator
   # typing this once at three in the morning should not have to know which.
@@ -205,15 +214,75 @@ defmodule Abuuba.Release do
   defp generated_password,
     do: 18 |> :crypto.strong_rand_bytes() |> Base.url_encode64(padding: false)
 
+  defp describe(%Ecto.Changeset{} = changeset) do
+    changeset
+    |> Ecto.Changeset.traverse_errors(fn {message, opts} ->
+      Enum.reduce(opts, message, fn {key, value}, acc ->
+        String.replace(acc, "%{#{key}}", to_string(value))
+      end)
+    end)
+    |> Enum.map_join("; ", fn {field, messages} -> "#{field} #{Enum.join(messages, ", ")}" end)
+  end
+
+  defp describe(reason), do: inspect(reason)
+
   defp load do
     Application.load(@app)
   end
 
-  # Unlike the migration functions, this one writes through the ordinary
-  # contexts, so it needs the application running rather than only the repo.
-  defp start do
-    Application.ensure_all_started(@app)
+  @doc """
+  Starts the application to run one command in, rather than to serve from.
 
-    :ok
+  Both halves of what it leaves out have already cost somebody a bad day.
+
+  No listener: the image sets `PHX_SERVER` for every container it starts.
+  `docker compose exec` runs the command inside the container that is already
+  serving, where a second listener finds the port taken and takes the whole
+  application down with it, so the command dies before it has done anything.
+  Under `run --rm` it binds, and a half-imported instance answers requests on
+  the compose network while it is still half imported.
+
+  No queues and no schedule: for the hours an import takes, its container is
+  the instance's only Oban peer and would therefore run every cron entry. One
+  of them clears the home feed of anybody who has not signed in for 180 days,
+  which on a freshly imported instance is most of it, so the sweep would
+  delete the feeds the rebuild step just wrote. Jobs a command enqueues are
+  still written, and the server runs them.
+
+  Left alone where the application is already up, which is a checkout and the
+  test suite: this is a decision about how to start one, not about how a
+  running one should behave.
+  """
+  @spec start_for_command() :: :ok
+  def start_for_command do
+    if List.keymember?(Application.started_applications(), @app, 0) do
+      :ok
+    else
+      load()
+
+      Application.put_all_env([{@app, startup_config()}])
+
+      {:ok, _started} = Application.ensure_all_started(@app)
+
+      :ok
+    end
+  end
+
+  @doc """
+  The application environment a command starts under, merged onto the deployed
+  one.
+
+  Public because it is worth a test of its own: settings that were replaced
+  rather than merged would take Oban's `:repo` with them, and every command
+  would die at boot with a message about a supervisor.
+  """
+  @spec startup_config() :: [{module(), keyword()}]
+  def startup_config do
+    [
+      {Oban,
+       @app |> Application.get_env(Oban, []) |> Keyword.merge(queues: false, plugins: false)},
+      {AbuubaWeb.Endpoint,
+       @app |> Application.get_env(AbuubaWeb.Endpoint, []) |> Keyword.put(:server, false)}
+    ]
   end
 end

@@ -31,21 +31,6 @@ defmodule Abuuba.Importer.CLITest do
     end
   end
 
-  describe "the application an import starts" do
-    test "keeps everything it is not deliberately turning off" do
-      # Merged onto the deployed configuration, never replacing it. Oban
-      # without its `:repo` cannot start, and a container that dies in its
-      # supervision tree says nothing about the import at all.
-      config = CLI.startup_config()
-
-      assert config[Oban][:repo] == Abuuba.Repo
-      assert config[Oban][:queues] == false
-      assert config[Oban][:plugins] == false
-      refute config[AbuubaWeb.Endpoint][:server]
-      assert config[AbuubaWeb.Endpoint][:url]
-    end
-  end
-
   describe "before anything can run" do
     test "it says which variable is missing rather than failing to connect" do
       with_env(%{"MASTODON_DATABASE_URL" => nil})
