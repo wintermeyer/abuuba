@@ -22,7 +22,7 @@ never start a second issue in the same run.
 5. **Work** the full definition of done from CLAUDE.md, in order: tests first,
    implementation, `mix precommit` green (includes `credo --strict`),
    `/simplify`, `/critique`, gettext extract/merge with complete German,
-   docs updated, Chrome smoke test.
+   docs updated, Safari smoke test.
 6. **Ship.** Commit (global message + footer rules), merge or push per the
    repo's current workflow, then close the issue with a short personal note
    per the global close-note rules (`Closes #<n>` in the commit body plus the

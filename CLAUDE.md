@@ -213,7 +213,7 @@ meet in production.
    (`mix gettext.extract --merge`, no empty or fuzzy `de` msgstrs); affected
    pages in `docs/admin/`, `docs/user/` and `docs/deploy.md` updated, and every
    changed `docs/user/` page's German mirror in `docs/de/user/` with it.
-6. Smoke test in the locally installed Chrome (claude-in-chrome tools): start
+6. Smoke test in the local Safari (safari-mcp tools): start
    the dev server, exercise the changed feature in the real browser, check the
    browser console for errors. For backend-only issues, exercise the nearest
    user-visible surface (an API endpoint or the page that consumes it).
